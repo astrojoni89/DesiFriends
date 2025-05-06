@@ -4,23 +4,25 @@ on:
   workflow_dispatch: # Allows manual triggering from the GitHub UI
 
 jobs:
-  build-android:
+  build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repo
+      - name: 🏗 Setup repo
         uses: actions/checkout@v3
 
-      - name: Set up Node.js
+      - name: 🏗 Setup Node
         uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: 18.x
 
-      - name: Install EAS CLI
-        run: npm install -g eas-cli
+      - name: 🏗 Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EAS_TOKEN }}
 
-      - name: Authenticate with EAS
-        run: eas login --token ${{ secrets.EAS_TOKEN }}
+      - name: 📦 Install dependencies
+        run: npm install
 
-      - name: Run EAS Build
+      - name: 🚀 Build app
         run: eas build --platform android --non-interactive --profile preview
