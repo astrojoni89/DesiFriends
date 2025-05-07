@@ -17,6 +17,15 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { RadioButton } from "react-native-paper";
 
+import {
+  platoToSG,
+  sgToPlato,
+  calculateAlc,
+  adjustHopAmount,
+  correctPlatoTemp,
+  calculateDilutionVolume,
+} from "@/utils/calcUtils";
+
 export default function CalcsScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
@@ -41,6 +50,7 @@ export default function CalcsScreen() {
   const [abvY, setAbvY] = useState(0);
   const [aaY, setAaY] = useState(0);
   const [tempY, setTempY] = useState(0);
+  const [diluY, setDiluY] = useState(0);
   const scrollTo = (y: number) => {
     scrollRef.current?.scrollTo({ y, animated: true });
     toggleSidebar();
@@ -100,6 +110,19 @@ export default function CalcsScreen() {
         })()
       : null;
 
+  // 4) Diluting wort with water to get desired gravity
+  const [originalGravity, setOriginalGravity] = useState("");
+  const [desiredGravity, setDesiredGravity] = useState("");
+  const [originalWortVolume, setOriginalWortVolume] = useState("");
+  const dilutionVolume =
+    originalGravity && desiredGravity && originalWortVolume
+      ? (
+          (parseFloat(originalGravity) * parseFloat(originalWortVolume)) /
+            parseFloat(desiredGravity) -
+          parseFloat(originalWortVolume)
+        ).toFixed(2)
+      : null;
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -107,7 +130,12 @@ export default function CalcsScreen() {
       keyboardVerticalOffset={80}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={[styles.content]} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          ref={scrollRef}
+          style={{ flex: 1 }}
+          contentContainerStyle={[styles.content]}
+          keyboardShouldPersistTaps="handled"
+        >
           {/* Hamburger */}
           <Pressable onPress={toggleSidebar} style={styles.hamburger}>
             <Ionicons name="menu" size={28} color={isDark ? "#fff" : "#000"} />
@@ -129,6 +157,9 @@ export default function CalcsScreen() {
             <Text style={styles.sidebarItem} onPress={() => scrollTo(tempY)}>
               Temperatur-Korrektur Plato
             </Text>
+            <Text style={styles.sidebarItem} onPress={() => scrollTo(diluY)}>
+              Würzeverdünnung
+            </Text>
           </Animated.View>
 
           {/* Backdrop */}
@@ -137,122 +168,182 @@ export default function CalcsScreen() {
           )}
 
           {/* Main content */}
-          {/* <ScrollView ref={scrollRef} contentContainerStyle={[styles.content, { minHeight: "100%" }]} keyboardShouldPersistTaps="handled"> */}
-            {/* ABV Section */}
-            <View onLayout={(e) => setAbvY(e.nativeEvent.layout.y)}>
-              <Text style={styles.title}>Alkoholgehalt</Text>
-              <RadioButton.Group
-                onValueChange={(v) => setUnit(v as any)}
-                value={unit}
-              >
-                <View style={styles.radioRow}>
-                  <RadioButton value="plato" />
-                  <Text style={styles.radioText}>°Plato</Text>
-                  <RadioButton value="brix" />
-                  <Text style={styles.radioText}>Brix</Text>
-                  <RadioButton value="gravity" />
-                  <Text style={styles.radioText}>Gravity</Text>
-                </View>
-              </RadioButton.Group>
-              <TextInput
-                style={styles.input}
-                placeholder="Originalwert"
-                keyboardType="decimal-pad"
-                value={og}
-                onChangeText={setOg}
-                placeholderTextColor={isDark ? "#aaa" : "#555"}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Endwert"
-                keyboardType="decimal-pad"
-                value={fg}
-                onChangeText={setFg}
-                placeholderTextColor={isDark ? "#aaa" : "#555"}
-              />
-              {abv && (
-                <>
-                  <Text style={styles.result}>Alkoholgehalt: {abv}%vol</Text>
+          {/* ABV Section */}
+          <View onLayout={(e) => setAbvY(e.nativeEvent.layout.y)}>
+            <Text style={styles.title}>Alkoholgehalt</Text>
+            <RadioButton.Group
+              onValueChange={(v) => setUnit(v as any)}
+              value={unit}
+            >
+              <View style={styles.radioRow}>
+                <RadioButton value="plato" />
+                <Text style={styles.radioText}>°Plato</Text>
+                <RadioButton value="brix" />
+                <Text style={styles.radioText}>Brix</Text>
+                <RadioButton value="gravity" />
+                <Text style={styles.radioText}>Gravity</Text>
+              </View>
+            </RadioButton.Group>
+            <TextInput
+              style={styles.input}
+              placeholder="Originalwert"
+              keyboardType="decimal-pad"
+              value={og}
+              onChangeText={setOg}
+              placeholderTextColor={isDark ? "#aaa" : "#555"}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Endwert"
+              keyboardType="decimal-pad"
+              value={fg}
+              onChangeText={setFg}
+              placeholderTextColor={isDark ? "#aaa" : "#555"}
+            />
+            {/* {abv && (
+              <>
+                <Text style={styles.result}>Alkoholgehalt: {abv}%vol</Text>
+                <Text style={styles.note}>
+                  Berechnet mit der Balling-Formel.
+                </Text>
+              </>
+            )} */}
+
+            {og && fg ? (
+              <>
+                <Text style={styles.result}>
+                  Alkoholgehalt:{" "}
+                  {calculateAlc(parseFloat(og), parseFloat(fg), unit)}%vol
+                </Text>
+                {unit === "plato" && (
                   <Text style={styles.note}>
                     Berechnet mit der Balling-Formel.
                   </Text>
-                </>
-              )}
-            </View>
+                )}
+                {unit === "brix" && (
+                  <Text style={styles.note}>
+                    Berechnet mit der Sean Terrill-Formel.
+                  </Text>
+                )}
+                {unit === "gravity" && (
+                  <Text style={styles.note}>
+                    Berechnet mit der Balling-Formel.
+                  </Text>
+                )}
+              </>
+            ) : null}
+          </View>
 
-            {/* Hop AA% Section */}
-            <View
-              onLayout={(e) => setAaY(e.nativeEvent.layout.y)}
-              style={{ marginTop: 32 }}
-            >
-              <Text style={styles.title}>Hopfen-Anpassung (Alpha-Säure)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Ursprüngliche Menge (g)"
-                keyboardType="decimal-pad"
-                value={originalAmount}
-                onChangeText={setOriginalAmount}
-                placeholderTextColor={isDark ? "#aaa" : "#555"}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Originale Alpha-Säure (%α)"
-                keyboardType="decimal-pad"
-                value={originalAA}
-                onChangeText={setOriginalAA}
-                placeholderTextColor={isDark ? "#aaa" : "#555"}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Tatsächliche Alpha-Säure (%α)"
-                keyboardType="decimal-pad"
-                value={actualAA}
-                onChangeText={setActualAA}
-                placeholderTextColor={isDark ? "#aaa" : "#555"}
-              />
-              {adjustedAmount && (
-                <Text style={styles.result}>
-                  Angepasste Menge: {adjustedAmount} g
-                </Text>
-              )}
-            </View>
+          {/* Hop AA% Section */}
+          <View
+            onLayout={(e) => setAaY(e.nativeEvent.layout.y)}
+            style={{ marginTop: 32 }}
+          >
+            <Text style={styles.title}>Hopfen-Anpassung (Alpha-Säure)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Ursprüngliche Menge (g)"
+              keyboardType="decimal-pad"
+              value={originalAmount}
+              onChangeText={setOriginalAmount}
+              placeholderTextColor={isDark ? "#aaa" : "#555"}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Originale Alpha-Säure (%α)"
+              keyboardType="decimal-pad"
+              value={originalAA}
+              onChangeText={setOriginalAA}
+              placeholderTextColor={isDark ? "#aaa" : "#555"}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Tatsächliche Alpha-Säure (%α)"
+              keyboardType="decimal-pad"
+              value={actualAA}
+              onChangeText={setActualAA}
+              placeholderTextColor={isDark ? "#aaa" : "#555"}
+            />
+            {adjustedAmount && (
+              <Text style={styles.result}>
+                Angepasste Menge: {adjustedAmount} g
+              </Text>
+            )}
+          </View>
 
-            {/* Temperature Correction Section */}
-            <View
-              onLayout={(e) => setTempY(e.nativeEvent.layout.y)}
-              style={{ marginTop: 32 }}
-            >
-              <Text style={styles.title}>Temperaturkorrektur (Plato)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Kalibriert bei (°C)"
-                keyboardType="decimal-pad"
-                value={calTemp}
-                onChangeText={setCalTemp}
-                placeholderTextColor={isDark ? "#aaa" : "#555"}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Gemessen bei (°C)"
-                keyboardType="decimal-pad"
-                value={measTemp}
-                onChangeText={setMeasTemp}
-                placeholderTextColor={isDark ? "#aaa" : "#555"}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Gemessene Dichte (°P)"
-                keyboardType="decimal-pad"
-                value={measPlato}
-                onChangeText={setMeasPlato}
-                placeholderTextColor={isDark ? "#aaa" : "#555"}
-              />
-              {tempCorr && (
-                <Text style={styles.result}>
-                  Korrigierte Dichte: {tempCorr} °P
-                </Text>
-              )}
-            </View>
+          {/* Temperature Correction Section */}
+          <View
+            onLayout={(e) => setTempY(e.nativeEvent.layout.y)}
+            style={{ marginTop: 32 }}
+          >
+            <Text style={styles.title}>Temperaturkorrektur (Plato)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Kalibriert bei (°C)"
+              keyboardType="decimal-pad"
+              value={calTemp}
+              onChangeText={setCalTemp}
+              placeholderTextColor={isDark ? "#aaa" : "#555"}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Gemessen bei (°C)"
+              keyboardType="decimal-pad"
+              value={measTemp}
+              onChangeText={setMeasTemp}
+              placeholderTextColor={isDark ? "#aaa" : "#555"}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Gemessene Dichte (°P)"
+              keyboardType="decimal-pad"
+              value={measPlato}
+              onChangeText={setMeasPlato}
+              placeholderTextColor={isDark ? "#aaa" : "#555"}
+            />
+            {tempCorr && (
+              <Text style={styles.result}>
+                Korrigierte Dichte: {tempCorr} °P
+              </Text>
+            )}
+          </View>
+
+          {/* Dilution Section */}
+          <View
+            onLayout={(e) => setDiluY(e.nativeEvent.layout.y)}
+            style={{ marginTop: 32 }}
+          >
+            <Text style={styles.title}>Würzeverdünnung</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Stammwürze (°P)"
+              keyboardType="decimal-pad"
+              value={originalGravity}
+              onChangeText={setOriginalGravity}
+              placeholderTextColor={isDark ? "#aaa" : "#555"}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Würzemenge (L)"
+              keyboardType="decimal-pad"
+              value={originalWortVolume}
+              onChangeText={setOriginalWortVolume}
+              placeholderTextColor={isDark ? "#aaa" : "#555"}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Gewünschte Stammwürze (°P)"
+              keyboardType="decimal-pad"
+              value={desiredGravity}
+              onChangeText={setDesiredGravity}
+              placeholderTextColor={isDark ? "#aaa" : "#555"}
+            />
+            {dilutionVolume && (
+              <Text style={styles.result}>
+                Benötigte Wassermenge: {dilutionVolume} L
+              </Text>
+            )}
+          </View>
           {/* </ScrollView> */}
         </ScrollView>
       </TouchableWithoutFeedback>
@@ -298,7 +389,7 @@ function createStyles(isDark: boolean) {
       fontSize: 12,
       color: isDark ? "#aaa" : "#666",
       fontStyle: "italic",
-      marginTop: 4,
+      marginTop: 0,
     },
     radioRow: {
       flexDirection: "row",

@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useRecipes } from "../../../context/RecipeContext";
+import { useRecipes } from "@/context/RecipeContext";
 import { useRouter } from "expo-router";
 import {
   View,
@@ -22,9 +22,10 @@ export default function BrewDayScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const styles = createStyles(isDark);
-  const { recipes } = useRecipes();
+  const { recipes, deleteRecipe } = useRecipes();
   const router = useRouter();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [deleteModeId, setDeleteModeId] = useState<string | null>(null);
   const rotationAnims = useRef<{ [id: string]: Animated.Value }>({});
   const contentAnims = useRef<{ [id: string]: Animated.Value }>({});
 
@@ -61,8 +62,14 @@ export default function BrewDayScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={80}
     >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView contentContainerStyle={styles.content}>
+      <TouchableWithoutFeedback
+        onPress={() => {
+          Keyboard.dismiss();
+          if (deleteModeId !== null) setDeleteModeId(null);
+        }}
+      >
+        <View style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <Text style={styles.title}>Gespeicherte Rezepte</Text>
 
           {recipes.length === 0 && (
@@ -84,12 +91,30 @@ export default function BrewDayScreen() {
             });
 
             return (
+              // <Pressable
+              //   key={r.id}
+              //   onPress={() => toggleExpand(r.id)}
+              //   style={[
+              //     styles.recipeBox,
+              //     expandedId === r.id && styles.recipeBoxExpanded,
+              //   ]}
+              // >
               <Pressable
                 key={r.id}
-                onPress={() => toggleExpand(r.id)}
+                onPress={() => {
+                  if (deleteModeId) {
+                    // cancel deletion mode
+                    setDeleteModeId(null);
+                  } else {
+                    toggleExpand(r.id);
+                  }
+                }}
+                onLongPress={() => setDeleteModeId(r.id)}
+                onStartShouldSetResponder={() => true}
                 style={[
                   styles.recipeBox,
                   expandedId === r.id && styles.recipeBoxExpanded,
+                  deleteModeId === r.id && styles.recipeBoxDeleteMode,
                 ]}
               >
                 <View style={styles.recipeTitleRow}>
@@ -100,6 +125,18 @@ export default function BrewDayScreen() {
                     <Ionicons name="chevron-down" size={20} color="#666" />
                   </Animated.View>
                 </View>
+
+                {deleteModeId === r.id && (
+                  <Pressable
+                    onPress={() => {
+                      deleteRecipe(r.id);
+                      setDeleteModeId(null);
+                    }}
+                    style={styles.deleteButton}
+                  >
+                    <Ionicons name="trash" size={20} color="#fff" />
+                  </Pressable>
+                )}
 
                 <Animated.View
                   style={{
@@ -155,6 +192,7 @@ export default function BrewDayScreen() {
             );
           })}
         </ScrollView>
+        </View>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
@@ -231,6 +269,18 @@ function createStyles(isDark: boolean) {
       fontWeight: "600",
       fontSize: 16,
       margin: 4,
+    },
+    recipeBoxDeleteMode: {
+      backgroundColor: "#ff4d4d",
+      borderColor: "#ff1a1a",
+    },
+
+    deleteButton: {
+      marginTop: 12,
+      backgroundColor: "#cc0000",
+      padding: 10,
+      borderRadius: 8,
+      alignItems: "center",
     },
   });
 }

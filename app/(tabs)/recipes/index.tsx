@@ -21,7 +21,7 @@ import {
   Recipe,
   Ingredient,
   HopIngredient,
-} from "../../../context/RecipeContext";
+} from "@/context/RecipeContext";
 
 import { Ionicons } from "@expo/vector-icons";
 
