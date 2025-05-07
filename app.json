@@ -42,7 +42,8 @@
               "backgroundColor": "#b8ffc7",
               "imageWidth": 200
             },
-            "imageWidth": 200
+            "imageWidth": 200,
+            "resizeMode": "contain"
           }
         ]
       ],
