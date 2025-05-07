@@ -107,7 +107,7 @@ export default function CalcsScreen() {
       keyboardVerticalOffset={80}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={{ flex: 1 }}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={[styles.content]} keyboardShouldPersistTaps="handled">
           {/* Hamburger */}
           <Pressable onPress={toggleSidebar} style={styles.hamburger}>
             <Ionicons name="menu" size={28} color={isDark ? "#fff" : "#000"} />
@@ -137,7 +137,7 @@ export default function CalcsScreen() {
           )}
 
           {/* Main content */}
-          <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>
+          {/* <ScrollView ref={scrollRef} contentContainerStyle={[styles.content, { minHeight: "100%" }]} keyboardShouldPersistTaps="handled"> */}
             {/* ABV Section */}
             <View onLayout={(e) => setAbvY(e.nativeEvent.layout.y)}>
               <Text style={styles.title}>Alkoholgehalt</Text>
@@ -253,8 +253,8 @@ export default function CalcsScreen() {
                 </Text>
               )}
             </View>
-          </ScrollView>
-        </View>
+          {/* </ScrollView> */}
+        </ScrollView>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
