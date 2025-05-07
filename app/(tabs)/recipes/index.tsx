@@ -90,7 +90,7 @@ export default function RecipesScreen() {
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={80}
+      keyboardVerticalOffset={50}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">

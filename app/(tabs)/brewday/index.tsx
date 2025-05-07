@@ -60,7 +60,7 @@ export default function BrewDayScreen() {
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={80}
+      keyboardVerticalOffset={50}
     >
       <TouchableWithoutFeedback
         onPress={() => {
