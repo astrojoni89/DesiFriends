@@ -157,7 +157,7 @@ export default function BrewModal() {
 
   const sharePDF = async () => {
     if (!recipe || !scaled) return;
-  
+
     try {
       // Load logo image
       const asset = Asset.fromModule(require("../../assets/images/logo.png"));
@@ -166,7 +166,7 @@ export default function BrewModal() {
         encoding: FileSystem.EncodingType.Base64,
       });
       const logoUri = `data:image/png;base64,${base64}`;
-  
+
       // Compose HTML
       const html = `
         <html>
@@ -209,12 +209,18 @@ export default function BrewModal() {
           </body>
         </html>
       `;
-  
+
       // Generate the PDF file
       const { uri } = await Print.printToFileAsync({ html });
-  
+
       // Share the file
-      await Sharing.shareAsync(uri, {
+      const newPath = FileSystem.cacheDirectory + "recipe.pdf";
+      await FileSystem.moveAsync({
+        from: uri,
+        to: newPath,
+      });
+
+      await Sharing.shareAsync(newPath, {
         mimeType: "application/pdf",
         dialogTitle: "Rezept teilen oder speichern",
       });
@@ -222,7 +228,7 @@ export default function BrewModal() {
       console.error("PDF Export Error:", error);
       Alert.alert("Fehler", "PDF konnte nicht exportiert werden.");
     }
-  };  
+  };
 
   return (
     <KeyboardAvoidingView
