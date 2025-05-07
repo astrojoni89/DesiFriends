@@ -11,7 +11,7 @@
       "splash": {
         "image": "./assets/images/splash-icon.png",
         "resizeMode": "contain",
-        "backgroundColor": "#a0cba9"
+        "backgroundColor": "#b8ffc7"
       },
       "ios": {
         "supportsTablet": true
@@ -19,7 +19,7 @@
       "android": {
         "adaptiveIcon": {
           "foregroundImage": "./assets/images/adaptive-icon.png",
-          "backgroundColor": "#a0cba9"
+          "backgroundColor": "#b8ffc7"
         },
         "edgeToEdgeEnabled": true,
         "package": "com.astrojoni89.DesiFriends",
@@ -35,8 +35,13 @@
         [
           "expo-splash-screen",
           {
-            "backgroundColor": "#a0cba9",
+            "backgroundColor": "#b8ffc7",
             "image": "./assets/images/splash-icon.png",
+            "dark": {
+              "image": "./assets/images/splash-icon.png",
+              "backgroundColor": "#b8ffc7",
+              "imageWidth": 200
+            },
             "imageWidth": 200
           }
         ]

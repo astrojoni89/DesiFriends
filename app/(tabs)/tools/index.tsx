@@ -126,7 +126,7 @@ export default function CalcsScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={80}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
