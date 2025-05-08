@@ -90,12 +90,16 @@ export default function BrewModal() {
 
     try {
       // Load logo image
-      const asset = Asset.fromModule(require("../../assets/images/logo.png"));
-      await asset.downloadAsync();
-      const base64 = await FileSystem.readAsStringAsync(asset.localUri!, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      const logoUri = `data:image/png;base64,${base64}`;
+      // const asset = Asset.fromModule(require("../../assets/images/logo.png"));
+      // await asset.downloadAsync();
+      // const base64 = await FileSystem.readAsStringAsync(asset.localUri!, {
+      //   encoding: FileSystem.EncodingType.Base64,
+      // });
+      // const logoUri = `data:image/png;base64,${base64}`;
+      const [logo] = await Asset.loadAsync(
+        require("../../assets/images/logo.png")
+      );
+      const logoUri = logo?.uri || ""; // or provide a backup
 
       // Compose HTML
       const html = `
@@ -160,12 +164,16 @@ export default function BrewModal() {
 
     try {
       // Load logo image
-      const asset = Asset.fromModule(require("../../assets/images/logo.png"));
-      await asset.downloadAsync();
-      const base64 = await FileSystem.readAsStringAsync(asset.localUri!, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      const logoUri = `data:image/png;base64,${base64}`;
+      // const asset = Asset.fromModule(require("../../assets/images/logo.png"));
+      // await asset.downloadAsync();
+      // const base64 = await FileSystem.readAsStringAsync(asset.localUri!, {
+      //   encoding: FileSystem.EncodingType.Base64,
+      // });
+      // const logoUri = `data:image/png;base64,${base64}`;
+      const [logo] = await Asset.loadAsync(
+        require("../../assets/images/logo.png")
+      );
+      const logoUri = logo?.uri || ""; // or provide a backup
 
       // Compose HTML
       const html = `
