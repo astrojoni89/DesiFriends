@@ -24,6 +24,7 @@ import {
 } from "@/context/RecipeContext";
 
 import { Ionicons } from "@expo/vector-icons";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 export default function RecipesScreen() {
   const router = useRouter();
@@ -87,131 +88,139 @@ export default function RecipesScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={50}
-    >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <Text style={styles.title}>Rezept erstellen</Text>
+    // <KeyboardAvoidingView
+    //   style={styles.container}
+    //   behavior={Platform.OS === "ios" ? "padding" : "height" }
+    //   keyboardVerticalOffset={50}
+    // >
+    <View style={styles.container}>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      {/* <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled"> */}
+      <KeyboardAwareScrollView
+        enableOnAndroid
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={styles.content}
+      >
+        <Text style={styles.title}>Rezept erstellen</Text>
 
-          <TextInput
-            style={styles.input}
-            placeholder="Rezeptname"
-            value={recipeName}
-            onChangeText={setRecipeName}
-            placeholderTextColor={isDark ? "#aaa" : "#555"}
+        <TextInput
+          style={styles.input}
+          placeholder="Rezeptname"
+          value={recipeName}
+          onChangeText={setRecipeName}
+          placeholderTextColor={isDark ? "#aaa" : "#555"}
+        />
+
+        <TextInput
+          style={styles.input}
+          placeholder="Menge (Liter)"
+          keyboardType="numeric"
+          value={batchSize}
+          onChangeText={setBatchSize}
+          placeholderTextColor={isDark ? "#aaa" : "#555"}
+        />
+
+        {/* MALZ Section */}
+        <Text style={styles.sectionTitle}>Malz</Text>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 8,
+          }}
+        >
+          <IngredientInput
+            input={malzInput}
+            setInput={setMalzInput}
+            onAdd={() =>
+              addIngredient(malzInput, malzList, setMalzList, setMalzInput)
+            }
+            isDark={isDark}
+            amountPlaceholder="Menge (kg)"
           />
+        </View>
+        {malzList.map((item, idx) => (
+          <Text key={idx} style={styles.ingredientItem}>
+            - {item.name}: {item.amount} kg
+          </Text>
+        ))}
 
-          <TextInput
-            style={styles.input}
-            placeholder="Menge (Liter)"
-            keyboardType="numeric"
-            value={batchSize}
-            onChangeText={setBatchSize}
-            placeholderTextColor={isDark ? "#aaa" : "#555"}
+        {/* HOPFEN Section */}
+        <Text style={styles.sectionTitle}>Hopfen</Text>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 8,
+          }}
+        >
+          <IngredientInput
+            input={hopfenInput}
+            setInput={setHopfenInput}
+            onAdd={() => {
+              if (
+                !hopfenInput.name ||
+                !hopfenInput.amount ||
+                !hopfenInput.alphaAcid
+              )
+                return;
+              setHopfenList([...hopfenList, hopfenInput]);
+              setHopfenInput({ name: "", amount: "", alphaAcid: "" });
+            }}
+            isDark={isDark}
+            amountPlaceholder="Menge (g)"
+            extraField={{
+              key: "alphaAcid",
+              placeholder: "%α",
+              keyboardType: "decimal-pad",
+            }}
           />
+        </View>
+        {hopfenList.map((item, idx) => (
+          <Text key={idx} style={styles.ingredientItem}>
+            - {item.name}: {item.amount} g @ {item.alphaAcid}%α
+          </Text>
+        ))}
 
-          {/* MALZ Section */}
-          <Text style={styles.sectionTitle}>Malz</Text>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 8,
-              marginBottom: 8,
-            }}
-          >
-            <IngredientInput
-              input={malzInput}
-              setInput={setMalzInput}
-              onAdd={() =>
-                addIngredient(malzInput, malzList, setMalzList, setMalzInput)
-              }
-              isDark={isDark}
-              amountPlaceholder="Menge (kg)"
-            />
-          </View>
-          {malzList.map((item, idx) => (
-            <Text key={idx} style={styles.ingredientItem}>
-              - {item.name}: {item.amount} kg
-            </Text>
-          ))}
+        {/* HEFE Section */}
+        <Text style={styles.sectionTitle}>Hefe</Text>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 8,
+          }}
+        >
+          <IngredientInput
+            input={hefeInput}
+            setInput={setHefeInput}
+            onAdd={() =>
+              addIngredient(hefeInput, hefeList, setHefeList, setHefeInput)
+            }
+            isDark={isDark}
+            amountPlaceholder="Menge (g)"
+          />
+        </View>
+        {hefeList.map((item, idx) => (
+          <Text key={idx} style={styles.ingredientItem}>
+            - {item.name}: {item.amount} g
+          </Text>
+        ))}
 
-          {/* HOPFEN Section */}
-          <Text style={styles.sectionTitle}>Hopfen</Text>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 8,
-              marginBottom: 8,
-            }}
-          >
-            <IngredientInput
-              input={hopfenInput}
-              setInput={setHopfenInput}
-              onAdd={() => {
-                if (
-                  !hopfenInput.name ||
-                  !hopfenInput.amount ||
-                  !hopfenInput.alphaAcid
-                )
-                  return;
-                setHopfenList([...hopfenList, hopfenInput]);
-                setHopfenInput({ name: "", amount: "", alphaAcid: "" });
-              }}
-              isDark={isDark}
-              amountPlaceholder="Menge (g)"
-              extraField={{
-                key: "alphaAcid",
-                placeholder: "%α",
-                keyboardType: "decimal-pad",
-              }}
-            />
-          </View>
-          {hopfenList.map((item, idx) => (
-            <Text key={idx} style={styles.ingredientItem}>
-              - {item.name}: {item.amount} g @ {item.alphaAcid}%α
-            </Text>
-          ))}
-
-          {/* HEFE Section */}
-          <Text style={styles.sectionTitle}>Hefe</Text>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 8,
-              marginBottom: 8,
-            }}
-          >
-            <IngredientInput
-              input={hefeInput}
-              setInput={setHefeInput}
-              onAdd={() =>
-                addIngredient(hefeInput, hefeList, setHefeList, setHefeInput)
-              }
-              isDark={isDark}
-              amountPlaceholder="Menge (g)"
-            />
-          </View>
-          {hefeList.map((item, idx) => (
-            <Text key={idx} style={styles.ingredientItem}>
-              - {item.name}: {item.amount} g
-            </Text>
-          ))}
-
-          <View style={{ marginVertical: 16 }}>
-            {/* <Button title="Rezept speichern" onPress={handleAddRecipe} /> */}
-            <Pressable onPress={handleAddRecipe} style={styles.brewButton}>
-              <Text style={styles.brewButtonText}>Rezept speichern</Text>
-            </Pressable>
-          </View>
-        </ScrollView>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
+        <View style={{ marginVertical: 16 }}>
+          {/* <Button title="Rezept speichern" onPress={handleAddRecipe} /> */}
+          <Pressable onPress={handleAddRecipe} style={styles.brewButton}>
+            <Text style={styles.brewButtonText}>Rezept speichern</Text>
+          </Pressable>
+        </View>
+        {/* </ScrollView> */}
+      </KeyboardAwareScrollView>
+    </TouchableWithoutFeedback>
+    {/* </KeyboardAvoidingView> */}
+    </View>
   );
 }
 

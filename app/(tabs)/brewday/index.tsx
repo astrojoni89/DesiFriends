@@ -17,6 +17,7 @@ import {
   Keyboard,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 export default function BrewDayScreen() {
   const colorScheme = useColorScheme();
@@ -57,144 +58,152 @@ export default function BrewDayScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={50}
+    // <KeyboardAvoidingView
+    //   style={styles.container}
+    //   behavior={Platform.OS === "ios" ? "padding" : undefined }
+    //   keyboardVerticalOffset={50}
+    // >
+    <View style={styles.container}>
+    <TouchableWithoutFeedback
+      onPress={() => {
+        Keyboard.dismiss();
+        if (deleteModeId !== null) setDeleteModeId(null);
+      }}
     >
-      <TouchableWithoutFeedback
-        onPress={() => {
-          Keyboard.dismiss();
-          if (deleteModeId !== null) setDeleteModeId(null);
-        }}
+      {/* <View style={{ flex: 1 }}> */}
+      {/* <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled"> */}
+      <KeyboardAwareScrollView
+        enableOnAndroid
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={styles.content}
       >
-        <View style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <Text style={styles.title}>Gespeicherte Rezepte</Text>
+        <Text style={styles.title}>Gespeicherte Rezepte</Text>
 
-          {recipes.length === 0 && (
-            <Text style={styles.text}>Noch keine Rezepte gespeichert.</Text>
-          )}
+        {recipes.length === 0 && (
+          <Text style={styles.text}>Noch keine Rezepte gespeichert.</Text>
+        )}
 
-          {recipes.map((r) => {
-            // Initialize animations per recipe
-            if (!rotationAnims.current[r.id]) {
-              rotationAnims.current[r.id] = new Animated.Value(0);
-            }
-            if (!contentAnims.current[r.id]) {
-              contentAnims.current[r.id] = new Animated.Value(0);
-            }
+        {recipes.map((r) => {
+          // Initialize animations per recipe
+          if (!rotationAnims.current[r.id]) {
+            rotationAnims.current[r.id] = new Animated.Value(0);
+          }
+          if (!contentAnims.current[r.id]) {
+            contentAnims.current[r.id] = new Animated.Value(0);
+          }
 
-            const rotate = rotationAnims.current[r.id].interpolate({
-              inputRange: [0, 1],
-              outputRange: ["0deg", "180deg"],
-            });
+          const rotate = rotationAnims.current[r.id].interpolate({
+            inputRange: [0, 1],
+            outputRange: ["0deg", "180deg"],
+          });
 
-            return (
-              // <Pressable
-              //   key={r.id}
-              //   onPress={() => toggleExpand(r.id)}
-              //   style={[
-              //     styles.recipeBox,
-              //     expandedId === r.id && styles.recipeBoxExpanded,
-              //   ]}
-              // >
-              <Pressable
-                key={r.id}
-                onPress={() => {
-                  if (deleteModeId) {
-                    // cancel deletion mode
-                    setDeleteModeId(null);
-                  } else {
-                    toggleExpand(r.id);
-                  }
-                }}
-                onLongPress={() => setDeleteModeId(r.id)}
-                onStartShouldSetResponder={() => true}
-                style={[
-                  styles.recipeBox,
-                  expandedId === r.id && styles.recipeBoxExpanded,
-                  deleteModeId === r.id && styles.recipeBoxDeleteMode,
-                ]}
-              >
-                <View style={styles.recipeTitleRow}>
-                  <Text style={styles.recipeTitle}>
-                    {r.name} – {r.batchSize}L
-                  </Text>
-                  <Animated.View style={{ transform: [{ rotate }] }}>
-                    <Ionicons name="chevron-down" size={20} color="#666" />
-                  </Animated.View>
-                </View>
-
-                {deleteModeId === r.id && (
-                  <Pressable
-                    onPress={() => {
-                      deleteRecipe(r.id);
-                      setDeleteModeId(null);
-                    }}
-                    style={styles.deleteButton}
-                  >
-                    <Ionicons name="trash" size={20} color="#fff" />
-                  </Pressable>
-                )}
-
-                <Animated.View
-                  style={{
-                    height: expandedId === r.id ? undefined : 0,
-                    opacity: contentAnims.current[r.id],
-                    transform: [
-                      {
-                        translateY: contentAnims.current[r.id].interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [-10, 0],
-                        }),
-                      },
-                    ],
-                    overflow: "hidden",
-                  }}
-                >
-                  <Text style={styles.section}>Malz</Text>
-                  {r.malz.map((m, i) => (
-                    <Text key={i} style={styles.ingredient}>
-                      - {m.name}: {m.amount} kg
-                    </Text>
-                  ))}
-
-                  <Text style={styles.section}>Hopfen</Text>
-                  {r.hopfen.map((h, i) => (
-                    <Text key={i} style={styles.ingredient}>
-                      - {h.name}: {h.amount} g @ {h.alphaAcid}%α
-                    </Text>
-                  ))}
-
-                  <Text style={styles.section}>Hefe</Text>
-                  {r.hefe.map((h, i) => (
-                    <Text key={i} style={styles.ingredient}>
-                      - {h.name}: {h.amount} g
-                    </Text>
-                  ))}
-
-                  <View style={{ marginTop: 16 }}>
-                    <Pressable
-                      onPress={() =>
-                        router.push({
-                          pathname: "/modal/brew",
-                          params: { id: r.id },
-                        })
-                      }
-                      style={styles.brewButton}
-                    >
-                      <Text style={styles.brewButtonText}>Brauen</Text>
-                    </Pressable>
-                  </View>
+          return (
+            // <Pressable
+            //   key={r.id}
+            //   onPress={() => toggleExpand(r.id)}
+            //   style={[
+            //     styles.recipeBox,
+            //     expandedId === r.id && styles.recipeBoxExpanded,
+            //   ]}
+            // >
+            <Pressable
+              key={r.id}
+              onPress={() => {
+                if (deleteModeId) {
+                  // cancel deletion mode
+                  setDeleteModeId(null);
+                } else {
+                  toggleExpand(r.id);
+                }
+              }}
+              onLongPress={() => setDeleteModeId(r.id)}
+              onStartShouldSetResponder={() => true}
+              style={[
+                styles.recipeBox,
+                expandedId === r.id && styles.recipeBoxExpanded,
+                deleteModeId === r.id && styles.recipeBoxDeleteMode,
+              ]}
+            >
+              <View style={styles.recipeTitleRow}>
+                <Text style={styles.recipeTitle}>
+                  {r.name} – {r.batchSize}L
+                </Text>
+                <Animated.View style={{ transform: [{ rotate }] }}>
+                  <Ionicons name="chevron-down" size={20} color="#666" />
                 </Animated.View>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-        </View>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
+              </View>
+
+              {deleteModeId === r.id && (
+                <Pressable
+                  onPress={() => {
+                    deleteRecipe(r.id);
+                    setDeleteModeId(null);
+                  }}
+                  style={styles.deleteButton}
+                >
+                  <Ionicons name="trash" size={20} color="#fff" />
+                </Pressable>
+              )}
+
+              <Animated.View
+                style={{
+                  height: expandedId === r.id ? undefined : 0,
+                  opacity: contentAnims.current[r.id],
+                  transform: [
+                    {
+                      translateY: contentAnims.current[r.id].interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [-10, 0],
+                      }),
+                    },
+                  ],
+                  overflow: "hidden",
+                }}
+              >
+                <Text style={styles.section}>Malz</Text>
+                {r.malz.map((m, i) => (
+                  <Text key={i} style={styles.ingredient}>
+                    - {m.name}: {m.amount} kg
+                  </Text>
+                ))}
+
+                <Text style={styles.section}>Hopfen</Text>
+                {r.hopfen.map((h, i) => (
+                  <Text key={i} style={styles.ingredient}>
+                    - {h.name}: {h.amount} g @ {h.alphaAcid}%α
+                  </Text>
+                ))}
+
+                <Text style={styles.section}>Hefe</Text>
+                {r.hefe.map((h, i) => (
+                  <Text key={i} style={styles.ingredient}>
+                    - {h.name}: {h.amount} g
+                  </Text>
+                ))}
+
+                <View style={{ marginTop: 16 }}>
+                  <Pressable
+                    onPress={() =>
+                      router.push({
+                        pathname: "/modal/brew",
+                        params: { id: r.id },
+                      })
+                    }
+                    style={styles.brewButton}
+                  >
+                    <Text style={styles.brewButtonText}>Brauen</Text>
+                  </Pressable>
+                </View>
+              </Animated.View>
+            </Pressable>
+          );
+        })}
+        {/* </ScrollView> */}
+      </KeyboardAwareScrollView>
+      {/* </View> */}
+    </TouchableWithoutFeedback>
+    {/* </KeyboardAvoidingView> */}
+    </View>
   );
 }
 

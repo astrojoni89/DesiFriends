@@ -25,6 +25,7 @@ import {
   correctPlatoTemp,
   calculateDilutionVolume,
 } from "@/utils/calcUtils";
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 export default function CalcsScreen() {
   const colorScheme = useColorScheme();
@@ -124,18 +125,24 @@ export default function CalcsScreen() {
       : null;
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={50}
-    >
+    // <KeyboardAvoidingView
+    //   style={styles.container}
+    //   behavior={Platform.OS === "ios" ? "padding" : undefined }
+    //   keyboardVerticalOffset={50}
+    // >
+    <View style={styles.container}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView
+        {/* <ScrollView
           ref={scrollRef}
           style={{ flex: 1 }}
           contentContainerStyle={[styles.content]}
           keyboardShouldPersistTaps="handled"
-        >
+        > */}
+        <KeyboardAwareScrollView
+  enableOnAndroid
+  keyboardShouldPersistTaps="handled"
+  contentContainerStyle={styles.content}
+>
           {/* Hamburger */}
           <Pressable onPress={toggleSidebar} style={styles.hamburger}>
             <Ionicons name="menu" size={28} color={isDark ? "#fff" : "#000"} />
@@ -345,9 +352,11 @@ export default function CalcsScreen() {
             )}
           </View>
           {/* </ScrollView> */}
-        </ScrollView>
+        {/* </ScrollView> */}
+        </KeyboardAwareScrollView>
       </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
+    {/* </KeyboardAvoidingView> */}
+    </View>
   );
 }
 
