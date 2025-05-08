@@ -18,14 +18,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { RadioButton } from "react-native-paper";
 
 import {
-  platoToSG,
-  sgToPlato,
   calculateAlc,
   adjustHopAmount,
   correctPlatoTemp,
   calculateDilutionVolume,
 } from "@/utils/calcUtils";
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+// import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 export default function CalcsScreen() {
   const colorScheme = useColorScheme();
@@ -61,88 +59,42 @@ export default function CalcsScreen() {
   const [og, setOg] = useState("");
   const [fg, setFg] = useState("");
   const [unit, setUnit] = useState<"gravity" | "plato" | "brix">("plato");
-  const convertToGravity = (val: string) => {
-    const n = parseFloat(val);
-    if (unit === "gravity") return n;
-    return 1 + n / (258.6 - (n / 258.2) * 227.1);
-  };
-  const abv =
-    og && fg
-      ? (
-          ((76.08 * (convertToGravity(og) - convertToGravity(fg))) /
-            (1.775 - convertToGravity(og))) *
-          (convertToGravity(fg) / 0.794)
-        ).toFixed(2)
-      : null;
 
   // 2) Hop AA% conversion
   const [originalAmount, setOriginalAmount] = useState("");
   const [originalAA, setOriginalAA] = useState("");
   const [actualAA, setActualAA] = useState("");
-  const adjustedAmount =
-    originalAmount && originalAA && actualAA
-      ? (
-          (parseFloat(originalAmount) * parseFloat(originalAA)) /
-          parseFloat(actualAA)
-        ).toFixed(2)
-      : null;
+
 
   // 3) Temperature correction (Plato)
   const [calTemp, setCalTemp] = useState("");
   const [measTemp, setMeasTemp] = useState("");
   const [measPlato, setMeasPlato] = useState("");
-  const tempCorr =
-    calTemp && measTemp && measPlato
-      ? (() => {
-          const Tcal = parseFloat(calTemp);
-          const Tobs = parseFloat(measTemp);
-          const Pobs = parseFloat(measPlato);
-          // Plato → SG
-          const sgObs = 1 + Pobs / (258.6 - (Pobs / 258.2) * 227.1);
-          // linear correction ≈ 0.000303 × Δ°C
-          const sgCorr = sgObs + 0.000303 * (Tobs - Tcal);
-          // SG → Plato polynomial
-          const Pcorr =
-            -616.868 +
-            1111.14 * sgCorr -
-            630.272 * sgCorr * sgCorr +
-            135.997 * sgCorr * sgCorr * sgCorr;
-          return Pcorr.toFixed(2);
-        })()
-      : null;
 
   // 4) Diluting wort with water to get desired gravity
   const [originalGravity, setOriginalGravity] = useState("");
   const [desiredGravity, setDesiredGravity] = useState("");
   const [originalWortVolume, setOriginalWortVolume] = useState("");
-  const dilutionVolume =
-    originalGravity && desiredGravity && originalWortVolume
-      ? (
-          (parseFloat(originalGravity) * parseFloat(originalWortVolume)) /
-            parseFloat(desiredGravity) -
-          parseFloat(originalWortVolume)
-        ).toFixed(2)
-      : null;
 
   return (
-    // <KeyboardAvoidingView
-    //   style={styles.container}
-    //   behavior={Platform.OS === "ios" ? "padding" : undefined }
-    //   keyboardVerticalOffset={50}
-    // >
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height" }
+      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+    >
+    {/* <View style={styles.container}> */}
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        {/* <ScrollView
+        <ScrollView
           ref={scrollRef}
           style={{ flex: 1 }}
           contentContainerStyle={[styles.content]}
           keyboardShouldPersistTaps="handled"
-        > */}
-        <KeyboardAwareScrollView
+        >
+        {/* <KeyboardAwareScrollView
   enableOnAndroid
   keyboardShouldPersistTaps="handled"
   contentContainerStyle={styles.content}
->
+> */}
           {/* Hamburger */}
           <Pressable onPress={toggleSidebar} style={styles.hamburger}>
             <Ionicons name="menu" size={28} color={isDark ? "#fff" : "#000"} />
@@ -207,14 +159,6 @@ export default function CalcsScreen() {
               onChangeText={setFg}
               placeholderTextColor={isDark ? "#aaa" : "#555"}
             />
-            {/* {abv && (
-              <>
-                <Text style={styles.result}>Alkoholgehalt: {abv}%vol</Text>
-                <Text style={styles.note}>
-                  Berechnet mit der Balling-Formel.
-                </Text>
-              </>
-            )} */}
 
             {og && fg ? (
               <>
@@ -271,11 +215,12 @@ export default function CalcsScreen() {
               onChangeText={setActualAA}
               placeholderTextColor={isDark ? "#aaa" : "#555"}
             />
-            {adjustedAmount && (
+            
+            {originalAmount && originalAA && actualAA ? (
               <Text style={styles.result}>
-                Angepasste Menge: {adjustedAmount} g
+                Angepasste Menge: {adjustHopAmount(parseFloat(originalAmount), parseFloat(originalAA), parseFloat(actualAA))} g
               </Text>
-            )}
+            ) : null}
           </View>
 
           {/* Temperature Correction Section */}
@@ -308,11 +253,12 @@ export default function CalcsScreen() {
               onChangeText={setMeasPlato}
               placeholderTextColor={isDark ? "#aaa" : "#555"}
             />
-            {tempCorr && (
+
+            {measPlato && calTemp && measTemp ? (
               <Text style={styles.result}>
-                Korrigierte Dichte: {tempCorr} °P
+                Korrigierte Dichte: {correctPlatoTemp(parseFloat(measPlato), parseFloat(calTemp), parseFloat(measTemp))} °P
               </Text>
-            )}
+            ) : null}
           </View>
 
           {/* Dilution Section */}
@@ -345,18 +291,18 @@ export default function CalcsScreen() {
               onChangeText={setDesiredGravity}
               placeholderTextColor={isDark ? "#aaa" : "#555"}
             />
-            {dilutionVolume && (
+
+            {originalGravity && originalWortVolume && desiredGravity ? (
               <Text style={styles.result}>
-                Benötigte Wassermenge: {dilutionVolume} L
+                Benötigte Wassermenge: {calculateDilutionVolume(parseFloat(originalGravity), parseFloat(originalWortVolume), parseFloat(desiredGravity))} L
               </Text>
-            )}
+            ) : null}
           </View>
           {/* </ScrollView> */}
-        {/* </ScrollView> */}
-        </KeyboardAwareScrollView>
+        </ScrollView>
+        {/* </KeyboardAwareScrollView> */}
       </TouchableWithoutFeedback>
-    {/* </KeyboardAvoidingView> */}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

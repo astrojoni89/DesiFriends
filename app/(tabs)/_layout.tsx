@@ -11,7 +11,7 @@ export default function TabLayout() {
 
   return (
     <Tabs
-      screenOptions={{ headerShown: false, tabBarActiveTintColor: "#007AFF" }}
+      screenOptions={{ headerShown: false, tabBarActiveTintColor: "#007AFF", tabBarHideOnKeyboard: false }}
     >
       <Tabs.Screen
         name="recipes/index"

@@ -5,8 +5,8 @@
   <color name="colorPrimaryDark">#ffffff</color>
 </resources> -->
 <resources>
-  <color name="splashscreen_background">#cafad4</color>
-  <color name="iconBackground">#cafad4</color>
-  <color name="colorPrimary">#cafad4</color>
-  <color name="colorPrimaryDark">#cafad4</color>
+  <color name="splashscreen_background">#83e196</color>
+  <color name="iconBackground">#83e196</color>
+  <color name="colorPrimary">#023c69</color>
+  <color name="colorPrimaryDark">#83e196</color>
 </resources>

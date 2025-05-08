@@ -78,8 +78,8 @@ export function adjustHopAmount(
   originalAmount: number,
   originalAA: number,
   actualAA: number
-): number {
-  return (originalAmount * originalAA) / actualAA;
+): string {
+  return ((originalAmount * originalAA) / actualAA).toFixed(1);
 }
 
 /** Correct measured Plato based on temperature */
@@ -87,10 +87,10 @@ export function correctPlatoTemp(
   measuredPlato: number,
   calTemp: number,
   measTemp: number
-): number {
+): string {
   const sgObs = platoToSG(measuredPlato);
   const sgCorr = sgObs + 0.000303 * (measTemp - calTemp);
-  return sgToPlato(sgCorr);
+  return (sgToPlato(sgCorr)).toFixed(2);
 }
 
 /** Calculate how much water to add to dilute wort to desired gravity */
@@ -98,6 +98,6 @@ export function calculateDilutionVolume(
   originalGravity: number,
   originalVolume: number,
   targetGravity: number
-): number {
-  return (originalGravity * originalVolume) / targetGravity - originalVolume;
+): string {
+  return ((originalGravity * originalVolume) / targetGravity - originalVolume).toFixed(2);
 }

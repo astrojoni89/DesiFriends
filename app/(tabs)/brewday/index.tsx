@@ -58,25 +58,24 @@ export default function BrewDayScreen() {
   };
 
   return (
-    // <KeyboardAvoidingView
-    //   style={styles.container}
-    //   behavior={Platform.OS === "ios" ? "padding" : undefined }
-    //   keyboardVerticalOffset={50}
-    // >
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height" }
+      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+    >
+    {/* <View style={styles.container}> */}
     <TouchableWithoutFeedback
       onPress={() => {
         Keyboard.dismiss();
         if (deleteModeId !== null) setDeleteModeId(null);
       }}
     >
-      {/* <View style={{ flex: 1 }}> */}
-      {/* <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled"> */}
-      <KeyboardAwareScrollView
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      {/* <KeyboardAwareScrollView
         enableOnAndroid
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.content}
-      >
+      > */}
         <Text style={styles.title}>Gespeicherte Rezepte</Text>
 
         {recipes.length === 0 && (
@@ -198,12 +197,10 @@ export default function BrewDayScreen() {
             </Pressable>
           );
         })}
-        {/* </ScrollView> */}
-      </KeyboardAwareScrollView>
-      {/* </View> */}
+        </ScrollView>
+      {/* </KeyboardAwareScrollView> */}
     </TouchableWithoutFeedback>
-    {/* </KeyboardAvoidingView> */}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

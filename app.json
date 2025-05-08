@@ -11,7 +11,7 @@
       "splash": {
         "image": "./assets/images/splash-icon.png",
         "resizeMode": "contain",
-        "backgroundColor": "#cafad4"
+        "backgroundColor": "#83e196"
       },
       "ios": {
         "supportsTablet": true
@@ -19,11 +19,11 @@
       "android": {
         "adaptiveIcon": {
           "foregroundImage": "./assets/images/adaptive-icon.png",
-          "backgroundColor": "#cafad4"
+          "backgroundColor": "#83e196"
         },
         "edgeToEdgeEnabled": true,
         "package": "com.astrojoni89.DesiFriends",
-        "permissions": ["READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"]
+        "permissions": ["NOTIFICATIONS", "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"]
       },
       "web": {
         "bundler": "metro",
@@ -35,11 +35,11 @@
         [
           "expo-splash-screen",
           {
-            "backgroundColor": "#cafad4",
+            "backgroundColor": "#83e196",
             "image": "./assets/images/splash-icon.png",
             "dark": {
               "image": "./assets/images/splash-icon.png",
-              "backgroundColor": "#cafad4",
+              "backgroundColor": "#83e196",
               "imageWidth": 200
             },
             "imageWidth": 200,

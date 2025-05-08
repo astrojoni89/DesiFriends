@@ -24,7 +24,7 @@ import {
 } from "@/context/RecipeContext";
 
 import { Ionicons } from "@expo/vector-icons";
-import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+// import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 export default function RecipesScreen() {
   const router = useRouter();
@@ -88,19 +88,19 @@ export default function RecipesScreen() {
   };
 
   return (
-    // <KeyboardAvoidingView
-    //   style={styles.container}
-    //   behavior={Platform.OS === "ios" ? "padding" : "height" }
-    //   keyboardVerticalOffset={50}
-    // >
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height" }
+      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+    >
+    {/* <View style={styles.container}> */}
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      {/* <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled"> */}
-      <KeyboardAwareScrollView
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      {/* <KeyboardAwareScrollView
         enableOnAndroid
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.content}
-      >
+      > */}
         <Text style={styles.title}>Rezept erstellen</Text>
 
         <TextInput
@@ -216,11 +216,11 @@ export default function RecipesScreen() {
             <Text style={styles.brewButtonText}>Rezept speichern</Text>
           </Pressable>
         </View>
-        {/* </ScrollView> */}
-      </KeyboardAwareScrollView>
+        </ScrollView>
+      {/* </KeyboardAwareScrollView> */}
     </TouchableWithoutFeedback>
-    {/* </KeyboardAvoidingView> */}
-    </View>
+    </KeyboardAvoidingView>
+    // </View>
   );
 }
 
