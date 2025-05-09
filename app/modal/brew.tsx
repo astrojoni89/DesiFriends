@@ -19,7 +19,6 @@ import * as Clipboard from "expo-clipboard";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system";
-import { Asset } from "expo-asset";
 
 export default function BrewModal() {
   const router = useRouter();
@@ -48,7 +47,7 @@ export default function BrewModal() {
     })),
     hefe: recipe.hefe.map((h) => ({
       ...h,
-      amount: (parseFloat(h.amount) * scaleFactor).toFixed(2),
+      amount: (parseFloat(h.amount) * scaleFactor).toFixed(1),
     })),
     hopfen: recipe.hopfen.map((h, i) => {
       const originalAA = parseFloat(h.alphaAcid || "0");
@@ -59,7 +58,7 @@ export default function BrewModal() {
       }
       return {
         ...h,
-        amount: amount.toFixed(2),
+        amount: amount.toFixed(1),
       };
     }),
   };
@@ -85,28 +84,17 @@ export default function BrewModal() {
     Clipboard.setStringAsync(text);
   };
 
-  const exportToPDF = async () => {
-    if (!recipe || !scaled) return;
+  const preparePDF = () => {
+    const logoUri =
+      "https://raw.githubusercontent.com/astrojoni89/DesiFriends/refs/heads/master/assets/images/logo.png";
 
-    try {
-      // Load logo image
-      // const asset = Asset.fromModule(require("../../assets/images/logo.png"));
-      // await asset.downloadAsync();
-      // const base64 = await FileSystem.readAsStringAsync(asset.localUri!, {
-      //   encoding: FileSystem.EncodingType.Base64,
-      // });
-      // const logoUri = `data:image/png;base64,${base64}`;
-      const [logo] = await Asset.loadAsync(
-        require("../../assets/images/logo.png")
-      );
-      const logoUri = logo?.uri || ""; // or provide a backup
-
-      // Compose HTML
-      const html = `
+    // Compose HTML
+    const html = `
         <html>
           <head>
             <meta charset="utf-8" />
             <style>
+              @page { size: A4; margin: 20mm; }
               body { font-family: sans-serif; padding: 20px; }
               h1 { font-size: 24px; }
               h2 { margin-top: 20px; }
@@ -143,6 +131,14 @@ export default function BrewModal() {
           </body>
         </html>
       `;
+      return html;
+  };
+
+  const exportToPDF = async () => {
+    if (!recipe || !scaled) return;
+
+    try {
+      const html = preparePDF();
 
       // Show "Print / Save As PDF" dialog
       await Print.printAsync({ html });
@@ -163,60 +159,7 @@ export default function BrewModal() {
     if (!recipe || !scaled) return;
 
     try {
-      // Load logo image
-      // const asset = Asset.fromModule(require("../../assets/images/logo.png"));
-      // await asset.downloadAsync();
-      // const base64 = await FileSystem.readAsStringAsync(asset.localUri!, {
-      //   encoding: FileSystem.EncodingType.Base64,
-      // });
-      // const logoUri = `data:image/png;base64,${base64}`;
-      const [logo] = await Asset.loadAsync(
-        require("../../assets/images/logo.png")
-      );
-      const logoUri = logo?.uri || ""; // or provide a backup
-
-      // Compose HTML
-      const html = `
-        <html>
-          <head>
-            <meta charset="utf-8" />
-            <style>
-              body { font-family: sans-serif; padding: 20px; }
-              h1 { font-size: 24px; }
-              h2 { margin-top: 20px; }
-              ul { padding-left: 20px; }
-              img { max-width: 150px; margin-bottom: 20px; }
-            </style>
-          </head>
-          <body>
-            <img src="${logoUri}" alt="Logo" />
-            <h1>${recipe.name} – ${targetSize} L</h1>
-            <h2>Malz</h2>
-            <ul>
-              ${scaled.malz
-                .map((m) => `<li>${m.name}: ${m.amount} kg</li>`)
-                .join("")}
-            </ul>
-            <h2>Hopfen</h2>
-            <ul>
-              ${scaled.hopfen
-                .map(
-                  (h, i) =>
-                    `<li>${h.name}: ${h.amount} g @ ${
-                      actualAlphaAcids[i] || h.alphaAcid
-                    }%&alpha;</li>`
-                )
-                .join("")}
-            </ul>
-            <h2>Hefe</h2>
-            <ul>
-              ${scaled.hefe
-                .map((h) => `<li>${h.name}: ${h.amount} g</li>`)
-                .join("")}
-            </ul>
-          </body>
-        </html>
-      `;
+      const html = preparePDF();
 
       // Generate the PDF file
       const { uri } = await Print.printToFileAsync({ html });
@@ -241,8 +184,8 @@ export default function BrewModal() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={80}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <ScrollView contentContainerStyle={styles.content}>
