@@ -7,7 +7,7 @@ import {
   TextInput,
   ScrollView,
   StyleSheet,
-  useColorScheme,
+  //useColorScheme,
   Alert,
   KeyboardAvoidingView,
   TouchableWithoutFeedback,
@@ -19,6 +19,8 @@ import * as Clipboard from "expo-clipboard";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system";
+import { useTheme } from "react-native-paper";
+import type { AppTheme } from "@/theme/theme";
 
 export default function BrewModal() {
   const router = useRouter();
@@ -31,9 +33,12 @@ export default function BrewModal() {
   const [actualAlphaAcids, setActualAlphaAcids] = useState<{
     [index: number]: string;
   }>({});
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const styles = createStyles(isDark);
+  // const colorScheme = useColorScheme();
+  // const isDark = colorScheme === "dark";
+  // const styles = createStyles(isDark);
+  const theme = useTheme() as AppTheme;
+  const { colors } = theme;
+  const styles = createStyles(theme.colors);
 
   if (!recipe) return <Text>Rezept nicht gefunden.</Text>;
 
@@ -201,7 +206,7 @@ export default function BrewModal() {
             keyboardType="decimal-pad"
             value={targetSize}
             onChangeText={setTargetSize}
-            placeholderTextColor={isDark ? "#aaa" : "#555"}
+            placeholderTextColor={colors.outline}
           />
 
           <Text style={styles.section}>Hopfen Alpha-Säure (%α)</Text>
@@ -215,7 +220,7 @@ export default function BrewModal() {
               onChangeText={(val) =>
                 setActualAlphaAcids((prev) => ({ ...prev, [i]: val }))
               }
-              placeholderTextColor={isDark ? "#aaa" : "#555"}
+              placeholderTextColor={colors.outline}
             />
           ))}
 
@@ -257,11 +262,11 @@ export default function BrewModal() {
   );
 }
 
-function createStyles(isDark: boolean) {
+function createStyles(colors: AppTheme["colors"]) {
   return StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: isDark ? "#000" : "#fff",
+      backgroundColor: colors.background,
     },
     content: {
       padding: 16,
@@ -271,30 +276,30 @@ function createStyles(isDark: boolean) {
       fontSize: 24,
       fontWeight: "bold",
       marginBottom: 12,
-      color: isDark ? "#fff" : "#000",
+      color: colors.onBackground,
     },
     section: {
       fontWeight: "bold",
       fontSize: 18,
       marginTop: 16,
       marginBottom: 6,
-      color: isDark ? "#fff" : "#000",
+      color: colors.text,
     },
     input: {
       borderWidth: 1,
-      borderColor: isDark ? "#444" : "#ccc",
-      backgroundColor: isDark ? "#111" : "#f9f9f9",
-      color: isDark ? "#fff" : "#000",
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      color: colors.text,
       padding: 8,
       marginBottom: 8,
       borderRadius: 8,
     },
     text: {
-      color: isDark ? "#ccc" : "#333",
+      color: colors.text,
       marginBottom: 4,
     },
     button: {
-      backgroundColor: "#007AFF",
+      backgroundColor: colors.primary,
       paddingVertical: 10,
       paddingHorizontal: 16,
       borderRadius: 8,
@@ -303,7 +308,7 @@ function createStyles(isDark: boolean) {
     },
     buttontext: {
       margin: 4,
-      color: "#fff",
+      color: colors.onPrimary || "#fff",
       fontWeight: "500",
       fontSize: 16,
     },

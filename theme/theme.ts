@@ -1,28 +1,46 @@
 // theme.ts
 import { MD3LightTheme, MD3DarkTheme, MD3Theme } from "react-native-paper";
 
-export const lightTheme: MD3Theme = {
+const sharedColors = {
+  primary: "#007AFF", // #5ca778 green theme, #8E44AD purple theme
+  onPrimary: "#ffffff", // #ffffff
+  notification: "#007AFF", // #007AFF
+};
+
+const extraLightColors = {
+  background: "#ffffff", // #ffffff
+  surface: "#ffffff", // #ffffff
+  text: "#000000", // #000000
+  card: "#f5f5f5", // #f5f5f5
+  border: "#cccccc", // #cccccc
+  shadow: "#000000",
+};
+
+const extraDarkColors = {
+  background: "#000000", // #000000
+  surface: "#121212", // #121212
+  text: "#ffffff", // #ffffff
+  card: "#1c1c1c", // #262626
+  border: "#333333", // #333333
+  shadow: "#ffffff",
+};
+
+export const lightTheme = {
   ...MD3LightTheme,
   colors: {
     ...MD3LightTheme.colors,
-    primary: "#007AFF",
-    background: "#ffffff",
-    onBackground: "#000000",
-    surface: "#f2f2f2",
-    onSurface: "#333333",
-    outline: "#cccccc",
+    ...sharedColors,
+    ...extraLightColors,
   },
 };
 
-export const darkTheme: MD3Theme = {
+export const darkTheme = {
   ...MD3DarkTheme,
   colors: {
     ...MD3DarkTheme.colors,
-    primary: "#007AFF",
-    background: "#000000",
-    onBackground: "#ffffff",
-    surface: "#111111",
-    onSurface: "#dddddd",
-    outline: "#444444",
+    ...sharedColors,
+    ...extraDarkColors,
   },
 };
+
+export type AppTheme = typeof lightTheme;

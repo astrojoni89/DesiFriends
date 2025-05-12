@@ -15,25 +15,25 @@ import {
   darkTheme as PaperDarkTheme,
 } from "@/theme/theme";
 
-const lightColors = {
-  primary: "#8E44AD",
-  background: "#ffffff",
-  surface: "#ffffff",
-  text: "#000000",
-  card: "#f5f5f5",
-  border: "#cccccc",
-  notification: "#8E44AD",
-};
+// const lightColors = {
+//   primary: "#8E44AD",
+//   background: "#ffffff",
+//   surface: "#ffffff",
+//   text: "#000000",
+//   card: "#f5f5f5",
+//   border: "#cccccc",
+//   notification: "#8E44AD",
+// };
 
-const darkColors = {
-  primary: "#8E44AD", //5ca778 green theme
-  background: "#000000",
-  surface: "#121212",
-  text: "#ffffff",
-  card: "#1c1c1c",
-  border: "#333333",
-  notification: "#8E44AD",
-};
+// const darkColors = {
+//   primary: "#8E44AD", //5ca778 green theme
+//   background: "#000000",
+//   surface: "#121212",
+//   text: "#ffffff",
+//   card: "#1c1c1c",
+//   border: "#333333",
+//   notification: "#8E44AD",
+// };
 
 export default function RootLayout() {
   return (
@@ -50,21 +50,29 @@ export default function RootLayout() {
 function AppWithTheming() {
   const { theme } = useThemeContext();
 
-  const paperTheme = {
-    ...(theme === "dark" ? PaperDarkTheme : PaperLightTheme),
-    colors: {
-      ...(theme === "dark" ? PaperDarkTheme.colors : PaperLightTheme.colors),
-      ...(theme === "dark" ? darkColors : lightColors),
-    },
-  };
+  // const paperTheme = {
+  //   ...(theme === "dark" ? PaperDarkTheme : PaperLightTheme),
+  //   colors: {
+  //     ...(theme === "dark" ? PaperDarkTheme.colors : PaperLightTheme.colors),
+  //     ...(theme === "dark" ? darkColors : lightColors),
+  //   },
+  // };
 
+  // const navigationTheme = {
+  //   ...(theme === "dark" ? NavigationDarkTheme : NavigationLightTheme),
+  //   colors: {
+  //     ...(theme === "dark"
+  //       ? NavigationDarkTheme.colors
+  //       : NavigationLightTheme.colors),
+  //     ...(theme === "dark" ? darkColors : lightColors),
+  //   },
+  // };
+  const paperTheme = theme === "dark" ? PaperDarkTheme : PaperLightTheme;
   const navigationTheme = {
     ...(theme === "dark" ? NavigationDarkTheme : NavigationLightTheme),
     colors: {
-      ...(theme === "dark"
-        ? NavigationDarkTheme.colors
-        : NavigationLightTheme.colors),
-      ...(theme === "dark" ? darkColors : lightColors),
+      ...NavigationDarkTheme.colors, // base
+      ...paperTheme.colors, // unified with extra tokens
     },
   };
 

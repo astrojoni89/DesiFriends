@@ -10,19 +10,25 @@ import {
   Button,
   Animated,
   Easing,
-  useColorScheme,
+  //useColorScheme,
   KeyboardAvoidingView,
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+// import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import { useTheme } from "react-native-paper";
+import type { AppTheme } from "@/theme/theme";
 
 export default function BrewDayScreen() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const styles = createStyles(isDark);
+  // const colorScheme = useColorScheme();
+  // const isDark = colorScheme === "dark";
+  // const styles = createStyles(isDark);
+  const theme = useTheme() as AppTheme;
+  const { colors } = theme;
+  const styles = createStyles(theme.colors);
+
   const { recipes, deleteRecipe } = useRecipes();
   const router = useRouter();
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -128,7 +134,7 @@ export default function BrewDayScreen() {
                   {r.name} – {r.batchSize}L
                 </Text>
                 <Animated.View style={{ transform: [{ rotate }] }}>
-                  <Ionicons name="chevron-down" size={20} color="#666" />
+                  <Ionicons name="chevron-down" size={20} color={colors.onBackground} />
                 </Animated.View>
               </View>
 
@@ -140,7 +146,7 @@ export default function BrewDayScreen() {
                   }}
                   style={styles.deleteButton}
                 >
-                  <Ionicons name="trash" size={20} color="#fff" />
+                  <Ionicons name="trash" size={20} color={colors.onError} />
                 </Pressable>
               )}
 
@@ -204,12 +210,12 @@ export default function BrewDayScreen() {
   );
 }
 
-function createStyles(isDark: boolean) {
+function createStyles(colors: AppTheme["colors"]) {
   return StyleSheet.create({
     container: {
       paddingTop: 32,
       flex: 1,
-      backgroundColor: isDark ? "#000" : "#fff",
+      backgroundColor: colors.background,
     },
     content: {
       padding: 16,
@@ -218,18 +224,18 @@ function createStyles(isDark: boolean) {
     title: {
       fontSize: 22,
       fontWeight: "bold",
-      color: isDark ? "#fff" : "#000",
+      color: colors.onBackground,
       marginBottom: 24,
     },
     recipeBox: {
-      backgroundColor: "#f9f9f9",
+      backgroundColor: colors.card,
       padding: 16,
       marginBottom: 16,
       borderRadius: 12,
       borderWidth: 1,
-      borderColor: "#ddd",
+      borderColor: colors.border,
       // Optional shadow for nicer look (iOS/Android)
-      shadowColor: "#000",
+      shadowColor: colors.shadow,
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.1,
       shadowRadius: 3,
@@ -241,29 +247,29 @@ function createStyles(isDark: boolean) {
       alignItems: "center",
     },
     recipeBoxExpanded: {
-      backgroundColor: "#ececec",
+      backgroundColor: colors.card,
     },
     recipeTitle: {
       fontWeight: "bold",
       fontSize: 16,
       marginVertical: 3,
-      color: "#222",
+      color: colors.onBackground,
     },
     section: {
       marginTop: 10,
       marginBottom: 4,
       fontWeight: "600",
-      color: "#444",
+      color: colors.onSurface, // #444444
     },
     ingredient: {
-      color: "#555",
+      color: colors.onSurface, // #555555
       marginBottom: 2,
     },
     text: {
-      color: "#888",
+      color: colors.text,
     },
     brewButton: {
-      backgroundColor: "#007AFF",
+      backgroundColor: colors.primary,
       paddingVertical: 10,
       paddingHorizontal: 16,
       borderRadius: 8,
@@ -271,19 +277,19 @@ function createStyles(isDark: boolean) {
       marginTop: 8,
     },
     brewButtonText: {
-      color: "#fff",
+      color: colors.onPrimary,
       fontWeight: "600",
       fontSize: 16,
       margin: 4,
     },
     recipeBoxDeleteMode: {
-      backgroundColor: "#ff4d4d",
+      backgroundColor: colors.errorContainer, // "#ff4d4d",
       borderColor: "#ff1a1a",
     },
 
     deleteButton: {
       marginTop: 12,
-      backgroundColor: "#cc0000",
+      backgroundColor: colors.error,// "#cc0000",
       padding: 10,
       borderRadius: 8,
       alignItems: "center",

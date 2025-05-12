@@ -8,7 +8,7 @@ import {
   FlatList,
   StyleSheet,
   Pressable,
-  useColorScheme,
+  // useColorScheme,
   ScrollView,
   KeyboardAvoidingView,
   TouchableWithoutFeedback,
@@ -25,6 +25,8 @@ import {
 
 import { Ionicons } from "@expo/vector-icons";
 // import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import { useTheme } from "react-native-paper";
+import type { AppTheme } from "@/theme/theme";
 
 export default function RecipesScreen() {
   const router = useRouter();
@@ -52,9 +54,12 @@ export default function RecipesScreen() {
   // const [recipes, setRecipes] = useState<Recipe[]>([]);
   const { recipes, addRecipe, deleteRecipe } = useRecipes();
 
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const styles = createStyles(isDark);
+  // const colorScheme = useColorScheme();
+  // const isDark = colorScheme === "dark";
+  // const styles = createStyles(isDark);
+  const theme = useTheme() as AppTheme;
+  const { colors } = theme;
+  const styles = createStyles(theme.colors);
 
   const addIngredient = (
     input: Ingredient,
@@ -108,7 +113,7 @@ export default function RecipesScreen() {
           placeholder="Rezeptname"
           value={recipeName}
           onChangeText={setRecipeName}
-          placeholderTextColor={isDark ? "#aaa" : "#555"}
+          placeholderTextColor={colors.outline || "#888"} //{isDark ? "#aaa" : "#555"}
         />
 
         <TextInput
@@ -117,7 +122,7 @@ export default function RecipesScreen() {
           keyboardType="numeric"
           value={batchSize}
           onChangeText={setBatchSize}
-          placeholderTextColor={isDark ? "#aaa" : "#555"}
+          placeholderTextColor={colors.outline || "#888"} //{isDark ? "#aaa" : "#555"}
         />
 
         {/* MALZ Section */}
@@ -136,7 +141,8 @@ export default function RecipesScreen() {
             onAdd={() =>
               addIngredient(malzInput, malzList, setMalzList, setMalzInput)
             }
-            isDark={isDark}
+            colors={theme.colors}
+            //isDark={isDark}
             amountPlaceholder="Menge (kg)"
           />
         </View>
@@ -169,7 +175,7 @@ export default function RecipesScreen() {
               setHopfenList([...hopfenList, hopfenInput]);
               setHopfenInput({ name: "", amount: "", alphaAcid: "" });
             }}
-            isDark={isDark}
+            colors={theme.colors}
             amountPlaceholder="Menge (g)"
             extraField={{
               key: "alphaAcid",
@@ -200,7 +206,7 @@ export default function RecipesScreen() {
             onAdd={() =>
               addIngredient(hefeInput, hefeList, setHefeList, setHefeInput)
             }
-            isDark={isDark}
+            colors={theme.colors}
             amountPlaceholder="Menge (g)"
           />
         </View>
@@ -228,14 +234,15 @@ function IngredientInput({
   input,
   setInput,
   onAdd,
-  isDark,
+  //isDark,
+  colors,
   amountPlaceholder = "Menge",
   extraField,
 }: {
   input: any;
   setInput: Function;
   onAdd: () => void;
-  isDark: boolean;
+  colors: AppTheme["colors"]; //isDark: boolean;
   amountPlaceholder?: string;
   extraField?: {
     key: string;
@@ -243,7 +250,10 @@ function IngredientInput({
     keyboardType?: "default" | "numeric" | "decimal-pad";
   };
 }) {
-  const styles = createStyles(isDark);
+
+  const theme = useTheme() as AppTheme;
+  const styles = createStyles(theme.colors);
+
   return (
     <View style={styles.row}>
       <TextInput
@@ -251,14 +261,14 @@ function IngredientInput({
         placeholder="Name"
         value={input.name}
         onChangeText={(text) => setInput({ ...input, name: text })}
-        placeholderTextColor={isDark ? "#aaa" : "#555"}
+        placeholderTextColor={colors.outline || "#888"} //{isDark ? "#aaa" : "#555"}
       />
       <TextInput
         style={[styles.input, { flex: 2 }]}
         placeholder={amountPlaceholder}
         value={input.amount}
         onChangeText={(text) => setInput({ ...input, amount: text })}
-        placeholderTextColor={isDark ? "#aaa" : "#555"}
+        placeholderTextColor={colors.outline || "#888"} //{isDark ? "#aaa" : "#555"}
         keyboardType="decimal-pad"
       />
       {extraField && (
@@ -269,7 +279,7 @@ function IngredientInput({
           onChangeText={(text) =>
             setInput({ ...input, [extraField.key]: text })
           }
-          placeholderTextColor={isDark ? "#aaa" : "#555"}
+          placeholderTextColor={colors.outline || "#888"} //{isDark ? "#aaa" : "#555"}
           keyboardType={extraField.keyboardType || "default"}
         />
       )}
@@ -280,12 +290,12 @@ function IngredientInput({
   );
 }
 
-function createStyles(isDark: boolean) {
+function createStyles(colors: AppTheme["colors"]) { //isDark: boolean
   return StyleSheet.create({
     container: {
       paddingTop: 32,
       flex: 1,
-      backgroundColor: isDark ? "#000" : "#fff",
+      backgroundColor: colors.background, //isDark ? "#000" : "#fff"
     },
     content: {
       padding: 16,
@@ -293,18 +303,18 @@ function createStyles(isDark: boolean) {
     title: {
       fontSize: 22,
       fontWeight: "bold",
-      color: isDark ? "#fff" : "#000",
+      color: colors.onBackground, //isDark ? "#fff" : "#000"
       marginBottom: 12,
     },
     input: {
       borderWidth: 1,
-      borderColor: isDark ? "#444" : "#ccc",
-      backgroundColor: isDark ? "#111" : "#f9f9f9",
+      borderColor: colors.border, //isDark ? "#444" : "#ccc"
+      backgroundColor: colors.surface, //isDark ? "#111" : "#f9f9f9"
       paddingHorizontal: 12,
       fontSize: 16,
       height: 48, // explicitly set input height
       borderRadius: 8,
-      color: isDark ? "#fff" : "#000",
+      color: colors.text, //isDark ? "#fff" : "#000"
       marginBottom: 8,
       flex: 1,
     },
@@ -319,7 +329,7 @@ function createStyles(isDark: boolean) {
       height: 48,
       width: 48,
       borderRadius: 8,
-      backgroundColor: "#007AFF",
+      backgroundColor: colors.primary, //"#007AFF"
       justifyContent: "center",
       alignItems: "center",
       marginBottom: 8,
@@ -328,26 +338,26 @@ function createStyles(isDark: boolean) {
       marginTop: 12,
       marginBottom: 4,
       fontWeight: "600",
-      color: isDark ? "#eee" : "#333",
+      color: colors.text, //isDark ? "#eee" : "#333"
     },
     ingredientItem: {
-      color: isDark ? "#ccc" : "#444",
+      color: colors.text, //isDark ? "#ccc" : "#444"
       marginBottom: 2,
     },
     recipeBox: {
       padding: 12,
       marginBottom: 12,
-      backgroundColor: isDark ? "#111" : "#f4f4f4",
+      backgroundColor: colors.card, //isDark ? "#111" : "#f4f4f4"
       borderRadius: 8,
     },
     recipeTitle: {
       fontSize: 18,
       fontWeight: "bold",
-      color: isDark ? "#fff" : "#000",
+      color: colors.text, //isDark ? "#fff" : "#000"
       marginBottom: 4,
     },
     brewButton: {
-      backgroundColor: "#007AFF",
+      backgroundColor: colors.primary, //"#007AFF"
       paddingVertical: 10,
       paddingHorizontal: 16,
       borderRadius: 8,
@@ -355,7 +365,7 @@ function createStyles(isDark: boolean) {
       marginTop: 8,
     },
     brewButtonText: {
-      color: "#fff",
+      color: colors.onPrimary || "#fff",//"#fff"
       fontWeight: "600",
       fontSize: 16,
       margin: 4,

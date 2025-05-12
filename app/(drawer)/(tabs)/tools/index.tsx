@@ -4,7 +4,7 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  useColorScheme,
+  //useColorScheme,
   ScrollView,
   Animated,
   Easing,
@@ -24,11 +24,16 @@ import {
   calculateDilutionVolume,
 } from "@/utils/calcUtils";
 // import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { useTheme } from "react-native-paper";
+import type { AppTheme } from "@/theme/theme";
 
 export default function CalcsScreen() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const styles = createStyles(isDark);
+  // const colorScheme = useColorScheme();
+  // const isDark = colorScheme === "dark";
+  // const styles = createStyles(isDark);
+  const theme = useTheme() as AppTheme;
+  const { colors } = theme;
+  const styles = createStyles(theme.colors);
 
   // Sidebar animation
   // const sidebarWidth = 250;
@@ -138,7 +143,7 @@ export default function CalcsScreen() {
                   <Ionicons
                     name="menu"
                     size={28}
-                    color={isDark ? "#fff" : "#000"}
+                    color={colors.onSurface}
                   />
                 </Pressable>
               }
@@ -197,7 +202,7 @@ export default function CalcsScreen() {
               keyboardType="decimal-pad"
               value={og}
               onChangeText={setOg}
-              placeholderTextColor={isDark ? "#aaa" : "#555"}
+              placeholderTextColor={colors.outline}
             />
             <TextInput
               style={styles.input}
@@ -205,7 +210,7 @@ export default function CalcsScreen() {
               keyboardType="decimal-pad"
               value={fg}
               onChangeText={setFg}
-              placeholderTextColor={isDark ? "#aaa" : "#555"}
+              placeholderTextColor={colors.outline}
             />
 
             {og && fg ? (
@@ -245,7 +250,7 @@ export default function CalcsScreen() {
               keyboardType="decimal-pad"
               value={originalAmount}
               onChangeText={setOriginalAmount}
-              placeholderTextColor={isDark ? "#aaa" : "#555"}
+              placeholderTextColor={colors.outline}
             />
             <TextInput
               style={styles.input}
@@ -253,7 +258,7 @@ export default function CalcsScreen() {
               keyboardType="decimal-pad"
               value={originalAA}
               onChangeText={setOriginalAA}
-              placeholderTextColor={isDark ? "#aaa" : "#555"}
+              placeholderTextColor={colors.outline}
             />
             <TextInput
               style={styles.input}
@@ -261,7 +266,7 @@ export default function CalcsScreen() {
               keyboardType="decimal-pad"
               value={actualAA}
               onChangeText={setActualAA}
-              placeholderTextColor={isDark ? "#aaa" : "#555"}
+              placeholderTextColor={colors.outline}
             />
 
             {originalAmount && originalAA && actualAA ? (
@@ -289,7 +294,7 @@ export default function CalcsScreen() {
               keyboardType="decimal-pad"
               value={calTemp}
               onChangeText={setCalTemp}
-              placeholderTextColor={isDark ? "#aaa" : "#555"}
+              placeholderTextColor={colors.outline}
             />
             <TextInput
               style={styles.input}
@@ -297,7 +302,7 @@ export default function CalcsScreen() {
               keyboardType="decimal-pad"
               value={measTemp}
               onChangeText={setMeasTemp}
-              placeholderTextColor={isDark ? "#aaa" : "#555"}
+              placeholderTextColor={colors.outline}
             />
             <TextInput
               style={styles.input}
@@ -305,7 +310,7 @@ export default function CalcsScreen() {
               keyboardType="decimal-pad"
               value={measPlato}
               onChangeText={setMeasPlato}
-              placeholderTextColor={isDark ? "#aaa" : "#555"}
+              placeholderTextColor={colors.outline}
             />
 
             {measPlato && calTemp && measTemp ? (
@@ -333,7 +338,7 @@ export default function CalcsScreen() {
               keyboardType="decimal-pad"
               value={originalGravity}
               onChangeText={setOriginalGravity}
-              placeholderTextColor={isDark ? "#aaa" : "#555"}
+              placeholderTextColor={colors.outline}
             />
             <TextInput
               style={styles.input}
@@ -341,7 +346,7 @@ export default function CalcsScreen() {
               keyboardType="decimal-pad"
               value={originalWortVolume}
               onChangeText={setOriginalWortVolume}
-              placeholderTextColor={isDark ? "#aaa" : "#555"}
+              placeholderTextColor={colors.outline}
             />
             <TextInput
               style={styles.input}
@@ -349,7 +354,7 @@ export default function CalcsScreen() {
               keyboardType="decimal-pad"
               value={desiredGravity}
               onChangeText={setDesiredGravity}
-              placeholderTextColor={isDark ? "#aaa" : "#555"}
+              placeholderTextColor={colors.outline}
             />
 
             {originalGravity && originalWortVolume && desiredGravity ? (
@@ -372,7 +377,7 @@ export default function CalcsScreen() {
   );
 }
 
-function createStyles(isDark: boolean) {
+function createStyles(colors: AppTheme["colors"]) {
   const sidebarWidth = 250;
   return StyleSheet.create({
     container: {
@@ -388,14 +393,14 @@ function createStyles(isDark: boolean) {
     title: {
       fontSize: 20,
       fontWeight: "bold",
-      color: isDark ? "#fff" : "#000",
+      color: colors.onBackground,
       marginBottom: 12,
     },
     input: {
       borderWidth: 1,
-      borderColor: isDark ? "#444" : "#ccc",
-      backgroundColor: isDark ? "#111" : "#f9f9f9",
-      color: isDark ? "#fff" : "#000",
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      color: colors.text,
       padding: 10,
       marginBottom: 12,
       borderRadius: 8,
@@ -405,11 +410,11 @@ function createStyles(isDark: boolean) {
       fontWeight: "600",
       marginTop: 8,
       marginBottom: 16,
-      color: isDark ? "#fff" : "#000",
+      color: colors.onBackground,
     },
     note: {
       fontSize: 12,
-      color: isDark ? "#aaa" : "#666",
+      color: colors.outline,
       fontStyle: "italic",
       marginTop: 0,
     },
@@ -420,7 +425,7 @@ function createStyles(isDark: boolean) {
     },
     radioText: {
       marginRight: 16,
-      color: isDark ? "#ccc" : "#333",
+      color: colors.text,
     },
     hamburger: {
       position: "absolute",
@@ -430,19 +435,14 @@ function createStyles(isDark: boolean) {
       paddingTop: 16,
     },
     sidebarContainer: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      width: sidebarWidth,
-      bottom: 0,
-      backgroundColor: isDark ? "#222" : "#eee",
+      backgroundColor: colors.surface,
       paddingTop: 76,
-      paddingHorizontal: 8,
+      paddingHorizontal: 20,
       zIndex: 9,
     },
     sidebarItem: {
       paddingVertical: 12,
-      color: isDark ? "#fff" : "#000",
+      color: colors.onSurface,
       fontWeight: "600",
     },
     backdrop: {
@@ -451,7 +451,7 @@ function createStyles(isDark: boolean) {
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: "rgba(0,0,0,0.3)",
+      backgroundColor: colors.backdrop,
       zIndex: 8,
     },
   });
