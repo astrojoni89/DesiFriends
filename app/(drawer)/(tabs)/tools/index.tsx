@@ -15,7 +15,7 @@ import {
   Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { RadioButton } from "react-native-paper";
+import { RadioButton, Menu } from "react-native-paper";
 
 import {
   calculateAlc,
@@ -31,18 +31,23 @@ export default function CalcsScreen() {
   const styles = createStyles(isDark);
 
   // Sidebar animation
-  const sidebarWidth = 250;
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const slideAnim = useRef(new Animated.Value(-sidebarWidth)).current;
-  const toggleSidebar = () => {
-    Animated.timing(slideAnim, {
-      toValue: sidebarOpen ? -sidebarWidth : 0,
-      duration: 200,
-      easing: Easing.ease,
-      useNativeDriver: true,
-    }).start();
-    setSidebarOpen(!sidebarOpen);
-  };
+  // const sidebarWidth = 250;
+  // const [sidebarOpen, setSidebarOpen] = useState(false);
+  // const slideAnim = useRef(new Animated.Value(-sidebarWidth)).current;
+  // const toggleSidebar = () => {
+  //   Animated.timing(slideAnim, {
+  //     toValue: sidebarOpen ? -sidebarWidth : 0,
+  //     duration: 200,
+  //     easing: Easing.ease,
+  //     useNativeDriver: true,
+  //   }).start();
+  //   setSidebarOpen(!sidebarOpen);
+  // };
+
+  const [menuVisible, setMenuVisible] = useState(false);
+
+  const openMenu = () => setMenuVisible(true);
+  const closeMenu = () => setMenuVisible(false);
 
   // Scroll‐to logic (using onLayout)
   const scrollRef = useRef<ScrollView>(null);
@@ -52,7 +57,7 @@ export default function CalcsScreen() {
   const [diluY, setDiluY] = useState(0);
   const scrollTo = (y: number) => {
     scrollRef.current?.scrollTo({ y, animated: true });
-    toggleSidebar();
+    // toggleSidebar();
   };
 
   // 1) ABV calculator
@@ -64,7 +69,6 @@ export default function CalcsScreen() {
   const [originalAmount, setOriginalAmount] = useState("");
   const [originalAA, setOriginalAA] = useState("");
   const [actualAA, setActualAA] = useState("");
-
 
   // 3) Temperature correction (Plato)
   const [calTemp, setCalTemp] = useState("");
@@ -79,29 +83,28 @@ export default function CalcsScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height" }
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
     >
-    {/* <View style={styles.container}> */}
+      {/* <View style={styles.container}> */}
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <ScrollView
           ref={scrollRef}
-          style={{ flex: 1 }}
           contentContainerStyle={[styles.content]}
           keyboardShouldPersistTaps="handled"
         >
-        {/* <KeyboardAwareScrollView
+          {/* <KeyboardAwareScrollView
   enableOnAndroid
   keyboardShouldPersistTaps="handled"
   contentContainerStyle={styles.content}
 > */}
           {/* Hamburger */}
-          <Pressable onPress={toggleSidebar} style={styles.hamburger}>
+          {/* <Pressable onPress={toggleSidebar} style={styles.hamburger}>
             <Ionicons name="menu" size={28} color={isDark ? "#fff" : "#000"} />
-          </Pressable>
+          </Pressable> */}
 
           {/* Sidebar */}
-          <Animated.View
+          {/* <Animated.View
             style={[
               styles.sidebarContainer,
               { transform: [{ translateX: slideAnim }] },
@@ -119,12 +122,57 @@ export default function CalcsScreen() {
             <Text style={styles.sidebarItem} onPress={() => scrollTo(diluY)}>
               Würzeverdünnung
             </Text>
-          </Animated.View>
+          </Animated.View> */}
 
           {/* Backdrop */}
-          {sidebarOpen && (
+          {/* {sidebarOpen && (
             <Pressable style={styles.backdrop} onPress={toggleSidebar} />
-          )}
+          )} */}
+
+          <View style={{ position: "absolute", top: 32, left: 16, zIndex: 10 }}>
+            <Menu
+              visible={menuVisible}
+              onDismiss={closeMenu}
+              anchor={
+                <Pressable onPress={openMenu}>
+                  <Ionicons
+                    name="menu"
+                    size={28}
+                    color={isDark ? "#fff" : "#000"}
+                  />
+                </Pressable>
+              }
+            >
+              <Menu.Item
+                onPress={() => {
+                  scrollTo(abvY);
+                  closeMenu();
+                }}
+                title="Alkoholgehalt"
+              />
+              <Menu.Item
+                onPress={() => {
+                  scrollTo(aaY);
+                  closeMenu();
+                }}
+                title="Hopfen-Anpassung"
+              />
+              <Menu.Item
+                onPress={() => {
+                  scrollTo(tempY);
+                  closeMenu();
+                }}
+                title="Temperatur-Korrektur Plato"
+              />
+              <Menu.Item
+                onPress={() => {
+                  scrollTo(diluY);
+                  closeMenu();
+                }}
+                title="Würzeverdünnung"
+              />
+            </Menu>
+          </View>
 
           {/* Main content */}
           {/* ABV Section */}
@@ -193,7 +241,7 @@ export default function CalcsScreen() {
             <Text style={styles.title}>Hopfen-Anpassung (Alpha-Säure)</Text>
             <TextInput
               style={styles.input}
-              placeholder="Ursprüngliche Menge (g)"
+              placeholder="Menge laut Rezept (g)"
               keyboardType="decimal-pad"
               value={originalAmount}
               onChangeText={setOriginalAmount}
@@ -201,7 +249,7 @@ export default function CalcsScreen() {
             />
             <TextInput
               style={styles.input}
-              placeholder="Originale Alpha-Säure (%α)"
+              placeholder="Alpha-Säure laut Rezept (%α)"
               keyboardType="decimal-pad"
               value={originalAA}
               onChangeText={setOriginalAA}
@@ -215,10 +263,16 @@ export default function CalcsScreen() {
               onChangeText={setActualAA}
               placeholderTextColor={isDark ? "#aaa" : "#555"}
             />
-            
+
             {originalAmount && originalAA && actualAA ? (
               <Text style={styles.result}>
-                Angepasste Menge: {adjustHopAmount(parseFloat(originalAmount), parseFloat(originalAA), parseFloat(actualAA))} g
+                Angepasste Menge:{" "}
+                {adjustHopAmount(
+                  parseFloat(originalAmount),
+                  parseFloat(originalAA),
+                  parseFloat(actualAA)
+                )}{" "}
+                g
               </Text>
             ) : null}
           </View>
@@ -256,7 +310,13 @@ export default function CalcsScreen() {
 
             {measPlato && calTemp && measTemp ? (
               <Text style={styles.result}>
-                Korrigierte Dichte: {correctPlatoTemp(parseFloat(measPlato), parseFloat(calTemp), parseFloat(measTemp))} °P
+                Korrigierte Dichte:{" "}
+                {correctPlatoTemp(
+                  parseFloat(measPlato),
+                  parseFloat(calTemp),
+                  parseFloat(measTemp)
+                )}{" "}
+                °P
               </Text>
             ) : null}
           </View>
@@ -294,7 +354,13 @@ export default function CalcsScreen() {
 
             {originalGravity && originalWortVolume && desiredGravity ? (
               <Text style={styles.result}>
-                Benötigte Wassermenge: {calculateDilutionVolume(parseFloat(originalGravity), parseFloat(originalWortVolume), parseFloat(desiredGravity))} L
+                Benötigte Wassermenge:{" "}
+                {calculateDilutionVolume(
+                  parseFloat(originalGravity),
+                  parseFloat(originalWortVolume),
+                  parseFloat(desiredGravity)
+                )}{" "}
+                L
               </Text>
             ) : null}
           </View>
@@ -311,7 +377,8 @@ function createStyles(isDark: boolean) {
   return StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: isDark ? "#000" : "#fff",
+      paddingTop: 16,
+      // backgroundColor: isDark ? "#000" : "#fff",
     },
     content: {
       padding: 16,

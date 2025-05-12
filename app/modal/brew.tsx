@@ -25,8 +25,9 @@ export default function BrewModal() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { recipes } = useRecipes();
   const recipe = recipes.find((r) => r.id === id);
-
-  const [targetSize, setTargetSize] = useState("");
+  const [targetSize, setTargetSize] = useState(
+    recipe?.batchSize.toString() || ""
+  );
   const [actualAlphaAcids, setActualAlphaAcids] = useState<{
     [index: number]: string;
   }>({});
@@ -131,7 +132,7 @@ export default function BrewModal() {
           </body>
         </html>
       `;
-      return html;
+    return html;
   };
 
   const exportToPDF = async () => {
@@ -188,9 +189,12 @@ export default function BrewModal() {
       keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
           <Text style={styles.title}>{recipe.name}</Text>
-
+          <Text style={styles.section}>Zielmenge (Liter)</Text>
           <TextInput
             style={styles.input}
             placeholder="Zielmenge (Liter)"
@@ -261,6 +265,7 @@ function createStyles(isDark: boolean) {
     },
     content: {
       padding: 16,
+      flexGrow: 1,
     },
     title: {
       fontSize: 24,
