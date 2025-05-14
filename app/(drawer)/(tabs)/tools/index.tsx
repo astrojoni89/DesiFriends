@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  //useColorScheme,
   ScrollView,
   Animated,
   Easing,
@@ -19,35 +18,18 @@ import { RadioButton, Menu } from "react-native-paper";
 
 import {
   calculateAlc,
+  convertUnit,
   adjustHopAmount,
   correctPlatoTemp,
   calculateDilutionVolume,
 } from "@/utils/calcUtils";
-// import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useTheme } from "react-native-paper";
 import type { AppTheme } from "@/theme/theme";
 
 export default function CalcsScreen() {
-  // const colorScheme = useColorScheme();
-  // const isDark = colorScheme === "dark";
-  // const styles = createStyles(isDark);
   const theme = useTheme() as AppTheme;
   const { colors } = theme;
   const styles = createStyles(theme.colors);
-
-  // Sidebar animation
-  // const sidebarWidth = 250;
-  // const [sidebarOpen, setSidebarOpen] = useState(false);
-  // const slideAnim = useRef(new Animated.Value(-sidebarWidth)).current;
-  // const toggleSidebar = () => {
-  //   Animated.timing(slideAnim, {
-  //     toValue: sidebarOpen ? -sidebarWidth : 0,
-  //     duration: 200,
-  //     easing: Easing.ease,
-  //     useNativeDriver: true,
-  //   }).start();
-  //   setSidebarOpen(!sidebarOpen);
-  // };
 
   const [menuVisible, setMenuVisible] = useState(false);
 
@@ -57,6 +39,7 @@ export default function CalcsScreen() {
   // Scroll‐to logic (using onLayout)
   const scrollRef = useRef<ScrollView>(null);
   const [abvY, setAbvY] = useState(0);
+  const [convY, setConvY] = useState(0);
   const [aaY, setAaY] = useState(0);
   const [tempY, setTempY] = useState(0);
   const [diluY, setDiluY] = useState(0);
@@ -70,17 +53,24 @@ export default function CalcsScreen() {
   const [fg, setFg] = useState("");
   const [unit, setUnit] = useState<"gravity" | "plato" | "brix">("plato");
 
-  // 2) Hop AA% conversion
+  // 2) Unit conversion
+  const [convInput, setConvInput] = useState("");
+  const [convFrom, setConvFrom] = useState<"brix" | "plato" | "gravity">(
+    "brix"
+  );
+  const [convTo, setConvTo] = useState<"brix" | "plato" | "gravity">("plato");
+
+  // 3) Hop AA% conversion
   const [originalAmount, setOriginalAmount] = useState("");
   const [originalAA, setOriginalAA] = useState("");
   const [actualAA, setActualAA] = useState("");
 
-  // 3) Temperature correction (Plato)
+  // 4) Temperature correction (Plato)
   const [calTemp, setCalTemp] = useState("");
   const [measTemp, setMeasTemp] = useState("");
   const [measPlato, setMeasPlato] = useState("");
 
-  // 4) Diluting wort with water to get desired gravity
+  // 5) Diluting wort with water to get desired gravity
   const [originalGravity, setOriginalGravity] = useState("");
   const [desiredGravity, setDesiredGravity] = useState("");
   const [originalWortVolume, setOriginalWortVolume] = useState("");
@@ -98,53 +88,13 @@ export default function CalcsScreen() {
           contentContainerStyle={[styles.content]}
           keyboardShouldPersistTaps="handled"
         >
-          {/* <KeyboardAwareScrollView
-  enableOnAndroid
-  keyboardShouldPersistTaps="handled"
-  contentContainerStyle={styles.content}
-> */}
-          {/* Hamburger */}
-          {/* <Pressable onPress={toggleSidebar} style={styles.hamburger}>
-            <Ionicons name="menu" size={28} color={isDark ? "#fff" : "#000"} />
-          </Pressable> */}
-
-          {/* Sidebar */}
-          {/* <Animated.View
-            style={[
-              styles.sidebarContainer,
-              { transform: [{ translateX: slideAnim }] },
-            ]}
-          >
-            <Text style={styles.sidebarItem} onPress={() => scrollTo(abvY)}>
-              Alkoholgehalt
-            </Text>
-            <Text style={styles.sidebarItem} onPress={() => scrollTo(aaY)}>
-              Hopfen-Anpassung
-            </Text>
-            <Text style={styles.sidebarItem} onPress={() => scrollTo(tempY)}>
-              Temperatur-Korrektur Plato
-            </Text>
-            <Text style={styles.sidebarItem} onPress={() => scrollTo(diluY)}>
-              Würzeverdünnung
-            </Text>
-          </Animated.View> */}
-
-          {/* Backdrop */}
-          {/* {sidebarOpen && (
-            <Pressable style={styles.backdrop} onPress={toggleSidebar} />
-          )} */}
-
           <View style={{ position: "absolute", top: 32, left: 16, zIndex: 10 }}>
             <Menu
               visible={menuVisible}
               onDismiss={closeMenu}
               anchor={
                 <Pressable onPress={openMenu}>
-                  <Ionicons
-                    name="menu"
-                    size={28}
-                    color={colors.onSurface}
-                  />
+                  <Ionicons name="menu" size={28} color={colors.onSurface} />
                 </Pressable>
               }
             >
@@ -154,6 +104,13 @@ export default function CalcsScreen() {
                   closeMenu();
                 }}
                 title="Alkoholgehalt"
+              />
+              <Menu.Item
+                onPress={() => {
+                  scrollTo(convY);
+                  closeMenu();
+                }}
+                title="Umrechner"
               />
               <Menu.Item
                 onPress={() => {
@@ -235,6 +192,67 @@ export default function CalcsScreen() {
                   </Text>
                 )}
               </>
+            ) : null}
+          </View>
+
+          {/* Conversion Section */}
+          <View
+            onLayout={(e) => setConvY(e.nativeEvent.layout.y)}
+            style={{ marginTop: 32 }}
+          >
+            <Text style={styles.title}>Einheiten umrechnen</Text>
+
+            <Text style={styles.label}>Von:</Text>
+            <RadioButton.Group
+              onValueChange={(v) => setConvFrom(v as any)}
+              value={convFrom}
+            >
+              <View style={styles.radioRow}>
+                <RadioButton value="brix" />
+                <Text style={styles.radioText}>Brix</Text>
+                <RadioButton value="plato" />
+                <Text style={styles.radioText}>Plato</Text>
+                <RadioButton value="gravity" />
+                <Text style={styles.radioText}>Gravity</Text>
+              </View>
+            </RadioButton.Group>
+
+            <Text style={styles.label}>Nach:</Text>
+            <RadioButton.Group
+              onValueChange={(v) => setConvTo(v as any)}
+              value={convTo}
+            >
+              <View style={styles.radioRow}>
+                <RadioButton value="brix" />
+                <Text style={styles.radioText}>Brix</Text>
+                <RadioButton value="plato" />
+                <Text style={styles.radioText}>Plato</Text>
+                <RadioButton value="gravity" />
+                <Text style={styles.radioText}>Gravity</Text>
+              </View>
+            </RadioButton.Group>
+
+            <TextInput
+              style={styles.input}
+              placeholder={`Wert in ${
+                convFrom.charAt(0).toUpperCase() + convFrom.slice(1)
+              }`}
+              keyboardType="decimal-pad"
+              value={convInput}
+              onChangeText={setConvInput}
+              placeholderTextColor={colors.outline}
+            />
+
+            {convInput ? (
+              <Text style={styles.result}>
+                Ergebnis ({convTo.charAt(0).toUpperCase() + convTo.slice(1)}):{" "}
+                {(() => {
+                  const parsed = parseFloat(convInput);
+                  return isNaN(parsed)
+                    ? "Ungültiger Wert"
+                    : convertUnit(parsed, convFrom, convTo);
+                })()}
+              </Text>
             ) : null}
           </View>
 
@@ -427,6 +445,13 @@ function createStyles(colors: AppTheme["colors"]) {
       marginRight: 16,
       color: colors.text,
     },
+    label: {
+      fontSize: 14,
+      fontWeight: "500",
+      marginBottom: 4,
+      color: colors.onBackground,
+    },
+
     hamburger: {
       position: "absolute",
       top: 16,

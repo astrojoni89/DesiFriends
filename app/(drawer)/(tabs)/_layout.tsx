@@ -1,6 +1,5 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons"; // or FontAwesome, MaterialIcons etc.
-// import { useColorScheme } from "react-native";
 import { useTheme } from "react-native-paper";
 import type { AppTheme } from "@/theme/theme";
 
@@ -14,6 +13,13 @@ export default function TabLayout() {
   const { colors } = theme;
 
   return (
+    // <TouchableWithoutFeedback
+    //   onPress={() => {
+    //     Keyboard.dismiss();
+    //     setDeleteModeId(null);
+    //   }}
+    // >
+    //   <View style={{ flex: 1 }}>
     <Tabs
       screenOptions={{ headerShown: false, tabBarActiveTintColor: colors.primary, tabBarHideOnKeyboard: true }}
     >
@@ -27,7 +33,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="brewday/index"
+        name="brewday"
         options={{
           title: "Brautag",
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
@@ -45,5 +51,7 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    /* </View>
+    </TouchableWithoutFeedback> */
   );
 }

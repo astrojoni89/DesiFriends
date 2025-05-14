@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { useRecipes } from "@/context/RecipeContext";
+import { useDeleteMode } from "@/context/DeleteModeContext";
 import { useRouter } from "expo-router";
 import {
   View,
@@ -10,32 +11,26 @@ import {
   Button,
   Animated,
   Easing,
-  //useColorScheme,
   KeyboardAvoidingView,
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-// import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { useTheme } from "react-native-paper";
 import type { AppTheme } from "@/theme/theme";
 
 export default function BrewDayScreen() {
-  // const colorScheme = useColorScheme();
-  // const isDark = colorScheme === "dark";
-  // const styles = createStyles(isDark);
   const theme = useTheme() as AppTheme;
   const { colors } = theme;
   const styles = createStyles(theme.colors);
-
   const { recipes, deleteRecipe } = useRecipes();
   const router = useRouter();
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [deleteModeId, setDeleteModeId] = useState<string | null>(null);
+  // const [deleteModeId, setDeleteModeId] = useState<string | null>(null);
+  const { deleteModeId, setDeleteModeId } = useDeleteMode();
   const rotationAnims = useRef<{ [id: string]: Animated.Value }>({});
   const contentAnims = useRef<{ [id: string]: Animated.Value }>({});
-
   const toggleExpand = (id: string) => {
     const isExpanding = expandedId !== id;
 
@@ -64,12 +59,12 @@ export default function BrewDayScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height" }
-      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
-    >
-    {/* <View style={styles.container}> */}
+    // <KeyboardAvoidingView
+    //   style={styles.container}
+    //   behavior={Platform.OS === "ios" ? "padding" : "height" }
+    //   keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+    // >
+    <View style={styles.container}>
     <TouchableWithoutFeedback
       onPress={() => {
         Keyboard.dismiss();
@@ -77,11 +72,6 @@ export default function BrewDayScreen() {
       }}
     >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      {/* <KeyboardAwareScrollView
-        enableOnAndroid
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.content}
-      > */}
         <Text style={styles.title}>Gespeicherte Rezepte</Text>
 
         {recipes.length === 0 && (
@@ -103,14 +93,6 @@ export default function BrewDayScreen() {
           });
 
           return (
-            // <Pressable
-            //   key={r.id}
-            //   onPress={() => toggleExpand(r.id)}
-            //   style={[
-            //     styles.recipeBox,
-            //     expandedId === r.id && styles.recipeBoxExpanded,
-            //   ]}
-            // >
             <Pressable
               key={r.id}
               onPress={() => {
@@ -204,9 +186,9 @@ export default function BrewDayScreen() {
           );
         })}
         </ScrollView>
-      {/* </KeyboardAwareScrollView> */}
     </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
+    </View>
+    /* </KeyboardAvoidingView> */
   );
 }
 

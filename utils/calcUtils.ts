@@ -73,6 +73,44 @@ export function calculateAlc(og: number, fg: number, unit: string): string {
   }
 }
 
+/** Convert unit wrapper  */
+export function convertUnit(
+  value: number,
+  from: "brix" | "plato" | "gravity",
+  to: "brix" | "plato" | "gravity"
+): string {
+  if (from === to) return String(value);
+
+  // Convert to Plato as intermediate
+  let plato: number;
+  switch (from) {
+    case "brix":
+      plato = brixToPlato(value);
+      break;
+    case "plato":
+      plato = value;
+      break;
+    case "gravity":
+      plato = sgToPlato(value);
+      break;
+    default:
+      throw new Error("Invalid source unit");
+  }
+
+  // Convert from Plato to target unit
+  switch (to) {
+    case "brix":
+      return (platoToBrix(plato)).toFixed(2);
+    case "plato":
+      return plato.toFixed(2);
+    case "gravity":
+      return (platoToSG(plato)).toFixed(3);
+    default:
+      throw new Error("Invalid target unit");
+  }
+}
+
+
 /** Calculate adjusted hop amount based on AA% */
 export function adjustHopAmount(
   originalAmount: number,

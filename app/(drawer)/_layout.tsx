@@ -2,7 +2,7 @@ import { Drawer } from "expo-router/drawer";
 
 export default function DrawerLayout() {
   return (
-    <Drawer screenOptions={{ headerShown: false, swipeEdgeWidth: 30 }}>
+    <Drawer screenOptions={{ headerShown: false, swipeEdgeWidth: 50, drawerStyle: { width: 250,} }}>
       <Drawer.Screen
           name="(tabs)"
           options={{

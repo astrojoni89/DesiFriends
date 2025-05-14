@@ -7,7 +7,6 @@ import {
   TextInput,
   ScrollView,
   StyleSheet,
-  //useColorScheme,
   Alert,
   KeyboardAvoidingView,
   TouchableWithoutFeedback,
@@ -33,9 +32,6 @@ export default function BrewModal() {
   const [actualAlphaAcids, setActualAlphaAcids] = useState<{
     [index: number]: string;
   }>({});
-  // const colorScheme = useColorScheme();
-  // const isDark = colorScheme === "dark";
-  // const styles = createStyles(isDark);
   const theme = useTheme() as AppTheme;
   const { colors } = theme;
   const styles = createStyles(theme.colors);
@@ -256,6 +252,7 @@ export default function BrewModal() {
           <Pressable style={styles.button} onPress={exportToPDF}>
             <Text style={styles.buttontext}>Drucken</Text>
           </Pressable>
+          <View style={{marginTop: 50}}></View>
         </ScrollView>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>

@@ -1,30 +1,40 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useColorScheme } from "react-native";
+import { createAppTheme, AppTheme } from "@/theme/theme";
 
 type ThemeType = "light" | "dark";
+
 type ThemeContextType = {
   theme: ThemeType;
   toggleTheme: () => void;
+  primaryColor: string;
+  setPrimaryColor: (color: string) => void;
+  appTheme: AppTheme;
 };
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const STORAGE_KEY = "user_theme_preference";
+const COLOR_KEY = "user_primary_color";
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const systemScheme = useColorScheme();
   const [theme, setTheme] = useState<ThemeType>("light");
+  const [primaryColor, setPrimaryColor] = useState("#007AFF");
 
-  // Load stored theme
   useEffect(() => {
     (async () => {
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      if (stored === "light" || stored === "dark") {
-        setTheme(stored);
+      const storedTheme = await AsyncStorage.getItem(STORAGE_KEY);
+      const storedColor = await AsyncStorage.getItem(COLOR_KEY);
+
+      if (storedTheme === "light" || storedTheme === "dark") {
+        setTheme(storedTheme);
       } else {
         setTheme(systemScheme === "dark" ? "dark" : "light");
       }
+
+      if (storedColor) setPrimaryColor(storedColor);
     })();
   }, [systemScheme]);
 
@@ -34,8 +44,23 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     await AsyncStorage.setItem(STORAGE_KEY, newTheme);
   };
 
+  const handleSetPrimaryColor = async (color: string) => {
+    setPrimaryColor(color);
+    await AsyncStorage.setItem(COLOR_KEY, color);
+  };
+
+  const appTheme = createAppTheme(theme, primaryColor);
+
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider
+      value={{
+        theme,
+        toggleTheme,
+        primaryColor,
+        setPrimaryColor: handleSetPrimaryColor,
+        appTheme,
+      }}
+    >
       {children}
     </ThemeContext.Provider>
   );
