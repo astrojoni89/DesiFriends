@@ -23,12 +23,23 @@ export type Recipe = {
   malz: Ingredient[];
   hopfen: HopIngredient[];
   hefe: Ingredient[];
+  mashSteps?: MashStep[];
+  boilTime?: string;
+  hopSchedule?: HopSchedule[];
 };
 
 type RecipeContextType = {
   recipes: Recipe[];
   addRecipe: (recipe: Recipe) => void;
+  getRecipeById: (id: string) => Recipe | undefined;
   deleteRecipe: (id: string) => void;
+};
+
+export type MashStep = { temperature: string; duration: string };
+export type HopSchedule = {
+  name: string;
+  amount: string;
+  time: string;
 };
 
 const RecipeContext = createContext<RecipeContextType | undefined>(undefined);
@@ -63,8 +74,18 @@ export const RecipeProvider = ({ children }: { children: ReactNode }) => {
     saveRecipes();
   }, [recipes]);
 
-  const addRecipe = (recipe: Recipe) => {
-    setRecipes((prev) => [...prev, recipe]);
+  // const addRecipe = (recipe: Recipe) => {
+  //   setRecipes((prev) => [...prev, recipe]);
+  // };
+  const addRecipe = (recipe: Recipe, partial: boolean = false) => {
+    setRecipes((prev) => {
+      const updated = [...prev.filter((r) => r.id !== recipe.id), recipe];
+      return updated;
+    });
+  };
+
+  const getRecipeById = (id: string) => {
+    return recipes.find((r) => r.id === id);
   };
 
   const deleteRecipe = (id: string) => {
@@ -72,7 +93,7 @@ export const RecipeProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <RecipeContext.Provider value={{ recipes, addRecipe, deleteRecipe }}>
+    <RecipeContext.Provider value={{ recipes, addRecipe, getRecipeById, deleteRecipe }}>
       {children}
     </RecipeContext.Provider>
   );

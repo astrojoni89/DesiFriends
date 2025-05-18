@@ -252,7 +252,7 @@ export default function BrewModal() {
           <Pressable style={styles.button} onPress={exportToPDF}>
             <Text style={styles.buttontext}>Drucken</Text>
           </Pressable>
-          <View style={{marginTop: 50}}></View>
+          {/* <View style={{marginTop: 50}}></View> */}
         </ScrollView>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
@@ -264,6 +264,7 @@ function createStyles(colors: AppTheme["colors"]) {
     container: {
       flex: 1,
       backgroundColor: colors.background,
+      marginBottom: 50,
     },
     content: {
       padding: 16,

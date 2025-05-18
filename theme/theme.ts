@@ -4,7 +4,7 @@ import { MD3LightTheme, MD3DarkTheme, MD3Theme } from "react-native-paper";
 const sharedColors = {
   //primary: "#007AFF", // #5ca778 green theme, #8E44AD purple theme
   onPrimary: "#ffffff", // #ffffff
-  notification: "#007AFF", // #007AFF
+  notification: "#face7d", // #face7d
 };
 
 const extraLightColors = {

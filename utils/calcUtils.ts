@@ -1,4 +1,5 @@
 // calcUtils.ts
+import type { HopSchedule } from "@/context/RecipeContext";
 
 /** Convert Plato (P) to specific gravity (SG) using a 3rd order polynomial */
 export function platoToSG(plato: number): number {
@@ -139,3 +140,29 @@ export function calculateDilutionVolume(
 ): string {
   return ((originalGravity * originalVolume) / targetGravity - originalVolume).toFixed(2);
 }
+
+type EnrichedHopSchedule = {
+  name: string;
+  amount: string;
+  time: string;
+  alphaAcid: number;
+};
+
+/** Estimate IBU based on hops and boil time */
+export function estimateIBU(hops: EnrichedHopSchedule[], volume: number, og: number = 1.05) {
+  return hops.reduce((total, hop) => {
+    const time = parseFloat(hop.time);
+    const amount = parseFloat(hop.amount);
+    const alphaAcid = hop.alphaAcid;
+
+    if (isNaN(time) || isNaN(amount) || isNaN(alphaAcid)) return total;
+
+    const utilization =
+      (1.65 * Math.pow(0.000125, og - 1)) *
+      ((1 - Math.exp(-0.04 * time)) / 4.15);
+
+    const ibu = (alphaAcid / 100) * amount * utilization * 1000 / volume;
+    return total + ibu;
+  }, 0);
+}
+
