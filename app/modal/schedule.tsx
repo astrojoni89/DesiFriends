@@ -32,7 +32,7 @@ export default function MashScheduleModal() {
   const [newMashStep, setNewMashStep] = useState({ temperature: "", duration: "" });
   const [boilTime, setBoilTime] = useState(recipe?.boilTime || "");
   const [expectedPlato, setExpectedPlato] = useState("12");
-  const [hopSchedule, setHopSchedule] = useState((recipe?.hopSchedule || []).sort((a, b) => parseFloat(a.time) - parseFloat(b.time)));
+  const [hopSchedule, setHopSchedule] = useState((recipe?.hopSchedule || []).sort((a, b) => parseFloat(b.time) - parseFloat(a.time)));
   const [newHop, setNewHop] = useState({ name: "", amount: "", time: "" });
 
   const [menuVisible, setMenuVisible] = useState(false);
@@ -143,7 +143,7 @@ export default function MashScheduleModal() {
 
         <Text style={styles.sectionTitle}>Hopfengaben</Text>
         {hopSchedule
-          .sort((a, b) => parseFloat(a.time) - parseFloat(b.time))
+          .sort((a, b) => parseFloat(b.time) - parseFloat(a.time))
           .map((hop, idx) => (
             <View key={idx} style={styles.row}>
               <Text style={[styles.ingredientItem, { flex: 1 }]}>- {hop.name}, {hop.amount}g bei {hop.time} min</Text>
