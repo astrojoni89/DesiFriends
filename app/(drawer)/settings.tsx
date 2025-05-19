@@ -5,8 +5,8 @@ import { Ionicons } from "@expo/vector-icons";
 import type { AppTheme } from "@/theme/theme";
 
 const colorOptions = [
-  { label: "Blau", color: "#007AFF" },
-  { label: "Lila", color: "#8E44AD" },
+  { label: "Blau", color: "#007aff" },
+  { label: "Lila", color: "#8e44ad" },
   { label: "Grün", color: "#5ca778" },
 ];
 

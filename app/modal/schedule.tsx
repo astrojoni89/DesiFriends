@@ -7,6 +7,8 @@ import {
   StyleSheet,
   Pressable,
   Keyboard,
+  KeyboardAvoidingView,
+  Platform,
   TouchableWithoutFeedback,
   Alert,
 } from "react-native";
@@ -68,9 +70,14 @@ export default function MashScheduleModal() {
   };
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Maisch- & Kochplan</Text>
+    <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+        >
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <Text style={styles.title}>{recipe.name}</Text>
 
         <Text style={styles.sectionTitle}>Rasten</Text>
         {mashSteps.map((step, idx) => (
@@ -78,7 +85,7 @@ export default function MashScheduleModal() {
             <Text style={[styles.ingredientItem, { flex: 1 }]}>- {step.temperature}°C für {step.duration} min</Text>
             <Pressable
               onPress={() => setMashSteps(mashSteps.filter((_, i) => i !== idx))}
-              style={[styles.addButton, { backgroundColor: colors.error }]}
+              style={[styles.addButton, { backgroundColor: colors.remove }]}
             >
               <Ionicons name="remove" size={20} color="#fff" />
             </Pressable>
@@ -142,7 +149,7 @@ export default function MashScheduleModal() {
               <Text style={[styles.ingredientItem, { flex: 1 }]}>- {hop.name}, {hop.amount}g bei {hop.time} min</Text>
               <Pressable
                 onPress={() => setHopSchedule(hopSchedule.filter((_, i) => i !== idx))}
-                style={[styles.addButton, { backgroundColor: colors.error }]}
+                style={[styles.addButton, { backgroundColor: colors.remove }]}
               >
                 <Ionicons name="remove" size={20} color="#fff" />
               </Pressable>
@@ -239,22 +246,26 @@ export default function MashScheduleModal() {
         </Pressable>
       </ScrollView>
     </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }
 
 function createStyles(colors: AppTheme["colors"]) {
   return StyleSheet.create({
     container: {
-      paddingTop: 48,
-      paddingHorizontal: 16,
-      paddingBottom: 80,
+      flex: 1,
       backgroundColor: colors.background,
+      marginBottom: 50,
+    },
+    content: {
+      padding: 16,
+      flexGrow: 1,
     },
     title: {
-      fontSize: 22,
+      fontSize: 24,
       fontWeight: "bold",
+      marginBottom: 12,
       color: colors.onBackground,
-      marginBottom: 16,
     },
     sectionTitle: {
       marginTop: 12,

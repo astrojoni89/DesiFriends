@@ -45,6 +45,10 @@ function AppWithTheming() {
             name="modal/brew"
             options={{ presentation: "modal", title: "Brautag" }}
           />
+          <Stack.Screen
+            name="modal/schedule"
+            options={{ presentation: "modal", title: "Maisch- & Kochplan" }}
+          />
         </Stack>
         <StatusBar style="auto" />
       </NavigationThemeProvider>

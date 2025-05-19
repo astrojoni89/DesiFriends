@@ -5,6 +5,7 @@ const sharedColors = {
   //primary: "#007AFF", // #5ca778 green theme, #8E44AD purple theme
   onPrimary: "#ffffff", // #ffffff
   notification: "#face7d", // #face7d
+  remove: "rgba(179, 38, 30, 1)",
 };
 
 const extraLightColors = {
@@ -45,7 +46,7 @@ export const darkTheme = {
 
 export type AppTheme = typeof lightTheme;
 
-export const createAppTheme = (mode: "light" | "dark", primaryColor: string): AppTheme => {
+export const createAppTheme = (mode: "light" | "dark", primaryColor: string, secondaryColor: string): AppTheme => {
   const base = mode === "dark" ? MD3DarkTheme : MD3LightTheme;
   const baseColors = mode === "dark" ? darkTheme.colors : lightTheme.colors;
 
@@ -54,6 +55,7 @@ export const createAppTheme = (mode: "light" | "dark", primaryColor: string): Ap
     colors: {
       ...baseColors,
       primary: primaryColor,
+      secondary: secondaryColor,
     },
   };
 };

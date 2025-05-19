@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useColorScheme } from "react-native";
 import { createAppTheme, AppTheme } from "@/theme/theme";
+import { secondaryFromPrimary } from "@/utils/colorMappings";
 
 type ThemeType = "light" | "dark";
 
@@ -10,6 +11,7 @@ type ThemeContextType = {
   toggleTheme: () => void;
   primaryColor: string;
   setPrimaryColor: (color: string) => void;
+  secondaryColor: string;
   appTheme: AppTheme;
 };
 
@@ -22,6 +24,9 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const systemScheme = useColorScheme();
   const [theme, setTheme] = useState<ThemeType>("light");
   const [primaryColor, setPrimaryColor] = useState("#007AFF");
+  const [secondaryColor, setSecondaryColor] = useState(
+    secondaryFromPrimary[primaryColor] ?? "#ccc2dc"
+  );
 
   useEffect(() => {
     (async () => {
@@ -38,6 +43,11 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     })();
   }, [systemScheme]);
 
+  useEffect(() => {
+    const normalized = primaryColor.toLowerCase();
+    setSecondaryColor(secondaryFromPrimary[normalized] ?? "#ccc2dc");
+  }, [primaryColor]);
+
   const toggleTheme = async () => {
     const newTheme = theme === "light" ? "dark" : "light";
     setTheme(newTheme);
@@ -49,7 +59,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     await AsyncStorage.setItem(COLOR_KEY, color);
   };
 
-  const appTheme = createAppTheme(theme, primaryColor);
+  const appTheme = createAppTheme(theme, primaryColor, secondaryColor);
 
   return (
     <ThemeContext.Provider
@@ -58,6 +68,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
         toggleTheme,
         primaryColor,
         setPrimaryColor: handleSetPrimaryColor,
+        secondaryColor,
         appTheme,
       }}
     >
