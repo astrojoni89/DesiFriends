@@ -131,7 +131,7 @@ export default function MashScheduleModal() {
           placeholderTextColor={colors.outline}
         />
 
-        <Text style={styles.sectionTitle}>Stammwürze (°Plato)</Text>
+        <Text style={styles.sectionTitle}>Angepeilte Stammwürze (°Plato)</Text>
         <TextInput
           placeholder="z. B. 12"
           keyboardType="decimal-pad"
