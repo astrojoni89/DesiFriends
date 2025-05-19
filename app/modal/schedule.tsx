@@ -259,7 +259,6 @@ function createStyles(colors: AppTheme["colors"]) {
     },
     content: {
       padding: 16,
-      flexGrow: 1,
     },
     title: {
       fontSize: 24,
