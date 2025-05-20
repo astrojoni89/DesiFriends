@@ -29,10 +29,17 @@ export default function MashScheduleModal() {
 
   const recipe = getRecipeById(id as string);
   const [mashSteps, setMashSteps] = useState(recipe?.mashSteps || []);
-  const [newMashStep, setNewMashStep] = useState({ temperature: "", duration: "" });
+  const [newMashStep, setNewMashStep] = useState({
+    temperature: "",
+    duration: "",
+  });
   const [boilTime, setBoilTime] = useState(recipe?.boilTime || "");
   const [expectedPlato, setExpectedPlato] = useState("12");
-  const [hopSchedule, setHopSchedule] = useState((recipe?.hopSchedule || []).sort((a, b) => parseFloat(b.time) - parseFloat(a.time)));
+  const [hopSchedule, setHopSchedule] = useState(
+    (recipe?.hopSchedule || []).sort(
+      (a, b) => parseFloat(b.time) - parseFloat(a.time)
+    )
+  );
   const [newHop, setNewHop] = useState({ name: "", amount: "", time: "" });
 
   const [menuVisible, setMenuVisible] = useState(false);
@@ -71,84 +78,27 @@ export default function MashScheduleModal() {
 
   return (
     <KeyboardAvoidingView
-          style={styles.container}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
         >
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>{recipe.name}</Text>
+          <Text style={styles.title}>{recipe.name}</Text>
 
-        <Text style={styles.sectionTitle}>Rasten</Text>
-        {mashSteps.map((step, idx) => (
-          <View key={idx} style={styles.row}>
-            <Text style={[styles.ingredientItem, { flex: 1 }]}>- {step.temperature}°C für {step.duration} min</Text>
-            <Pressable
-              onPress={() => setMashSteps(mashSteps.filter((_, i) => i !== idx))}
-              style={[styles.addButton, { backgroundColor: colors.remove }]}
-            >
-              <Ionicons name="remove" size={20} color="#fff" />
-            </Pressable>
-          </View>
-        ))}
-
-        <View style={styles.row}>
-          <TextInput
-            placeholder="Temperatur (°C)"
-            keyboardType="decimal-pad"
-            value={newMashStep.temperature}
-            onChangeText={(t) => setNewMashStep({ ...newMashStep, temperature: t })}
-            style={[styles.input, { flex: 1 }]}
-            placeholderTextColor={colors.outline}
-          />
-          <TextInput
-            placeholder="Dauer (min)"
-            keyboardType="numeric"
-            value={newMashStep.duration}
-            onChangeText={(t) => setNewMashStep({ ...newMashStep, duration: t })}
-            style={[styles.input, { flex: 1 }]}
-            placeholderTextColor={colors.outline}
-          />
-          <Pressable
-            style={styles.addButton}
-            onPress={() => {
-              if (!newMashStep.temperature || !newMashStep.duration) return;
-              setMashSteps([...mashSteps, newMashStep]);
-              setNewMashStep({ temperature: "", duration: "" });
-            }}
-          >
-            <Ionicons name="add" size={20} color="#fff" />
-          </Pressable>
-        </View>
-
-        <Text style={styles.sectionTitle}>Würzekochen</Text>
-        <TextInput
-          placeholder="Kochzeit (min)"
-          keyboardType="numeric"
-          value={boilTime}
-          onChangeText={setBoilTime}
-          style={styles.input}
-          placeholderTextColor={colors.outline}
-        />
-
-        <Text style={styles.sectionTitle}>Angepeilte Stammwürze (°Plato)</Text>
-        <TextInput
-          placeholder="z. B. 12"
-          keyboardType="decimal-pad"
-          value={expectedPlato}
-          onChangeText={setExpectedPlato}
-          style={styles.input}
-          placeholderTextColor={colors.outline}
-        />
-
-        <Text style={styles.sectionTitle}>Hopfengaben</Text>
-        {hopSchedule
-          .sort((a, b) => parseFloat(b.time) - parseFloat(a.time))
-          .map((hop, idx) => (
+          <Text style={styles.sectionTitle}>Rasten</Text>
+          {mashSteps.map((step, idx) => (
             <View key={idx} style={styles.row}>
-              <Text style={[styles.ingredientItem, { flex: 1 }]}>- {hop.name}, {hop.amount}g bei {hop.time} min</Text>
+              <Text style={[styles.ingredientItem, { flex: 1 }]}>
+                - {step.temperature}°C für {step.duration} min
+              </Text>
               <Pressable
-                onPress={() => setHopSchedule(hopSchedule.filter((_, i) => i !== idx))}
+                onPress={() =>
+                  setMashSteps(mashSteps.filter((_, i) => i !== idx))
+                }
                 style={[styles.addButton, { backgroundColor: colors.remove }]}
               >
                 <Ionicons name="remove" size={20} color="#fff" />
@@ -156,96 +106,180 @@ export default function MashScheduleModal() {
             </View>
           ))}
 
-        <View style={styles.row}>
-          <View style={{ flex: 2 }}>
-            <Menu
-              visible={menuVisible}
-              onDismiss={() => setMenuVisible(false)}
-              anchor={
-                <Pressable
-                  onPress={() => setMenuVisible(true)}
-                  style={[styles.input, { justifyContent: "center" }]}
-                >
-                  <Text style={{ color: newHop.name ? colors.text : colors.outline }}>
-                    {newHop.name || "Hopfen wählen"}
-                  </Text>
-                </Pressable>
+          <View style={styles.row}>
+            <TextInput
+              placeholder="Temperatur (°C)"
+              keyboardType="decimal-pad"
+              value={newMashStep.temperature}
+              onChangeText={(t) =>
+                setNewMashStep({ ...newMashStep, temperature: t })
               }
+              style={[styles.input, { flex: 1 }]}
+              placeholderTextColor={colors.outline}
+            />
+            <TextInput
+              placeholder="Dauer (min)"
+              keyboardType="numeric"
+              value={newMashStep.duration}
+              onChangeText={(t) =>
+                setNewMashStep({ ...newMashStep, duration: t })
+              }
+              style={[styles.input, { flex: 1 }]}
+              placeholderTextColor={colors.outline}
+            />
+            <Pressable
+              style={styles.addButton}
+              onPress={() => {
+                if (!newMashStep.temperature || !newMashStep.duration) return;
+                setMashSteps([...mashSteps, newMashStep]);
+                setNewMashStep({ temperature: "", duration: "" });
+              }}
             >
-              {hopOptions.map((hop, idx) => (
-                <Menu.Item
-                  key={idx}
-                  onPress={() => {
-                    setNewHop({ ...newHop, name: hop });
-                    setMenuVisible(false);
-                  }}
-                  title={hop}
-                />
-              ))}
-            </Menu>
+              <Ionicons name="add" size={20} color="#fff" />
+            </Pressable>
           </View>
 
+          <Text style={styles.sectionTitle}>Würzekochen</Text>
           <TextInput
-            placeholder={`g (max ${getMaxHopAmount()})`}
-            keyboardType="decimal-pad"
-            value={newHop.amount}
-            onChangeText={(t) => setNewHop({ ...newHop, amount: t })}
-            style={[styles.input, { flex: 1 }]}
-            placeholderTextColor={colors.outline}
-          />
-          <TextInput
-            placeholder={`bei (max ${boilTime || "?"} min)`}
+            placeholder="Kochzeit (min)"
             keyboardType="numeric"
-            value={newHop.time}
-            onChangeText={(t) => setNewHop({ ...newHop, time: t })}
-            style={[styles.input, { flex: 1 }]}
+            value={boilTime}
+            onChangeText={setBoilTime}
+            style={styles.input}
             placeholderTextColor={colors.outline}
           />
+
+          <Text style={styles.sectionTitle}>
+            Angepeilte Stammwürze (°Plato)
+          </Text>
+          <TextInput
+            placeholder="z. B. 12"
+            keyboardType="decimal-pad"
+            value={expectedPlato}
+            onChangeText={setExpectedPlato}
+            style={styles.input}
+            placeholderTextColor={colors.outline}
+          />
+
+          <Text style={styles.sectionTitle}>Hopfengaben</Text>
+          {hopSchedule
+            .sort((a, b) => parseFloat(b.time) - parseFloat(a.time))
+            .map((hop, idx) => (
+              <View key={idx} style={styles.row}>
+                <Text style={[styles.ingredientItem, { flex: 1 }]}>
+                  - {hop.name}, {hop.amount}g bei {hop.time} min
+                </Text>
+                <Pressable
+                  onPress={() =>
+                    setHopSchedule(hopSchedule.filter((_, i) => i !== idx))
+                  }
+                  style={[styles.addButton, { backgroundColor: colors.remove }]}
+                >
+                  <Ionicons name="remove" size={20} color="#fff" />
+                </Pressable>
+              </View>
+            ))}
+
+          <View style={styles.row}>
+            <View style={{ flex: 2 }}>
+              <Menu
+                visible={menuVisible}
+                onDismiss={() => setMenuVisible(false)}
+                anchor={
+                  <Pressable
+                    onPress={() => setMenuVisible(true)}
+                    style={[styles.input, { justifyContent: "center" }]}
+                  >
+                    <Text
+                      style={{
+                        color: newHop.name ? colors.text : colors.outline,
+                      }}
+                    >
+                      {newHop.name || "Hopfen wählen"}
+                    </Text>
+                  </Pressable>
+                }
+              >
+                {hopOptions.map((hop, idx) => (
+                  <Menu.Item
+                    key={idx}
+                    onPress={() => {
+                      setNewHop({ ...newHop, name: hop });
+                      setMenuVisible(false);
+                    }}
+                    title={hop}
+                  />
+                ))}
+              </Menu>
+            </View>
+
+            <TextInput
+              placeholder={`g (max ${getMaxHopAmount()})`}
+              keyboardType="decimal-pad"
+              value={newHop.amount}
+              onChangeText={(t) => setNewHop({ ...newHop, amount: t })}
+              style={[styles.input, { flex: 1 }]}
+              placeholderTextColor={colors.outline}
+            />
+            <TextInput
+              placeholder={`bei (max ${boilTime || "?"} min)`}
+              keyboardType="numeric"
+              value={newHop.time}
+              onChangeText={(t) => setNewHop({ ...newHop, time: t })}
+              style={[styles.input, { flex: 1 }]}
+              placeholderTextColor={colors.outline}
+            />
+            <Pressable
+              style={styles.addButton}
+              onPress={() => {
+                const amt = parseFloat(newHop.amount);
+                const t = parseFloat(newHop.time);
+                if (!newHop.name || isNaN(amt) || isNaN(t)) return;
+                if (amt > getMaxHopAmount()) {
+                  Alert.alert(
+                    "Zuviel Hopfen",
+                    `Maximal ${getMaxHopAmount()}g erlaubt.`
+                  );
+                  return;
+                }
+                if (maxBoilTime && t > maxBoilTime) {
+                  Alert.alert(
+                    "Ungültige Zeit",
+                    `Maximalzeit ist ${boilTime} min.`
+                  );
+                  return;
+                }
+                setHopSchedule([...hopSchedule, newHop]);
+                setNewHop({ name: "", amount: "", time: "" });
+              }}
+            >
+              <Ionicons name="add" size={20} color="#fff" />
+            </Pressable>
+          </View>
+
+          {hopSchedule.length > 0 && (
+            <Text style={{ marginTop: 8, color: colors.outline }}>
+              Geschätzte IBU: {getEstimatedIBU()}
+            </Text>
+          )}
+
           <Pressable
-            style={styles.addButton}
+            style={styles.brewButton}
             onPress={() => {
-              const amt = parseFloat(newHop.amount);
-              const t = parseFloat(newHop.time);
-              if (!newHop.name || isNaN(amt) || isNaN(t)) return;
-              if (amt > getMaxHopAmount()) {
-                Alert.alert("Zuviel Hopfen", `Maximal ${getMaxHopAmount()}g erlaubt.`);
-                return;
-              }
-              if (maxBoilTime && t > maxBoilTime) {
-                Alert.alert("Ungültige Zeit", `Maximalzeit ist ${boilTime} min.`);
-                return;
-              }
-              setHopSchedule([...hopSchedule, newHop]);
-              setNewHop({ name: "", amount: "", time: "" });
+              const updatedRecipe = {
+                ...recipe,
+                mashSteps,
+                boilTime,
+                hopSchedule,
+              };
+              addRecipe(updatedRecipe);
+              router.back();
             }}
           >
-            <Ionicons name="add" size={20} color="#fff" />
+            <Text style={styles.brewButtonText}>Fertig</Text>
           </Pressable>
-        </View>
-
-        {hopSchedule.length > 0 && (
-          <Text style={{ marginTop: 8, color: colors.outline }}>
-            Geschätzte IBU: {getEstimatedIBU()}
-          </Text>
-        )}
-
-        <Pressable
-          style={styles.brewButton}
-          onPress={() => {
-            const updatedRecipe = {
-              ...recipe,
-              mashSteps,
-              boilTime,
-              hopSchedule,
-            };
-            addRecipe(updatedRecipe);
-            router.back();
-          }}
-        >
-          <Text style={styles.brewButtonText}>Fertig</Text>
-        </Pressable>
-      </ScrollView>
-    </TouchableWithoutFeedback>
+        </ScrollView>
+      </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
 }

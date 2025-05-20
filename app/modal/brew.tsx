@@ -102,6 +102,25 @@ export default function BrewModal() {
               h2 { margin-top: 20px; }
               ul { padding-left: 20px; }
               img { max-width: 150px; margin-bottom: 20px; }
+              .timeline {
+              border-left: 3px solid #999;
+              margin-left: 10px;
+              padding-left: 10px;
+            }
+            .timeline-entry {
+              margin-bottom: 10px;
+              position: relative;
+            }
+            .timeline-entry::before {
+              content: "";
+              width: 10px;
+              height: 10px;
+              background-color: #999;
+              border-radius: 50%;
+              position: absolute;
+              left: -16px;
+              top: 5px;
+            }
             </style>
           </head>
           <body>
@@ -130,6 +149,41 @@ export default function BrewModal() {
                 .map((h) => `<li>${h.name}: ${h.amount} g</li>`)
                 .join("")}
             </ul>
+
+            <h2>Maischplan</h2>
+          <ul>
+            ${
+              recipe.mashSteps
+                ?.map(
+                  (s) => `<li>${s.temperature}°C für ${s.duration} min</li>`
+                )
+                .join("") || "<li>-</li>"
+            }
+          </ul>
+
+          <h2>Kochen & Hopfengaben</h2>
+            <p><strong>Gesamte Kochzeit: ${
+              recipe.boilTime || "?"
+            } min</strong></p>
+            <div class="timeline">
+            <div class="timeline-entry">${
+              recipe.boilTime || "?"
+            } min (Beginn)</div>
+            ${
+              recipe.hopSchedule
+                ?.sort((a, b) => parseFloat(b.time) - parseFloat(a.time))
+                .map((h) => {
+                  const adjustedAmount =
+                    scaled.hopfen.find((s) => s.name === h.name)?.amount ||
+                    h.amount;
+                  return `<div class="timeline-entry">${h.time} min: ${h.name}, ${adjustedAmount}g</div>`;
+                })
+                .join("") || "<div>-</div>"
+            }
+
+            <div class="timeline-entry">0 min (Ende)</div>
+            </div>
+
           </body>
         </html>
       `;
@@ -240,6 +294,7 @@ export default function BrewModal() {
               - {h.name}: {h.amount} g
             </Text>
           ))}
+
           <View style={{ marginTop: 24 }}></View>
           <Pressable style={styles.button} onPress={() => router.back()}>
             <Text style={styles.buttontext}>Schließen</Text>
@@ -252,7 +307,6 @@ export default function BrewModal() {
           <Pressable style={styles.button} onPress={exportToPDF}>
             <Text style={styles.buttontext}>Drucken</Text>
           </Pressable>
-          {/* <View style={{marginTop: 50}}></View> */}
         </ScrollView>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
