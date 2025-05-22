@@ -13,7 +13,7 @@ import {
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useTheme, Menu } from "react-native-paper";
+import { useTheme, Menu, Snackbar } from "react-native-paper";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import type { AppTheme } from "@/theme/theme";
 import { useRecipes } from "@/context/RecipeContext";
@@ -76,6 +76,8 @@ export default function MashScheduleModal() {
     ).toFixed(1);
   };
 
+  const [showSavedMessage, setShowSavedMessage] = useState(false);
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -93,7 +95,7 @@ export default function MashScheduleModal() {
           {mashSteps.map((step, idx) => (
             <View key={idx} style={styles.row}>
               <Text style={[styles.ingredientItem, { flex: 1 }]}>
-                - {step.temperature}°C für {step.duration} min
+                &bull; {step.temperature}°C für {step.duration} min
               </Text>
               <Pressable
                 onPress={() =>
@@ -167,7 +169,7 @@ export default function MashScheduleModal() {
             .map((hop, idx) => (
               <View key={idx} style={styles.row}>
                 <Text style={[styles.ingredientItem, { flex: 1 }]}>
-                  - {hop.name}, {hop.amount}g bei {hop.time} min
+                  &bull; {hop.name}, {hop.amount}g bei {hop.time} min
                 </Text>
                 <Pressable
                   onPress={() =>
@@ -280,6 +282,21 @@ export default function MashScheduleModal() {
           </Pressable>
         </ScrollView>
       </TouchableWithoutFeedback>
+      <Snackbar
+        visible={showSavedMessage}
+        onDismiss={() => setShowSavedMessage(false)}
+        duration={2000}
+        style={{
+          backgroundColor: colors.primary,
+          position: "absolute",
+          bottom: 16,
+          left: 16,
+          right: 16,
+          borderRadius: 8,
+        }}
+      >
+        Maischplan gespeichert!
+      </Snackbar>
     </KeyboardAvoidingView>
   );
 }

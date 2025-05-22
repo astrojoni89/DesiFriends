@@ -165,21 +165,21 @@ export default function BrewDayScreen() {
                   <Text style={styles.section}>Malz</Text>
                   {r.malz.map((m, i) => (
                     <Text key={i} style={styles.ingredient}>
-                      - {m.name}: {m.amount} kg
+                      &bull; {m.name}: {m.amount} kg
                     </Text>
                   ))}
 
                   <Text style={styles.section}>Hopfen</Text>
                   {r.hopfen.map((h, i) => (
                     <Text key={i} style={styles.ingredient}>
-                      - {h.name}: {h.amount} g @ {h.alphaAcid}%α
+                      &bull; {h.name}: {h.amount} g @ {h.alphaAcid}%α
                     </Text>
                   ))}
 
                   <Text style={styles.section}>Hefe</Text>
                   {r.hefe.map((h, i) => (
                     <Text key={i} style={styles.ingredient}>
-                      - {h.name}: {h.amount} g
+                      &bull; {h.name}: {h.amount} g
                     </Text>
                   ))}
 
@@ -223,6 +223,18 @@ export default function BrewDayScreen() {
                     >
                       <Text style={styles.brewButtonText}>Brauen</Text>
                     </Pressable>
+
+                    {/* <Pressable
+                      style={styles.brewButton}
+                      onPress={() =>
+                        router.push({
+                          pathname: "/brewflow/[id]/mash",
+                          params: { id: r.id },
+                        })
+                      }
+                    >
+                      <Text style={styles.brewButtonText}>Brautag starten</Text>
+                    </Pressable> */}
                   </View>
                 </Animated.View>
               </Pressable>

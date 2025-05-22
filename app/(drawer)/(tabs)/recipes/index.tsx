@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useState, useImperativeHandle, forwardRef, ForwardedRef } from "react";
 import {
   View,
   Text,
@@ -29,271 +29,7 @@ import { useTheme, Snackbar } from "react-native-paper";
 import type { AppTheme } from "@/theme/theme";
 import { useValidation } from "@/hooks/useValidation";
 
-// export default function RecipesScreen() {
-//   const router = useRouter();
-//   const [recipeName, setRecipeName] = useState("");
-//   const [batchSize, setBatchSize] = useState("");
-
-//   const [malzList, setMalzList] = useState<Ingredient[]>([]);
-//   const [hopfenList, setHopfenList] = useState<HopIngredient[]>([]);
-//   const [hefeList, setHefeList] = useState<Ingredient[]>([]);
-
-//   const [malzInput, setMalzInput] = useState<Ingredient>({
-//     name: "",
-//     amount: "",
-//   });
-//   const [hopfenInput, setHopfenInput] = useState<HopIngredient>({
-//     name: "",
-//     amount: "",
-//     alphaAcid: "",
-//   });
-//   const [hefeInput, setHefeInput] = useState<Ingredient>({
-//     name: "",
-//     amount: "",
-//   });
-
-//   const { recipes, addRecipe, deleteRecipe } = useRecipes();
-//   const theme = useTheme() as AppTheme;
-//   const { colors } = theme;
-//   const styles = createStyles(theme.colors);
-
-//   const [modalVisible, setModalVisible] = useState(false);
-
-//   // Validation
-//   type RecipeForm = {
-//     name: string;
-//     batchSize: string;
-//     malzList: Ingredient[];
-//     hopfenList: HopIngredient[];
-//     hefeList: Ingredient[];
-//     // Add other fields as necessary
-//   };
-
-//   const initialValues: RecipeForm = {
-//     name: "",
-//     batchSize: "",
-//     malzList: [],
-//     hopfenList: [],
-//     hefeList: [],
-//     // Initialize other fields
-//   };
-
-//   const validationRules = {
-//     name: (value: string) => (!value ? "Name is required" : null),
-//     batchSize: (value: string) => (!value ? "Batch size is required" : null),
-//     malzList: (value: Ingredient[]) =>
-//       value.length === 0 ? "At least one malt is required" : null,
-//     hopfenList: (value: HopIngredient[]) =>
-//       value.length === 0 ? "At least one hop is required" : null,
-//     hefeList: (value: Ingredient[]) =>
-//       value.length === 0 ? "At least one yeast is required" : null,
-//     // Add other validation rules
-//   };
-
-//   const { values, errors, handleChange, validate, setValues, setErrors } =
-//     useValidation<RecipeForm>(initialValues, validationRules);
-
-//   // Process data
-//   const [mashSteps, setMashSteps] = useState<MashStep[]>([]);
-//   const [boilTime, setBoilTime] = useState("");
-//   const [hopSchedule, setHopSchedule] = useState<HopSchedule[]>([]);
-
-//   const addIngredient = (
-//     input: Ingredient,
-//     list: Ingredient[],
-//     setter: Function,
-//     resetter: Function
-//   ) => {
-//     if (!input.name || !input.amount) return;
-//     setter([...list, input]);
-//     resetter({ name: "", amount: "" });
-//   };
-
-//   // Inside RecipesScreen
-//   const handleAddRecipe = () => {
-//     const validationErrors = validate();
-//     if (Object.keys(validationErrors).length > 0) return;
-
-//     const newRecipe: Recipe = {
-//       id: Date.now().toString(),
-//       name: values.name,
-//       batchSize: parseFloat(values.batchSize),
-//       malz: values.malzList,
-//       hopfen: values.hopfenList,
-//       hefe: values.hefeList,
-//       mashSteps,
-//       boilTime,
-//       hopSchedule,
-//     };
-//     addRecipe(newRecipe);
-
-//     // Clear
-//     setMashSteps([]);
-//     setBoilTime("");
-//     setHopSchedule([]);
-//     setValues(initialValues); // Reset form
-//     setErrors({});
-//   };
-
-//   const handleSaveAndOpenModal = () => {
-//     if (!recipeName || !batchSize) return;
-//     const id = Date.now().toString();
-//     const newRecipe: Recipe = {
-//       id,
-//       name: recipeName,
-//       batchSize: parseFloat(batchSize),
-//       malz: values.malzList,
-//       hopfen: values.hopfenList,
-//       hefe: values.hefeList,
-//     };
-//     addRecipe(newRecipe); // Save partial
-
-//     // Reset local state (so user can start fresh)
-//     setValues(initialValues); // Reset form
-//     setErrors({});
-
-//     router.push({ pathname: "/modal/schedule", params: { id } });
-//   };
-
-//   return (
-//     <KeyboardAvoidingView
-//       style={styles.container}
-//       behavior={Platform.OS === "ios" ? "padding" : "height"}
-//       keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
-//     >
-//       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-//         <ScrollView
-//           contentContainerStyle={styles.content}
-//           keyboardShouldPersistTaps="handled"
-//         >
-//           <Text style={styles.title}>Rezept erstellen</Text>
-
-//           <TextInput
-//             style={[
-//               styles.input,
-//               errors.name && { borderColor: "red", borderWidth: 2 },
-//             ]}
-//             placeholder="Rezeptname"
-//             value={values.name}
-//             onChangeText={(text) => handleChange("name", text)}
-//             placeholderTextColor={colors.outline}
-//           />
-
-//           <TextInput
-//             style={[
-//               styles.input,
-//               errors.batchSize && { borderColor: "red", borderWidth: 2 },
-//             ]}
-//             placeholder="Menge (Liter)"
-//             keyboardType="numeric"
-//             value={values.batchSize}
-//             onChangeText={(text) => handleChange("batchSize", text)}
-//             placeholderTextColor={colors.outline}
-//           />
-
-//           {/* MALZ Section */}
-//           <Text style={styles.sectionTitle}>Malz</Text>
-//           <View
-//             style={{
-//               flexDirection: "row",
-//               alignItems: "center",
-//               gap: 8,
-//               marginBottom: 8,
-//             }}
-//           >
-//             <IngredientInput
-//               input={malzInput}
-//               setInput={setMalzInput}
-//               onAdd={() =>
-//                 addIngredient(malzInput, malzList, setMalzList, setMalzInput)
-//               }
-//               colors={theme.colors}
-//               amountPlaceholder="Menge (kg)"
-//             />
-//           </View>
-//           {malzList.map((item, idx) => (
-//             <Text key={idx} style={styles.ingredientItem}>
-//               - {item.name}: {item.amount} kg
-//             </Text>
-//           ))}
-
-//           {/* HOPFEN Section */}
-//           <Text style={styles.sectionTitle}>Hopfen</Text>
-//           <View
-//             style={{
-//               flexDirection: "row",
-//               alignItems: "center",
-//               gap: 8,
-//               marginBottom: 8,
-//             }}
-//           >
-//             <IngredientInput
-//               input={hopfenInput}
-//               setInput={setHopfenInput}
-//               onAdd={() => {
-//                 setHopfenList([...hopfenList, hopfenInput]);
-//                 setHopfenInput({ name: "", amount: "", alphaAcid: "" });
-//               }}
-//               colors={theme.colors}
-//               amountPlaceholder="Menge (g)"
-//               extraField={{
-//                 key: "alphaAcid",
-//                 placeholder: "%α",
-//                 keyboardType: "decimal-pad",
-//               }}
-//             />
-//           </View>
-//           {hopfenList.map((item, idx) => (
-//             <Text key={idx} style={styles.ingredientItem}>
-//               - {item.name}: {item.amount} g @ {item.alphaAcid}%α
-//             </Text>
-//           ))}
-
-//           {/* HEFE Section */}
-//           <Text style={styles.sectionTitle}>Hefe</Text>
-//           <View
-//             style={{
-//               flexDirection: "row",
-//               alignItems: "center",
-//               gap: 8,
-//               marginBottom: 8,
-//             }}
-//           >
-//             <IngredientInput
-//               input={hefeInput}
-//               setInput={setHefeInput}
-//               onAdd={() =>
-//                 addIngredient(hefeInput, hefeList, setHefeList, setHefeInput)
-//               }
-//               colors={theme.colors}
-//               amountPlaceholder="Menge (g)"
-//             />
-//           </View>
-//           {hefeList.map((item, idx) => (
-//             <Text key={idx} style={styles.ingredientItem}>
-//               - {item.name}: {item.amount} g
-//             </Text>
-//           ))}
-
-//           <View style={{ marginVertical: 16 }}>
-//             <Pressable
-//               onPress={handleSaveAndOpenModal}
-//               style={[styles.brewButton, { backgroundColor: colors.secondary }]}
-//             >
-//               <Text style={styles.brewButtonText}>Maisch- & Kochplan</Text>
-//             </Pressable>
-
-//             <Pressable onPress={handleAddRecipe} style={styles.brewButton}>
-//               <Text style={styles.brewButtonText}>Rezept speichern</Text>
-//             </Pressable>
-//           </View>
-//         </ScrollView>
-//       </TouchableWithoutFeedback>
-//     </KeyboardAvoidingView>
-//   );
-// }
 // Updated RecipesScreen to highlight missing name, batchSize, and ingredient lists on validation
-
 export default function RecipesScreen() {
   const router = useRouter();
   const [recipeName, setRecipeName] = useState("");
@@ -508,7 +244,7 @@ export default function RecipesScreen() {
           </View>
           {malzList.map((item, idx) => (
             <Text key={idx} style={styles.ingredientItem}>
-              - {item.name}: {item.amount} kg
+              &bull; {item.name}: {item.amount} kg
             </Text>
           ))}
 
@@ -546,7 +282,7 @@ export default function RecipesScreen() {
           </View>
           {hopfenList.map((item, idx) => (
             <Text key={idx} style={styles.ingredientItem}>
-              - {item.name}: {item.amount} g @ {item.alphaAcid}%α
+              &bull; {item.name}: {item.amount} g @ {item.alphaAcid}%α
             </Text>
           ))}
 
@@ -579,7 +315,7 @@ export default function RecipesScreen() {
           </View>
           {hefeList.map((item, idx) => (
             <Text key={idx} style={styles.ingredientItem}>
-              - {item.name}: {item.amount} g
+              &bull; {item.name}: {item.amount} g
             </Text>
           ))}
 
@@ -594,18 +330,24 @@ export default function RecipesScreen() {
               <Text style={styles.brewButtonText}>Rezept speichern</Text>
             </Pressable>
           </View>
-
-          <Snackbar
-            visible={showSavedMessage}
-            onDismiss={() => setShowSavedMessage(false)}
-            duration={2000}
-            style={{ backgroundColor: colors.primary }}
-          >
-            Rezept gespeichert!
-          </Snackbar>
         </ScrollView>
         {/* </TouchableWithoutFeedback> */}
       </Pressable>
+      <Snackbar
+        visible={showSavedMessage}
+        onDismiss={() => setShowSavedMessage(false)}
+        duration={2000}
+        style={{
+          backgroundColor: colors.primary,
+          position: "absolute",
+          bottom: 16,
+          left: 16,
+          right: 16,
+          borderRadius: 8,
+        }}
+      >
+        Rezept gespeichert!
+      </Snackbar>
     </KeyboardAvoidingView>
   );
 }
@@ -765,3 +507,4 @@ function createStyles(colors: AppTheme["colors"]) {
     },
   });
 }
+// recipe index.tsx, 22/05/2025
