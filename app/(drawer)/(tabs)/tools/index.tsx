@@ -170,29 +170,52 @@ export default function CalcsScreen() {
               placeholderTextColor={colors.outline}
             />
 
-            {og && fg ? (
-              <>
-                <Text style={styles.result}>
-                  Alkoholgehalt:{" "}
-                  {calculateAlc(parseFloat(og), parseFloat(fg), unit)}%vol
-                </Text>
-                {unit === "plato" && (
-                  <Text style={styles.note}>
-                    Berechnet mit der Balling-Formel.
-                  </Text>
-                )}
-                {unit === "brix" && (
-                  <Text style={styles.note}>
-                    Berechnet mit der Sean Terrill-Formel.
-                  </Text>
-                )}
-                {unit === "gravity" && (
-                  <Text style={styles.note}>
-                    Berechnet mit der Balling-Formel.
-                  </Text>
-                )}
-              </>
-            ) : null}
+            {og && fg
+              ? (() => {
+                  const [
+                    alcVol,
+                    fermRateApp,
+                    fermRateReal,
+                    appExtract,
+                    realExtract,
+                  ] = calculateAlc(parseFloat(og), parseFloat(fg), unit);
+
+                  return (
+                    <View style={{ borderColor: colors.border, borderWidth: 1, padding: 16, borderRadius: 8 }}>
+                      <Text style={styles.result}>
+                        Alkoholgehalt: {alcVol}%vol
+                      </Text>
+                      <Text style={styles.secondaryResult}>
+                        Scheinbarer Endvergärungsgrad: {fermRateApp}%
+                      </Text>
+                      <Text style={styles.secondaryResult}>
+                        Tatsächlicher Endvergärungsgrad: {fermRateReal}%
+                      </Text>
+                      <Text style={styles.secondaryResult}>
+                        Scheinbarer Restextrakt: {appExtract}%
+                      </Text>
+                      <Text style={styles.secondaryResult}>
+                        Tatsächlicher Restextrakt: {realExtract}%
+                      </Text>
+                      {unit === "plato" && (
+                        <Text style={styles.note}>
+                          Berechnet mit der Balling-Formel.
+                        </Text>
+                      )}
+                      {unit === "brix" && (
+                        <Text style={styles.note}>
+                          Berechnet mit der Sean Terrill-Formel.
+                        </Text>
+                      )}
+                      {unit === "gravity" && (
+                        <Text style={styles.note}>
+                          Berechnet mit der Balling-Formel.
+                        </Text>
+                      )}
+                    </View>
+                  );
+                })()
+              : null}
           </View>
 
           {/* Conversion Section */}
@@ -427,14 +450,19 @@ function createStyles(colors: AppTheme["colors"]) {
       fontSize: 18,
       fontWeight: "600",
       marginTop: 8,
-      marginBottom: 16,
+      marginBottom: 8,
+      color: colors.onBackground,
+    },
+    secondaryResult: {
+      fontSize: 14,
+      fontStyle: "italic",
       color: colors.onBackground,
     },
     note: {
       fontSize: 12,
       color: colors.outline,
       fontStyle: "italic",
-      marginTop: 0,
+      marginTop: 8,
     },
     radioRow: {
       flexDirection: "row",

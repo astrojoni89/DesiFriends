@@ -24,8 +24,8 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
-    shouldShowBanner: true, // ✅ required in SDK 50+
-    shouldShowList: true, // ✅ required in SDK 50+
+    shouldShowBanner: true, // required in SDK 50+
+    shouldShowList: true, // required in SDK 50+
   }),
 });
 
@@ -85,7 +85,7 @@ export default function MashTimerStep() {
           trigger: {
             seconds: 10,
             repeats: false,
-          } as Notifications.TimeIntervalTriggerInput, // 👈 this cast is key!
+          } as Notifications.TimeIntervalTriggerInput,
         });
       }
     };

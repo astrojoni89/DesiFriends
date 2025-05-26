@@ -162,6 +162,19 @@ export default function BrewDayScreen() {
                   >
                     Zutaten:
                   </Text>
+
+                  <Text style={styles.section}>Wasser</Text>
+                  {r.hauptguss && (
+                    <Text style={styles.ingredient}>
+                      &bull; Hauptguss: {r.hauptguss} Liter
+                    </Text>
+                  )}
+                  {r.nachguss && (
+                    <Text style={styles.ingredient}>
+                      &bull; Nachguss: {r.nachguss} Liter
+                    </Text>
+                  )}
+
                   <Text style={styles.section}>Malz</Text>
                   {r.malz.map((m, i) => (
                     <Text key={i} style={styles.ingredient}>

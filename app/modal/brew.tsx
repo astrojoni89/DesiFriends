@@ -14,6 +14,7 @@ import {
   Platform,
   TouchableOpacity,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useRecipes } from "../../context/RecipeContext";
 import * as Clipboard from "expo-clipboard";
 import * as Print from "expo-print";
@@ -67,25 +68,81 @@ export default function BrewModal() {
     }),
   };
 
+  const exportRecipeAsJson = async () => {
+    if (!recipe) return;
+
+    try {
+      const fileName = `${recipe.name.replace(/\s+/g, "_")}.json`;
+      const fileUri = FileSystem.cacheDirectory + fileName;
+
+      // Prepare data with versioning
+      const exportData = {
+        version: 1,
+        recipe,
+      };
+
+      await FileSystem.writeAsStringAsync(
+        fileUri,
+        JSON.stringify(exportData, null, 2)
+      );
+
+      await Sharing.shareAsync(fileUri, {
+        mimeType: "application/json",
+        dialogTitle: "Rezept exportieren",
+      });
+    } catch (error) {
+      console.error("Export Error:", error);
+      Alert.alert("Fehler", "Rezept konnte nicht exportiert werden.");
+    }
+  };
+
   const copyToClipboard = () => {
     const text = `
-  📋 ${recipe?.name} (${targetSize} L)
-  
-  Malz:
-  ${scaled?.malz.map((m) => `- ${m.name}: ${m.amount} kg`).join("\n")}
-  
-  Hopfen:
-  ${scaled?.hopfen
-    .map(
-      (h, i) =>
-        `- ${h.name}: ${h.amount} g @ ${actualAlphaAcids[i] || h.alphaAcid}%α`
-    )
-    .join("\n")}
-  
-  Hefe:
-  ${scaled?.hefe.map((h) => `- ${h.name}: ${h.amount} g`).join("\n")}
-    `;
-    Clipboard.setStringAsync(text);
+    📋 ${recipe?.name} (${targetSize} L)
+
+    Wasser:
+    ${recipe.hauptguss ? `- Hauptguss: ${recipe.hauptguss} L\n` : ""}${
+      recipe.nachguss ? `- Nachguss: ${recipe.nachguss} L` : ""
+    }
+      
+    Malz:
+    ${scaled?.malz.map((m) => `- ${m.name}: ${m.amount} kg`).join("\n")}
+      
+    Hopfen:
+    ${scaled?.hopfen
+      .map(
+        (h, i) =>
+          `- ${h.name}: ${h.amount} g @ ${actualAlphaAcids[i] || h.alphaAcid}%α`
+      )
+      .join("\n")}
+    
+    Hefe:
+    ${scaled?.hefe.map((h) => `- ${h.name}: ${h.amount} g`).join("\n")}
+    
+    ${
+      recipe.mashSteps?.length
+        ? `Maischplan:\n${recipe.mashSteps
+            .map((s) => `- ${s.temperature}°C für ${s.duration} min`)
+            .join("\n")}`
+        : ""
+    }
+
+    ${
+      recipe.hopSchedule?.length
+        ? `Kochplan:\n${
+            recipe.boilTime || "?"
+          } min (Beginn)\n${recipe.hopSchedule
+            .sort((a, b) => parseFloat(b.time) - parseFloat(a.time))
+            .map((h) => {
+              const adjustedAmount =
+                scaled.hopfen.find((s) => s.name === h.name)?.amount ||
+                h.amount;
+              return `- ${h.time} min: ${h.name}, ${adjustedAmount} g`;
+            })
+            .join("\n")}\n0 min (Ende)`
+        : ""
+    }`;
+    Clipboard.setStringAsync(text.trim());
   };
 
   const preparePDF = () => {
@@ -128,6 +185,18 @@ export default function BrewModal() {
           <body>
             <img src="${logoUri}" alt="Logo" />
             <h1>${recipe.name} – ${targetSize} L</h1>
+            <h2>Wasser</h2>
+            <ul>
+              ${
+                recipe.hauptguss
+                  ? `<li>Hauptguss: ${recipe.hauptguss} L</li>`
+                  : ""
+              }
+              ${
+                recipe.nachguss ? `<li>Nachguss: ${recipe.nachguss} L</li>` : ""
+              }
+            </ul>
+
             <h2>Malz</h2>
             <ul>
               ${scaled.malz
@@ -279,6 +348,18 @@ export default function BrewModal() {
             />
           ))}
 
+          <Text style={styles.section}>Wasser</Text>
+          {recipe.hauptguss ? (
+            <Text style={styles.text}>
+              &bull; Hauptguss: {recipe.hauptguss} L
+            </Text>
+          ) : null}
+          {recipe.nachguss ? (
+            <Text style={styles.text}>
+              &bull; Nachguss: {recipe.nachguss} L
+            </Text>
+          ) : null}
+
           <Text style={styles.section}>Malz</Text>
           {scaled.malz.map((m, i) => (
             <Text key={i} style={styles.text}>
@@ -289,7 +370,8 @@ export default function BrewModal() {
           <Text style={styles.section}>Hopfen</Text>
           {scaled.hopfen.map((h, i) => (
             <Text key={i} style={styles.text}>
-              &bull; {h.name}: {h.amount} g @ {actualAlphaAcids[i] || h.alphaAcid}%α
+              &bull; {h.name}: {h.amount} g @{" "}
+              {actualAlphaAcids[i] || h.alphaAcid}%α
             </Text>
           ))}
 
@@ -301,14 +383,42 @@ export default function BrewModal() {
           ))}
 
           <View style={{ marginTop: 24 }}></View>
-          <Pressable style={styles.button} onPress={copyToClipboard}>
+          {/* <Pressable style={styles.button} onPress={copyToClipboard}>
             <Text style={styles.buttontext}>
               In die Zwischenablage kopieren
             </Text>
           </Pressable>
+
           <Pressable style={styles.button} onPress={exportToPDF}>
             <Text style={styles.buttontext}>Drucken</Text>
-          </Pressable>
+          </Pressable> */}
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "flex-end",
+              gap: 12,
+              marginTop: 8,
+            }}
+          >
+            <Pressable onPress={copyToClipboard} style={styles.iconButton}>
+              <Ionicons name="copy-outline" size={24} color={colors.primary} />
+            </Pressable>
+            <Pressable onPress={exportToPDF} style={styles.iconButton}>
+              <Ionicons name="print-outline" size={24} color={colors.primary} />
+            </Pressable>
+            <Pressable onPress={exportRecipeAsJson} style={styles.iconButton}>
+              <Ionicons
+                name="download-outline"
+                size={24}
+                color={colors.primary}
+              />
+            </Pressable>
+          </View>
+
+          {/* <Pressable style={styles.button} onPress={exportRecipeAsJson}>
+            <Text style={styles.buttontext}>Rezept exportieren (.json)</Text>
+          </Pressable> */}
+
           <Pressable
             style={styles.button}
             onPress={() =>
@@ -321,7 +431,7 @@ export default function BrewModal() {
             <Text style={styles.buttontext}>Brautag starten</Text>
           </Pressable>
 
-          <Pressable
+          {/* <Pressable
             style={[
               styles.button,
               { backgroundColor: colors.secondary, marginTop: 32 },
@@ -329,7 +439,7 @@ export default function BrewModal() {
             onPress={() => router.back()}
           >
             <Text style={styles.buttontext}>Schließen</Text>
-          </Pressable>
+          </Pressable> */}
         </ScrollView>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
@@ -386,6 +496,13 @@ function createStyles(colors: AppTheme["colors"]) {
       color: colors.onPrimary || "#fff",
       fontWeight: "500",
       fontSize: 16,
+    },
+    iconButton: {
+      padding: 10,
+      borderRadius: 8,
+      backgroundColor: colors.surfaceVariant,
+      alignItems: "center",
+      justifyContent: "center",
     },
   });
 }

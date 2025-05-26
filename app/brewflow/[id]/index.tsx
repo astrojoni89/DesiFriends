@@ -28,7 +28,7 @@ export default function BrewStartScreen() {
       {recipe.mashSteps?.length ? (
         recipe.mashSteps.map((step, i) => (
           <Text key={i} style={styles.text}>
-            - {step.temperature}°C für {step.duration} min
+            &bull; {step.temperature}°C für {step.duration} min
           </Text>
         ))
       ) : (
@@ -39,7 +39,7 @@ export default function BrewStartScreen() {
       {recipe.hopSchedule?.length ? (
         recipe.hopSchedule.map((hop, i) => (
           <Text key={i} style={styles.text}>
-            - {hop.name}, {hop.amount}g bei {hop.time} min
+            &bull; {hop.name}, {hop.amount}g bei {hop.time} min
           </Text>
         ))
       ) : (

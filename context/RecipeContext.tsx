@@ -20,6 +20,8 @@ export type Recipe = {
   id: string;
   name: string;
   batchSize: number;
+  hauptguss: number;
+  nachguss: number;
   malz: Ingredient[];
   hopfen: HopIngredient[];
   hefe: Ingredient[];

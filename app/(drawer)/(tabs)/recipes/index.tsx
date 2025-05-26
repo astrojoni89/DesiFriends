@@ -24,6 +24,9 @@ import {
   HopSchedule,
 } from "@/context/RecipeContext";
 
+import * as DocumentPicker from "expo-document-picker";
+import * as FileSystem from "expo-file-system";
+import { Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme, Snackbar } from "react-native-paper";
 import type { AppTheme } from "@/theme/theme";
@@ -34,6 +37,8 @@ export default function RecipesScreen() {
   const router = useRouter();
   const [recipeName, setRecipeName] = useState("");
   const [batchSize, setBatchSize] = useState("");
+  const [hauptguss, setHauptguss] = useState("");
+  const [nachguss, setNachguss] = useState("");
 
   const [malzList, setMalzList] = useState<Ingredient[]>([]);
   const [hopfenList, setHopfenList] = useState<HopIngredient[]>([]);
@@ -64,6 +69,8 @@ export default function RecipesScreen() {
   type RecipeForm = {
     name: string;
     batchSize: string;
+    hauptguss: string;
+    nachguss: string;
     malzList: Ingredient[];
     hopfenList: HopIngredient[];
     hefeList: Ingredient[];
@@ -72,6 +79,8 @@ export default function RecipesScreen() {
   const initialValues: RecipeForm = {
     name: "",
     batchSize: "",
+    hauptguss: "",
+    nachguss: "",
     malzList: [],
     hopfenList: [],
     hefeList: [],
@@ -80,6 +89,9 @@ export default function RecipesScreen() {
   const validationRules = {
     name: (value: string) => (!value ? "Name is required" : null),
     batchSize: (value: string) => (!value ? "Batch size is required" : null),
+    hauptguss: (value: string) =>
+      !value ? "Main water volume is required" : null,
+    nachguss: (value: string) => (!value ? "Sparge volume is required" : null),
     malzList: (value: Ingredient[]) =>
       value.length === 0 ? "At least one malt is required" : null,
     hopfenList: (value: HopIngredient[]) =>
@@ -121,6 +133,8 @@ export default function RecipesScreen() {
       id: Date.now().toString(),
       name: values.name,
       batchSize: parseFloat(values.batchSize),
+      hauptguss: parseFloat(values.hauptguss),
+      nachguss: parseFloat(values.nachguss),
       malz: values.malzList,
       hopfen: values.hopfenList,
       hefe: values.hefeList,
@@ -155,6 +169,8 @@ export default function RecipesScreen() {
       id,
       name: values.name,
       batchSize: parseFloat(values.batchSize),
+      hauptguss: parseFloat(values.hauptguss),
+      nachguss: parseFloat(values.nachguss),
       malz: values.malzList,
       hopfen: values.hopfenList,
       hefe: values.hefeList,
@@ -163,6 +179,37 @@ export default function RecipesScreen() {
     setValues(initialValues);
     setErrors({});
     router.push({ pathname: "/modal/schedule", params: { id } });
+  };
+
+  const importRecipe = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "application/json",
+      });
+
+      if (result.canceled || !result.assets || !result.assets[0]?.uri) return;
+
+      const fileUri = result.assets[0].uri;
+      const contents = await FileSystem.readAsStringAsync(fileUri);
+      const data = JSON.parse(contents);
+
+      if (!data || typeof data !== "object" || !data.recipe) {
+        Alert.alert("Fehler", "Die Datei enthält kein gültiges Rezept.");
+        return;
+      }
+
+      // Optional: sanitize ID to avoid collisions
+      const importedRecipe = {
+        ...data.recipe,
+        id: Date.now().toString(),
+      };
+
+      addRecipe(importedRecipe);
+      Alert.alert("Erfolg", "Rezept erfolgreich importiert!");
+    } catch (error) {
+      console.error("Import Error:", error);
+      Alert.alert("Fehler", "Rezept konnte nicht importiert werden.");
+    }
   };
 
   const [showSavedMessage, setShowSavedMessage] = useState(false);
@@ -190,7 +237,23 @@ export default function RecipesScreen() {
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.title}>Rezept erstellen</Text>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 12,
+            }}
+          >
+            <Text style={styles.title}>Rezept erstellen</Text>
+            <Pressable onPress={importRecipe} style={styles.iconButton}>
+              <Ionicons
+                name="cloud-upload-outline"
+                size={24}
+                color={colors.primary}
+              />
+            </Pressable>
+          </View>
 
           <TextInput
             style={[
@@ -208,12 +271,46 @@ export default function RecipesScreen() {
               styles.input,
               errors.batchSize && { borderColor: "red", borderWidth: 2 },
             ]}
-            placeholder="Menge (Liter)"
+            placeholder="Zielmenge (Liter)"
             keyboardType="numeric"
             value={values.batchSize}
             onChangeText={(text) => handleChange("batchSize", text)}
             placeholderTextColor={colors.outline}
           />
+
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 8,
+            }}
+          >
+            <TextInput
+              style={[
+                styles.input,
+                { flex: 1 },
+                errors.batchSize && { borderColor: "red", borderWidth: 2 },
+              ]}
+              placeholder="Hauptguss (Liter)"
+              keyboardType="decimal-pad"
+              value={values.hauptguss}
+              onChangeText={(text) => handleChange("hauptguss", text)}
+              placeholderTextColor={colors.outline}
+            />
+            <TextInput
+              style={[
+                styles.input,
+                { flex: 1 },
+                errors.batchSize && { borderColor: "red", borderWidth: 2 },
+              ]}
+              placeholder="Nachguss (Liter)"
+              keyboardType="decimal-pad"
+              value={values.nachguss}
+              onChangeText={(text) => handleChange("nachguss", text)}
+              placeholderTextColor={colors.outline}
+            />
+          </View>
 
           {/* Malz section */}
           <Text style={styles.sectionTitle}>Malz</Text>
@@ -340,7 +437,7 @@ export default function RecipesScreen() {
         style={{
           backgroundColor: colors.primary,
           position: "absolute",
-          bottom: 16,
+          bottom: 2,
           left: 16,
           right: 16,
           borderRadius: 8,
@@ -504,6 +601,13 @@ function createStyles(colors: AppTheme["colors"]) {
       fontWeight: "600",
       fontSize: 16,
       margin: 4,
+    },
+    iconButton: {
+      padding: 10,
+      borderRadius: 8,
+      backgroundColor: colors.surfaceVariant,
+      alignItems: "center",
+      justifyContent: "center",
     },
   });
 }

@@ -28,40 +28,57 @@ export function brixToPlato(brix: number): number {
 }
 
 /** Calculate ABV using Balling formula */
-export function calculateAlcPlato(og: number, fg: number): string {
-  var realExtract = (1 - (0.81 * (og - fg) / og)) * og;
+export function calculateAlcPlato(og: number, fg: number): [string, string, string, string, string] {
+  var appExtract = fg;
+  
+  var fermRate_real = 100 * (0.81 * (og - fg) / og);
+  var fermRate_app = 100 * (1 - (fg / og));
+  
+  var realExtract = (1 - (fermRate_real/100)) * og;
+  
   var alcWeight = (realExtract - og) / ((1.0665 * og / 100) - 2.0665);
   var alcVol = alcWeight / 0.795;
   // return ((76.08 * (og - fg)) / (1.775 - og)) * (fg / 0.794);
-  return alcVol.toFixed(2);
+  return [alcVol.toFixed(2), fermRate_app.toFixed(2), fermRate_real.toFixed(2), appExtract.toFixed(2), realExtract.toFixed(2)];
 }
 
 /** Calculate ABV using Sean Terrill formula */
-export function calculateAlcBrix(og: number, fg: number, correction: number = 1.02): string {
+export function calculateAlcBrix(og: number, fg: number, correction: number = 1.04): [string, string, string, string, string] {
   var og_corr = og / correction;
   var fg_corr = fg / correction;
   var sg = 1.0000 - 0.00085683 * og_corr + 0.0034941 * fg_corr;
-  var apparentExtract = - 463.37 + 668.72 * sg - 205.347 * sg ** 2;
-  var realExtract = 0.1808 * og_corr + 0.8192 * apparentExtract;
-  var alcWeight = (realExtract - og_corr) / ((1.0665 * og_corr / 100) - 2.0665);
-  var alcVol = alcWeight / 0.795;
-  return alcVol.toFixed(2);
+  
+  var [alcVol, fermRate_app, fermRate_real, appExtract, realExtract] = calculateAlcPlato(brixToPlato(og_corr), sgToPlato(sg)); /** As in Fabier/biercalcs */
+
+  /** Might replace this with standard computation */
+  // var apparentExtract = - 463.37 + 668.72 * sg - 205.347 * sg ** 2;
+  // var realExtract = 0.1808 * og_corr + 0.8192 * apparentExtract;
+
+  // var fermRate_real = 100 * (0.81 * (og_corr - sgToPlato(sg)) / og_corr);
+  // var fermRate_app = 100 * (1 - (sgToPlato(sg) / og_corr));
+
+  // var alcWeight = (realExtract - og_corr) / ((1.0665 * og_corr / 100) - 2.0665);
+  // var alcVol = alcWeight / 0.795;
+  // return [alcVol.toFixed(2), fermRate_app.toFixed(2), fermRate_real.toFixed(2), apparentExtract.toFixed(2), realExtract.toFixed(2)];
+  return [alcVol, fermRate_app, fermRate_real, appExtract, realExtract];
 }
 
 /** Calculate ABV using Balling formula and specific gravity */
-export function calculateAlcGravity(og: number, fg: number): string {
+export function calculateAlcGravity(og: number, fg: number): [string, string, string, string, string] {
   var og_plato = sgToPlato(og);
   var fg_plato = sgToPlato(fg);
 
-  var realExtract = (1 - (0.81 * (og_plato - fg_plato) / og_plato)) * og_plato;
-  var alcWeight = (realExtract - og_plato) / ((1.0665 * og_plato / 100) - 2.0665);
-  var alcVol = alcWeight / 0.795;
+  var [alcVol, fermRate_app, fermRate_real, appExtract, realExtract] = calculateAlcPlato(og_plato, fg_plato);
+
+  // var realExtract = (1 - (0.81 * (og_plato - fg_plato) / og_plato)) * og_plato;
+  // var alcWeight = (realExtract - og_plato) / ((1.0665 * og_plato / 100) - 2.0665);
+  // var alcVol = alcWeight / 0.795;
   // return ((76.08 * (og - fg)) / (1.775 - og)) * (fg / 0.794);
-  return alcVol.toFixed(2);
+  return [alcVol, fermRate_app, fermRate_real, appExtract, realExtract];
 }
 
 /** Calculate ABV wrapper  */
-export function calculateAlc(og: number, fg: number, unit: string): string {
+export function calculateAlc(og: number, fg: number, unit: string): [string, string, string, string, string] {
   if (unit === "plato") {
     return calculateAlcPlato(og, fg);
   } else if (unit === "brix") {
