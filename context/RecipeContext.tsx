@@ -34,6 +34,8 @@ type RecipeContextType = {
   recipes: Recipe[];
   addRecipe: (recipe: Recipe) => void;
   getRecipeById: (id: string) => Recipe | undefined;
+  updateRecipe: (id: string, updated: Partial<Recipe>) => void;
+  duplicateRecipe: (id: string) => void;
   deleteRecipe: (id: string) => void;
 };
 
@@ -86,6 +88,26 @@ export const RecipeProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  const updateRecipe = (id: string, updated: Partial<Recipe>) => {
+    setRecipes((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, ...updated } : r))
+    );
+  };
+
+  const duplicateRecipe = (id: string) => {
+    const original = recipes.find((r) => r.id === id);
+    if (!original) return;
+
+    const newId = crypto.randomUUID();
+    const duplicated: Recipe = {
+      ...original,
+      id: newId,
+      name: `${original.name} (Kopie)`,
+    };
+
+    setRecipes((prev) => [...prev, duplicated]);
+  };
+
   const getRecipeById = (id: string) => {
     return recipes.find((r) => r.id === id);
   };
@@ -95,7 +117,9 @@ export const RecipeProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <RecipeContext.Provider value={{ recipes, addRecipe, getRecipeById, deleteRecipe }}>
+    <RecipeContext.Provider
+      value={{ recipes, addRecipe, getRecipeById, updateRecipe, duplicateRecipe, deleteRecipe }}
+    >
       {children}
     </RecipeContext.Provider>
   );

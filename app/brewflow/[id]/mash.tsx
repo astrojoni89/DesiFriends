@@ -46,6 +46,32 @@ export default function MashTimerStep() {
 
   const step = steps[stepIndex];
   const [paused, setPaused] = useState(false);
+  const [frozenTime, setFrozenTime] = useState<number | null>(null);
+
+  const togglePause = () => {
+    if (!paused) {
+      const timeLeft = endTime
+        ? Math.max(0, Math.floor((endTime - Date.now()) / 1000))
+        : 0;
+      setFrozenTime(timeLeft); // Capture the current time left
+    } else {
+      setNow(Date.now()); // Re-sync timer base when resuming
+      setFrozenTime(null); // Clear the frozen value
+    }
+    setPaused((prev) => !prev);
+  };
+
+  const resetStep = () => {
+    if (!step) return;
+
+    const durationSec = parseInt(step.duration) * 60;
+    const targetEndTime = Date.now() + durationSec * 1000;
+
+    setEndTime(targetEndTime);
+    setNow(Date.now());
+    setPaused(false);
+    setFrozenTime(null);
+  };
 
   // Set up app state listener to re-sync timer
   useEffect(() => {
@@ -95,7 +121,6 @@ export default function MashTimerStep() {
 
   useEffect(() => {
     if (!endTime || paused) return;
-
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
   }, [endTime, paused]);
@@ -119,7 +144,7 @@ export default function MashTimerStep() {
   const timeLeft =
     endTime && !paused
       ? Math.max(0, Math.floor((endTime - now) / 1000))
-      : Math.max(0, Math.floor((endTime ?? now) - now) / 1000); // fallback during pause
+      : frozenTime ?? 0; // Display frozen time when paused
 
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
@@ -156,16 +181,25 @@ export default function MashTimerStep() {
         </Pressable>
       )}
 
-      <Pressable
-        style={styles.iconButton}
-        onPress={() => setPaused((prev) => !prev)}
-      >
-        <Ionicons
-          name={paused ? "play" : "pause"}
-          size={28}
-          color={colors.onPrimary}
-        />
-      </Pressable>
+      <View style={{ flexDirection: "row", gap: 12 }}>
+        <Pressable
+          style={styles.iconButton}
+          onPress={togglePause}
+        >
+          <Ionicons
+            name={paused ? "play" : "pause"}
+            size={28}
+            color={colors.onPrimary}
+          />
+        </Pressable>
+
+        <Pressable
+          style={[styles.iconButton, { backgroundColor: colors.secondary }]}
+          onPress={resetStep}
+        >
+          <Ionicons name="refresh" size={28} color={colors.onPrimary} />
+        </Pressable>
+      </View>
 
       <Pressable
         style={[

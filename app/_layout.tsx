@@ -50,6 +50,10 @@ function AppWithTheming() {
             options={{ presentation: "modal", title: "Maisch- & Kochplan" }}
           />
           <Stack.Screen
+            name="modal/edit"
+            options={{ presentation: "modal", title: "Rezept bearbeiten" }}
+          />
+          <Stack.Screen
             name="brewflow"
             options={{ presentation: "modal", title: "Brautag starten" }}
           />

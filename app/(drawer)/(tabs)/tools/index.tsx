@@ -4,17 +4,14 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  ScrollView,
-  Animated,
-  Easing,
   Pressable,
-  KeyboardAvoidingView,
   TouchableWithoutFeedback,
   Keyboard,
   Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { RadioButton, Menu } from "react-native-paper";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 import {
   calculateAlc,
@@ -37,15 +34,15 @@ export default function CalcsScreen() {
   const closeMenu = () => setMenuVisible(false);
 
   // Scroll‐to logic (using onLayout)
-  const scrollRef = useRef<ScrollView>(null);
+  // const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<KeyboardAwareScrollView | null>(null);
   const [abvY, setAbvY] = useState(0);
   const [convY, setConvY] = useState(0);
   const [aaY, setAaY] = useState(0);
   const [tempY, setTempY] = useState(0);
   const [diluY, setDiluY] = useState(0);
   const scrollTo = (y: number) => {
-    scrollRef.current?.scrollTo({ y, animated: true });
-    // toggleSidebar();
+  scrollRef.current?.scrollToPosition(0, y, true);
   };
 
   // 1) ABV calculator
@@ -76,65 +73,33 @@ export default function CalcsScreen() {
   const [originalWortVolume, setOriginalWortVolume] = useState("");
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
-    >
-      {/* <View style={styles.container}> */}
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView
-          ref={scrollRef}
-          contentContainerStyle={[styles.content]}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={{ position: "absolute", top: 32, left: 16, zIndex: 10 }}>
-            <Menu
-              visible={menuVisible}
-              onDismiss={closeMenu}
-              anchor={
-                <Pressable onPress={openMenu}>
-                  <Ionicons name="menu" size={28} color={colors.onSurface} />
-                </Pressable>
-              }
-            >
-              <Menu.Item
-                onPress={() => {
-                  scrollTo(abvY);
-                  closeMenu();
-                }}
-                title="Alkoholgehalt"
-              />
-              <Menu.Item
-                onPress={() => {
-                  scrollTo(convY);
-                  closeMenu();
-                }}
-                title="Umrechner"
-              />
-              <Menu.Item
-                onPress={() => {
-                  scrollTo(aaY);
-                  closeMenu();
-                }}
-                title="Hopfen-Anpassung"
-              />
-              <Menu.Item
-                onPress={() => {
-                  scrollTo(tempY);
-                  closeMenu();
-                }}
-                title="Temperatur-Korrektur Plato"
-              />
-              <Menu.Item
-                onPress={() => {
-                  scrollTo(diluY);
-                  closeMenu();
-                }}
-                title="Würzeverdünnung"
-              />
-            </Menu>
-          </View>
+    <View style={{ flex: 1 , paddingTop: 16}}>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <KeyboardAwareScrollView
+        ref={scrollRef}
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        enableOnAndroid
+        extraScrollHeight={Platform.OS === "ios" ? 80 : 300}
+      >
+        <View style={{ position: "absolute", top: 32, left: 16, zIndex: 10 }}>
+          <Menu
+            visible={menuVisible}
+            onDismiss={closeMenu}
+            anchor={
+              <Pressable onPress={openMenu}>
+                <Ionicons name="menu" size={28} color={colors.onSurface} />
+              </Pressable>
+            }
+          >
+            <Menu.Item onPress={() => { scrollTo(abvY); closeMenu(); }} title="Alkoholgehalt" />
+            <Menu.Item onPress={() => { scrollTo(convY); closeMenu(); }} title="Umrechner" />
+            <Menu.Item onPress={() => { scrollTo(aaY); closeMenu(); }} title="Hopfen-Anpassung" />
+            <Menu.Item onPress={() => { scrollTo(tempY); closeMenu(); }} title="Temperatur-Korrektur Plato" />
+            <Menu.Item onPress={() => { scrollTo(diluY); closeMenu(); }} title="Würzeverdünnung" />
+          </Menu>
+        </View>
 
           {/* Main content */}
           {/* ABV Section */}
@@ -410,11 +375,9 @@ export default function CalcsScreen() {
               </Text>
             ) : null}
           </View>
-          {/* </ScrollView> */}
-        </ScrollView>
-        {/* </KeyboardAwareScrollView> */}
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
+          </KeyboardAwareScrollView>
+    </TouchableWithoutFeedback>
+  </View>
   );
 }
 

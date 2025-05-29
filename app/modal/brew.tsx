@@ -5,22 +5,20 @@ import {
   Pressable,
   Text,
   TextInput,
-  ScrollView,
   StyleSheet,
   Alert,
-  KeyboardAvoidingView,
   TouchableWithoutFeedback,
   Keyboard,
   Platform,
-  TouchableOpacity,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { Ionicons } from "@expo/vector-icons";
 import { useRecipes } from "../../context/RecipeContext";
 import * as Clipboard from "expo-clipboard";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system";
-import { useTheme } from "react-native-paper";
+import { useTheme, Tooltip } from "react-native-paper";
 import type { AppTheme } from "@/theme/theme";
 
 export default function BrewModal() {
@@ -68,11 +66,21 @@ export default function BrewModal() {
     }),
   };
 
+  const scaledWater = {
+    hauptguss: recipe.hauptguss
+      ? (recipe.hauptguss * scaleFactor).toFixed(1)
+      : null,
+    nachguss: recipe.nachguss
+      ? (recipe.nachguss * scaleFactor).toFixed(1)
+      : null,
+  };
+
   const exportRecipeAsJson = async () => {
     if (!recipe) return;
 
     try {
-      const fileName = `${recipe.name.replace(/\s+/g, "_")}.json`;
+      // const fileName = `${recipe.name.replace(/\s+/g, "_")}.json`;
+      const fileName = `${recipe.name.replace(/\s+/g, "_")}.dfr`;
       const fileUri = FileSystem.cacheDirectory + fileName;
 
       // Prepare data with versioning
@@ -88,7 +96,7 @@ export default function BrewModal() {
 
       await Sharing.shareAsync(fileUri, {
         mimeType: "application/json",
-        dialogTitle: "Rezept exportieren",
+        dialogTitle: "Rezept teilen",
       });
     } catch (error) {
       console.error("Export Error:", error);
@@ -101,9 +109,10 @@ export default function BrewModal() {
     📋 ${recipe?.name} (${targetSize} L)
 
     Wasser:
-    ${recipe.hauptguss ? `- Hauptguss: ${recipe.hauptguss} L\n` : ""}${
-      recipe.nachguss ? `- Nachguss: ${recipe.nachguss} L` : ""
-    }
+      ${
+        scaledWater.hauptguss ? `- Hauptguss: ${scaledWater.hauptguss} L\n` : ""
+      }${scaledWater.nachguss ? `- Nachguss: ${scaledWater.nachguss} L` : ""}
+
       
     Malz:
     ${scaled?.malz.map((m) => `- ${m.name}: ${m.amount} kg`).join("\n")}
@@ -188,13 +197,11 @@ export default function BrewModal() {
             <h2>Wasser</h2>
             <ul>
               ${
-                recipe.hauptguss
-                  ? `<li>Hauptguss: ${recipe.hauptguss} L</li>`
+                scaledWater.hauptguss
+                  ? `<li>Hauptguss: ${scaledWater.hauptguss} L</li>`
                   : ""
               }
-              ${
-                recipe.nachguss ? `<li>Nachguss: ${recipe.nachguss} L</li>` : ""
-              }
+              ${scaledWater.nachguss ? `<li>Nachguss: ${scaledWater.nachguss} L</li>` : ""}
             </ul>
 
             <h2>Malz</h2>
@@ -279,8 +286,6 @@ export default function BrewModal() {
         [{ text: "OK" }]
       );
     } catch (error) {
-      // console.error("PDF Export Error:", error);
-      // alert("Fehler beim Exportieren der PDF.");
       sharePDF();
     }
   };
@@ -312,113 +317,99 @@ export default function BrewModal() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
-    >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-        >
-          <Text style={styles.title}>{recipe.name}</Text>
-          <Text style={styles.section}>Zielmenge (Liter)</Text>
+  <View style={{ flex: 1 }}>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <KeyboardAwareScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        enableOnAndroid
+        extraScrollHeight={Platform.OS === "ios" ? 80 : 0}
+      >
+        <Text style={styles.title}>{recipe.name}</Text>
+
+        <Text style={styles.section}>Zielmenge (Liter)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Zielmenge (Liter)"
+          keyboardType="decimal-pad"
+          value={targetSize}
+          onChangeText={setTargetSize}
+          placeholderTextColor={colors.outline}
+        />
+
+        <Text style={styles.section}>Hopfen Alpha-Säure (%α)</Text>
+        {recipe.hopfen.map((h, i) => (
           <TextInput
+            key={i}
             style={styles.input}
-            placeholder="Zielmenge (Liter)"
+            placeholder={`für ${h.name}`}
+            value={actualAlphaAcids[i] || ""}
             keyboardType="decimal-pad"
-            value={targetSize}
-            onChangeText={setTargetSize}
+            onChangeText={(val) =>
+              setActualAlphaAcids((prev) => ({ ...prev, [i]: val }))
+            }
             placeholderTextColor={colors.outline}
           />
+        ))}
 
-          <Text style={styles.section}>Hopfen Alpha-Säure (%α)</Text>
-          {recipe.hopfen.map((h, i) => (
-            <TextInput
-              key={i}
-              style={styles.input}
-              placeholder={`für ${h.name}`}
-              value={actualAlphaAcids[i] || ""}
-              keyboardType="decimal-pad"
-              onChangeText={(val) =>
-                setActualAlphaAcids((prev) => ({ ...prev, [i]: val }))
-              }
-              placeholderTextColor={colors.outline}
-            />
-          ))}
+        <Text style={styles.section}>Wasser</Text>
+        {scaledWater.hauptguss && (
+          <Text style={styles.text}>
+            &bull; Hauptguss: {scaledWater.hauptguss} L
+          </Text>
+        )}
+        {scaledWater.nachguss && (
+          <Text style={styles.text}>
+            &bull; Nachguss: {scaledWater.nachguss} L
+          </Text>
+        )}
 
-          <Text style={styles.section}>Wasser</Text>
-          {recipe.hauptguss ? (
-            <Text style={styles.text}>
-              &bull; Hauptguss: {recipe.hauptguss} L
-            </Text>
-          ) : null}
-          {recipe.nachguss ? (
-            <Text style={styles.text}>
-              &bull; Nachguss: {recipe.nachguss} L
-            </Text>
-          ) : null}
+        <Text style={styles.section}>Malz</Text>
+        {scaled.malz.map((m, i) => (
+          <Text key={i} style={styles.text}>
+            &bull; {m.name}: {m.amount} kg
+          </Text>
+        ))}
 
-          <Text style={styles.section}>Malz</Text>
-          {scaled.malz.map((m, i) => (
-            <Text key={i} style={styles.text}>
-              &bull; {m.name}: {m.amount} kg
-            </Text>
-          ))}
+        <Text style={styles.section}>Hopfen</Text>
+        {scaled.hopfen.map((h, i) => (
+          <Text key={i} style={styles.text}>
+            &bull; {h.name}: {h.amount} g @{" "}
+            {actualAlphaAcids[i] || h.alphaAcid}%α
+          </Text>
+        ))}
 
-          <Text style={styles.section}>Hopfen</Text>
-          {scaled.hopfen.map((h, i) => (
-            <Text key={i} style={styles.text}>
-              &bull; {h.name}: {h.amount} g @{" "}
-              {actualAlphaAcids[i] || h.alphaAcid}%α
-            </Text>
-          ))}
+        <Text style={styles.section}>Hefe</Text>
+        {scaled.hefe.map((h, i) => (
+          <Text key={i} style={styles.text}>
+            &bull; {h.name}: {h.amount} g
+          </Text>
+        ))}
 
-          <Text style={styles.section}>Hefe</Text>
-          {scaled.hefe.map((h, i) => (
-            <Text key={i} style={styles.text}>
-              &bull; {h.name}: {h.amount} g
-            </Text>
-          ))}
+        <View style={{ marginTop: 24 }} />
 
-          <View style={{ marginTop: 24 }}></View>
-          {/* <Pressable style={styles.button} onPress={copyToClipboard}>
-            <Text style={styles.buttontext}>
-              In die Zwischenablage kopieren
-            </Text>
-          </Pressable>
-
-          <Pressable style={styles.button} onPress={exportToPDF}>
-            <Text style={styles.buttontext}>Drucken</Text>
-          </Pressable> */}
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "flex-end",
-              gap: 12,
-              marginTop: 8,
-            }}
-          >
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "flex-end",
+            gap: 12,
+            marginTop: 8,
+          }}
+        >
+          <Tooltip title="Kopieren">
             <Pressable onPress={copyToClipboard} style={styles.iconButton}>
-              <Ionicons name="copy-outline" size={24} color={colors.primary} />
+              <Ionicons name="clipboard-outline" size={24} color={colors.primary} />
             </Pressable>
+          </Tooltip>
+          <Tooltip title="Drucken">
             <Pressable onPress={exportToPDF} style={styles.iconButton}>
               <Ionicons name="print-outline" size={24} color={colors.primary} />
             </Pressable>
-            <Pressable onPress={exportRecipeAsJson} style={styles.iconButton}>
-              <Ionicons
-                name="download-outline"
-                size={24}
-                color={colors.primary}
-              />
-            </Pressable>
-          </View>
+          </Tooltip>
+        </View>
 
-          {/* <Pressable style={styles.button} onPress={exportRecipeAsJson}>
-            <Text style={styles.buttontext}>Rezept exportieren (.json)</Text>
-          </Pressable> */}
-
+        <View style={{ marginTop: 8 }}>
           <Pressable
             style={styles.button}
             onPress={() =>
@@ -430,20 +421,11 @@ export default function BrewModal() {
           >
             <Text style={styles.buttontext}>Brautag starten</Text>
           </Pressable>
-
-          {/* <Pressable
-            style={[
-              styles.button,
-              { backgroundColor: colors.secondary, marginTop: 32 },
-            ]}
-            onPress={() => router.back()}
-          >
-            <Text style={styles.buttontext}>Schließen</Text>
-          </Pressable> */}
-        </ScrollView>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
-  );
+        </View>
+      </KeyboardAwareScrollView>
+    </TouchableWithoutFeedback>
+  </View>
+);
 }
 
 function createStyles(colors: AppTheme["colors"]) {

@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useRecipes } from "@/context/RecipeContext";
+import { Recipe, useRecipes } from "@/context/RecipeContext";
 import { useDeleteMode } from "@/context/DeleteModeContext";
 import { useRouter } from "expo-router";
 import {
@@ -8,23 +8,24 @@ import {
   ScrollView,
   StyleSheet,
   Pressable,
-  Button,
   Animated,
   Easing,
-  KeyboardAvoidingView,
-  Platform,
+  Alert,
   TouchableWithoutFeedback,
   Keyboard,
 } from "react-native";
+import * as Sharing from "expo-sharing";
+import * as FileSystem from "expo-file-system";
 import { Ionicons } from "@expo/vector-icons";
-import { useTheme } from "react-native-paper";
+import { useTheme, Tooltip, Snackbar } from "react-native-paper";
+import uuid from "react-native-uuid";
 import type { AppTheme } from "@/theme/theme";
 
 export default function BrewDayScreen() {
   const theme = useTheme() as AppTheme;
   const { colors } = theme;
   const styles = createStyles(theme.colors);
-  const { recipes, deleteRecipe } = useRecipes();
+  const { recipes, addRecipe, deleteRecipe } = useRecipes();
   const router = useRouter();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   // const [deleteModeId, setDeleteModeId] = useState<string | null>(null);
@@ -58,12 +59,38 @@ export default function BrewDayScreen() {
     }
   };
 
+  const exportRecipeAsJson = async (recipe: Recipe) => {
+  if (!recipe) return;
+  
+      try {
+        // const fileName = `${recipe.name.replace(/\s+/g, "_")}.json`;
+        const fileName = `${recipe.name.replace(/\s+/g, "_")}.dfr`;
+        const fileUri = FileSystem.cacheDirectory + fileName;
+  
+        // Prepare data with versioning
+        const exportData = {
+          version: 1,
+          recipe,
+        };
+  
+        await FileSystem.writeAsStringAsync(
+          fileUri,
+          JSON.stringify(exportData, null, 2)
+        );
+  
+        await Sharing.shareAsync(fileUri, {
+          mimeType: "application/json",
+          dialogTitle: "Rezept teilen",
+        });
+      } catch (error) {
+        console.error("Export Error:", error);
+        Alert.alert("Fehler", "Rezept konnte nicht exportiert werden.");
+      }
+    };
+
+    const [showSavedMessage, setShowSavedMessage] = useState(false);
+
   return (
-    // <KeyboardAvoidingView
-    //   style={styles.container}
-    //   behavior={Platform.OS === "ios" ? "padding" : "height" }
-    //   keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
-    // >
     <View style={styles.container}>
       <TouchableWithoutFeedback
         onPress={() => {
@@ -196,18 +223,73 @@ export default function BrewDayScreen() {
                     </Text>
                   ))}
 
-                  <View style={{ marginTop: 16 }}>
-                    {/* <Pressable
-                    onPress={() =>
-                      router.push({
-                        pathname: "/modal/brew",
-                        params: { id: r.id },
-                      })
-                    }
-                    style={styles.brewButton}
-                  >
-                    <Text style={styles.brewButtonText}>Brauen</Text>
-                  </Pressable> */}
+                  
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "flex-end",
+                        gap: 12,
+                        marginTop: 16,
+                      }}
+                    >
+                      {/* Edit */}
+                      <Tooltip title="Bearbeiten">
+                        <Pressable
+                      onPress={() =>
+                        router.push({
+                          pathname: "/modal/edit",
+                          params: { id: r.id },
+                        })
+                      }
+                      style={styles.iconButton}
+                    >
+                      <Ionicons
+                        name="create-outline"
+                        size={24}
+                        color={colors.primary}
+                      />
+                    </Pressable>
+
+                      {/* Duplicate */}
+                      </Tooltip>
+                      <Tooltip title="Duplizieren">
+                        <Pressable
+                      onPress={() => {
+                        const newId = uuid.v4() as string;
+                        const copy = {
+                          ...r,
+                          id: newId,
+                          name: r.name + " (Kopie)",
+                        };
+                        addRecipe(copy);
+                        setShowSavedMessage(true)
+                      }}
+                      style={styles.iconButton}
+                    >
+                      <Ionicons
+                        name="copy-outline"
+                        size={24}
+                        color={colors.primary}
+                      />
+                    </Pressable>
+
+                      {/* Share */}
+                      </Tooltip>
+                      <Tooltip title="Rezept teilen">
+                        <Pressable
+                          onPress={() => exportRecipeAsJson(r)}
+                          style={styles.iconButton}
+                        >
+                          <Ionicons
+                            name="share-social-outline"
+                            size={24}
+                            color={colors.primary}
+                          />
+                        </Pressable>
+                      </Tooltip>
+                    </View>
+                    
+                  <View style={{ marginTop: 8 }}>
                     <Pressable
                       onPress={() =>
                         router.push({
@@ -236,18 +318,6 @@ export default function BrewDayScreen() {
                     >
                       <Text style={styles.brewButtonText}>Brauen</Text>
                     </Pressable>
-
-                    {/* <Pressable
-                      style={styles.brewButton}
-                      onPress={() =>
-                        router.push({
-                          pathname: "/brewflow/[id]/mash",
-                          params: { id: r.id },
-                        })
-                      }
-                    >
-                      <Text style={styles.brewButtonText}>Brautag starten</Text>
-                    </Pressable> */}
                   </View>
                 </Animated.View>
               </Pressable>
@@ -255,8 +325,22 @@ export default function BrewDayScreen() {
           })}
         </ScrollView>
       </TouchableWithoutFeedback>
+      <Snackbar
+        visible={showSavedMessage}
+        onDismiss={() => setShowSavedMessage(false)}
+        duration={2000}
+        style={{
+          backgroundColor: colors.primary,
+          position: "absolute",
+          bottom: 2,
+          left: 16,
+          right: 16,
+          borderRadius: 8,
+        }}
+      >
+        Rezept dupliziert!
+      </Snackbar>
     </View>
-    /* </KeyboardAvoidingView> */
   );
 }
 
@@ -336,13 +420,19 @@ function createStyles(colors: AppTheme["colors"]) {
       backgroundColor: colors.errorContainer, // "#ff4d4d",
       borderColor: "#ff1a1a",
     },
-
     deleteButton: {
       marginTop: 12,
       backgroundColor: colors.error, // "#cc0000",
       padding: 10,
       borderRadius: 8,
       alignItems: "center",
+    },
+    iconButton: {
+      padding: 10,
+      borderRadius: 8,
+      backgroundColor: colors.surfaceVariant,
+      alignItems: "center",
+      justifyContent: "center",
     },
   });
 }

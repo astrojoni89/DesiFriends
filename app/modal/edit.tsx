@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useState} from "react";
+import { useState } from "react";
 import {
   View,
   Text,
@@ -29,18 +29,31 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme, Snackbar, Tooltip } from "react-native-paper";
 import type { AppTheme } from "@/theme/theme";
 import { useValidation } from "@/hooks/useValidation";
+import { useLocalSearchParams } from "expo-router";
 
 // Updated RecipesScreen to highlight missing name, batchSize, and ingredient lists on validation
 export default function RecipesScreen() {
   const router = useRouter();
-  const [recipeName, setRecipeName] = useState("");
-  const [batchSize, setBatchSize] = useState("");
-  const [hauptguss, setHauptguss] = useState("");
-  const [nachguss, setNachguss] = useState("");
 
-  const [malzList, setMalzList] = useState<Ingredient[]>([]);
-  const [hopfenList, setHopfenList] = useState<HopIngredient[]>([]);
-  const [hefeList, setHefeList] = useState<Ingredient[]>([]);
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { getRecipeById, updateRecipe } = useRecipes();
+
+  const existing = getRecipeById(id!);
+
+  const [recipeName, setRecipeName] = useState(existing?.name ?? "");
+  const [batchSize, setBatchSize] = useState(
+    existing?.batchSize != null ? existing.batchSize.toString() : ""
+  );
+  const [hauptguss, setHauptguss] = useState(
+    existing?.hauptguss != null ? existing.hauptguss.toString() : ""
+  );
+  const [nachguss, setNachguss] = useState(
+    existing?.nachguss != null ? existing.nachguss.toString() : ""
+  );
+
+  const [malzList, setMalzList] = useState(existing?.malz ?? []);
+  const [hopfenList, setHopfenList] = useState(existing?.hopfen ?? []);
+  const [hefeList, setHefeList] = useState(existing?.hefe ?? []);
 
   const [malzInput, setMalzInput] = useState<Ingredient>({
     name: "",
@@ -56,7 +69,7 @@ export default function RecipesScreen() {
     amount: "",
   });
 
-  const { addRecipe } = useRecipes();
+  //const { addRecipe } = useRecipes();
   const theme = useTheme() as AppTheme;
   const { colors } = theme;
   const styles = createStyles(theme.colors);
@@ -75,13 +88,13 @@ export default function RecipesScreen() {
   };
 
   const initialValues: RecipeForm = {
-    name: "",
-    batchSize: "",
-    hauptguss: "",
-    nachguss: "",
-    malzList: [],
-    hopfenList: [],
-    hefeList: [],
+    name: existing?.name ?? "",
+    batchSize: existing?.batchSize != null ? existing.batchSize.toString() : "",
+    hauptguss: existing?.hauptguss != null ? existing.hauptguss.toString() : "",
+    nachguss: existing?.nachguss != null ? existing.nachguss.toString() : "",
+    malzList: existing?.malz ?? [],
+    hopfenList: existing?.hopfen ?? [],
+    hefeList: existing?.hefe ?? [],
   };
 
   const validationRules = {
@@ -101,23 +114,10 @@ export default function RecipesScreen() {
   const { values, errors, handleChange, validate, setValues, setErrors } =
     useValidation<RecipeForm>(initialValues, validationRules);
 
-  const [mashSteps, setMashSteps] = useState<MashStep[]>([]);
-  const [boilTime, setBoilTime] = useState("");
-  const [hopSchedule, setHopSchedule] = useState<HopSchedule[]>([]);
+  const [mashSteps, setMashSteps] = useState(existing?.mashSteps ?? []);
+  const [boilTime, setBoilTime] = useState(existing?.boilTime ?? "");
+  const [hopSchedule, setHopSchedule] = useState(existing?.hopSchedule ?? []);
 
-  // const addIngredient = (
-  //   input: Ingredient,
-  //   list: Ingredient[],
-  //   setter: Function,
-  //   resetter: Function,
-  //   key: keyof RecipeForm
-  // ) => {
-  //   if (!input.name || !input.amount) return;
-  //   const updatedList = [...list, input];
-  //   setter(updatedList);
-  //   handleChange(key, updatedList);
-  //   resetter({ name: "", amount: "" });
-  // };
   const addIngredient = (
     input: Ingredient | HopIngredient,
     list: Ingredient[] | HopIngredient[],
@@ -164,7 +164,19 @@ export default function RecipesScreen() {
       boilTime,
       hopSchedule,
     };
-    addRecipe(newRecipe);
+    //addRecipe(newRecipe);
+    updateRecipe(id!, {
+      name: values.name,
+      batchSize: parseFloat(values.batchSize),
+      hauptguss: parseFloat(values.hauptguss),
+      nachguss: parseFloat(values.nachguss),
+      malz: values.malzList,
+      hopfen: values.hopfenList,
+      hefe: values.hefeList,
+      mashSteps,
+      boilTime,
+      hopSchedule,
+    });
 
     setMashSteps([]);
     setBoilTime("");
@@ -197,7 +209,19 @@ export default function RecipesScreen() {
       hopfen: values.hopfenList,
       hefe: values.hefeList,
     };
-    addRecipe(newRecipe);
+    //addRecipe(newRecipe);
+    updateRecipe(id!, {
+      name: values.name,
+      batchSize: parseFloat(values.batchSize),
+      hauptguss: parseFloat(values.hauptguss),
+      nachguss: parseFloat(values.nachguss),
+      malz: values.malzList,
+      hopfen: values.hopfenList,
+      hefe: values.hefeList,
+      mashSteps,
+      boilTime,
+      hopSchedule,
+    });
     setValues(initialValues);
     setErrors({});
     router.push({ pathname: "/modal/schedule", params: { id } });
@@ -243,7 +267,20 @@ export default function RecipesScreen() {
         hefe: data.recipe.hefe ?? [],
       };
 
-      addRecipe(importedRecipe);
+      //addRecipe(importedRecipe);
+      updateRecipe(id!, {
+        name: values.name,
+        batchSize: parseFloat(values.batchSize),
+        hauptguss: parseFloat(values.hauptguss),
+        nachguss: parseFloat(values.nachguss),
+        malz: values.malzList,
+        hopfen: values.hopfenList,
+        hefe: values.hefeList,
+        mashSteps,
+        boilTime,
+        hopSchedule,
+      });
+
       Alert.alert("Erfolg", "Rezept erfolgreich importiert!");
     } catch (error) {
       console.error("Import Error:", error);
@@ -254,276 +291,242 @@ export default function RecipesScreen() {
   const [showSavedMessage, setShowSavedMessage] = useState(false);
 
   return (
-    <View style={{ flex: 1 , paddingTop: 32}}>
-      <TouchableWithoutFeedback
-        onPress={() => {
-          Keyboard.dismiss();
-          setErrors({});
-        }}
+    <View style={{ flex: 1 }}>
+    <TouchableWithoutFeedback
+      onPress={() => {
+        Keyboard.dismiss();
+        setErrors({});
+      }}
+    >
+      <KeyboardAwareScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.content}
+        enableOnAndroid
+        extraScrollHeight={Platform.OS === "ios" ? 80 : 100}
+        keyboardShouldPersistTaps="handled"
       >
-        <KeyboardAwareScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={styles.content}
-          enableOnAndroid
-          extraScrollHeight={Platform.OS === "ios" ? 80 : 20}
-          keyboardShouldPersistTaps="handled"
+
+        <TextInput
+          style={[
+            styles.input,
+            errors.name && { borderColor: "red", borderWidth: 2 },
+          ]}
+          placeholder="Rezeptname"
+          value={values.name}
+          onChangeText={(text) => handleChange("name", text)}
+          placeholderTextColor={colors.outline}
+        />
+
+        <TextInput
+          style={[
+            styles.input,
+            errors.batchSize && { borderColor: "red", borderWidth: 2 },
+          ]}
+          placeholder="Zielmenge (Liter)"
+          keyboardType="numeric"
+          value={values.batchSize}
+          onChangeText={(text) => handleChange("batchSize", text)}
+          placeholderTextColor={colors.outline}
+        />
+
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 8,
+          }}
         >
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 12,
-            }}
-          >
-            <Text style={styles.title}>Rezept erstellen</Text>
-            <Tooltip title="Rezept importieren (.dfr)">
-              <Pressable onPress={importRecipe} style={styles.iconButton}>
-                <Ionicons
-                  name="share-outline"
-                  size={24}
-                  color={colors.primary}
-                />
-              </Pressable>
-            </Tooltip>
-          </View>
-
           <TextInput
             style={[
               styles.input,
-              errors.name && { borderColor: "red", borderWidth: 2 },
+              { flex: 1 },
+              errors.hauptguss && { borderColor: "red", borderWidth: 2 },
             ]}
-            placeholder="Rezeptname"
-            value={values.name}
-            onChangeText={(text) => handleChange("name", text)}
+            placeholder="Hauptguss (Liter)"
+            keyboardType="decimal-pad"
+            value={values.hauptguss}
+            onChangeText={(text) => handleChange("hauptguss", text)}
             placeholderTextColor={colors.outline}
           />
-
           <TextInput
             style={[
               styles.input,
-              errors.batchSize && { borderColor: "red", borderWidth: 2 },
+              { flex: 1 },
+              errors.nachguss && { borderColor: "red", borderWidth: 2 },
             ]}
-            placeholder="Zielmenge (Liter)"
-            keyboardType="numeric"
-            value={values.batchSize}
-            onChangeText={(text) => handleChange("batchSize", text)}
+            placeholder="Nachguss (Liter)"
+            keyboardType="decimal-pad"
+            value={values.nachguss}
+            onChangeText={(text) => handleChange("nachguss", text)}
             placeholderTextColor={colors.outline}
           />
+        </View>
 
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 8,
-              marginBottom: 8,
-            }}
-          >
-            <TextInput
-              style={[
-                styles.input,
-                { flex: 1 },
-                errors.hauptguss && { borderColor: "red", borderWidth: 2 },
-              ]}
-              placeholder="Hauptguss (Liter)"
-              keyboardType="decimal-pad"
-              value={values.hauptguss}
-              onChangeText={(text) => handleChange("hauptguss", text)}
-              placeholderTextColor={colors.outline}
-            />
-            <TextInput
-              style={[
-                styles.input,
-                { flex: 1 },
-                errors.nachguss && { borderColor: "red", borderWidth: 2 },
-              ]}
-              placeholder="Nachguss (Liter)"
-              keyboardType="decimal-pad"
-              value={values.nachguss}
-              onChangeText={(text) => handleChange("nachguss", text)}
-              placeholderTextColor={colors.outline}
-            />
-          </View>
-
-          {/* Malz section */}
-          <Text style={styles.sectionTitle}>Malz</Text>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 8,
-              marginBottom: 8,
-            }}
-          >
-            <IngredientInput
-              input={malzInput}
-              setInput={setMalzInput}
-              onAdd={() =>
-                addIngredient(
-                  malzInput,
-                  malzList,
-                  setMalzList,
-                  setMalzInput,
-                  "malzList"
-                )
-              }
-              colors={theme.colors}
-              amountPlaceholder="Menge (kg)"
-              showErrors={!!errors.malzList}
-            />
-          </View>
-          {/* {malzList.map((item, idx) => (
+        {/* Malz section */}
+        <Text style={styles.sectionTitle}>Malz</Text>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 8,
+          }}
+        >
+          <IngredientInput
+            input={malzInput}
+            setInput={setMalzInput}
+            onAdd={() =>
+              addIngredient(
+                malzInput,
+                malzList,
+                setMalzList,
+                setMalzInput,
+                "malzList"
+              )
+            }
+            colors={theme.colors}
+            amountPlaceholder="Menge (kg)"
+            showErrors={!!errors.malzList}
+          />
+        </View>
+        {/* {malzList.map((item, idx) => (
             <Text key={idx} style={styles.ingredientItem}>
               &bull; {item.name}: {item.amount} kg
             </Text>
           ))} */}
-          {malzList.map((item, idx) => (
-            <View key={idx} style={styles.ingredientRow}>
-              <Text style={[styles.ingredientItem, { flex: 1 }]}>
-                &bull; {item.name}: {item.amount} kg
-              </Text>
-              <Pressable
-                onPress={() => {
-                  const updated = malzList.filter((_, i) => i !== idx);
-                  setMalzList(updated);
-                  handleChange("malzList", updated);
-                }}
-                style={[
-                  styles.removeButton,
-                  { backgroundColor: colors.remove },
-                ]}
-              >
-                <Ionicons name="remove" size={20} color="#fff" />
-              </Pressable>
-            </View>
-          ))}
-
-          {/* Hopfen section */}
-          <Text style={styles.sectionTitle}>Hopfen</Text>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 8,
-              marginBottom: 8,
-            }}
-          >
-            <IngredientInput
-              input={hopfenInput}
-              setInput={setHopfenInput}
-              onAdd={() =>
-                addIngredient(
-                  hopfenInput,
-                  hopfenList,
-                  setHopfenList,
-                  setHopfenInput,
-                  "hopfenList"
-                )
-              }
-              colors={theme.colors}
-              amountPlaceholder="Menge (g)"
-              extraField={{
-                key: "alphaAcid",
-                placeholder: "%α",
-                keyboardType: "decimal-pad",
+        {malzList.map((item, idx) => (
+          <View key={idx} style={styles.ingredientRow}>
+            <Text style={[styles.ingredientItem, { flex: 1 }]}>
+              &bull; {item.name}: {item.amount} kg
+            </Text>
+            <Pressable
+              onPress={() => {
+                const updated = malzList.filter((_, i) => i !== idx);
+                setMalzList(updated);
+                handleChange("malzList", updated);
               }}
-              showErrors={!!errors.hopfenList}
-            />
+              style={[styles.removeButton, { backgroundColor: colors.remove }]}
+            >
+              <Ionicons name="remove" size={20} color="#fff" />
+            </Pressable>
           </View>
-          {/* {hopfenList.map((item, idx) => (
+        ))}
+
+        {/* Hopfen section */}
+        <Text style={styles.sectionTitle}>Hopfen</Text>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 8,
+          }}
+        >
+          <IngredientInput
+            input={hopfenInput}
+            setInput={setHopfenInput}
+            onAdd={() =>
+              addIngredient(
+                hopfenInput,
+                hopfenList,
+                setHopfenList,
+                setHopfenInput,
+                "hopfenList"
+              )
+            }
+            colors={theme.colors}
+            amountPlaceholder="Menge (g)"
+            extraField={{
+              key: "alphaAcid",
+              placeholder: "%α",
+              keyboardType: "decimal-pad",
+            }}
+            showErrors={!!errors.hopfenList}
+          />
+        </View>
+        {/* {hopfenList.map((item, idx) => (
             <Text key={idx} style={styles.ingredientItem}>
               &bull; {item.name}: {item.amount} g @ {item.alphaAcid}%α
             </Text>
           ))} */}
-          {hopfenList.map((item, idx) => (
-            <View key={idx} style={styles.ingredientRow}>
-              <Text style={[styles.ingredientItem, { flex: 1 }]}>
-                &bull; {item.name}: {item.amount} g @ {item.alphaAcid}%α
-              </Text>
-              <Pressable
-                onPress={() => {
-                  const updated = hopfenList.filter((_, i) => i !== idx);
-                  setHopfenList(updated);
-                  handleChange("hopfenList", updated);
-                }}
-                style={[
-                  styles.removeButton,
-                  { backgroundColor: colors.remove },
-                ]}
-              >
-                <Ionicons name="remove" size={20} color="#fff" />
-              </Pressable>
-            </View>
-          ))}
-
-          {/* Hefe section */}
-          <Text style={styles.sectionTitle}>Hefe</Text>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 8,
-              marginBottom: 8,
-            }}
-          >
-            <IngredientInput
-              input={hefeInput}
-              setInput={setHefeInput}
-              onAdd={() =>
-                addIngredient(
-                  hefeInput,
-                  hefeList,
-                  setHefeList,
-                  setHefeInput,
-                  "hefeList"
-                )
-              }
-              colors={theme.colors}
-              amountPlaceholder="Menge (g)"
-              showErrors={!!errors.hefeList}
-            />
+        {hopfenList.map((item, idx) => (
+          <View key={idx} style={styles.ingredientRow}>
+            <Text style={[styles.ingredientItem, { flex: 1 }]}>
+              &bull; {item.name}: {item.amount} g @ {item.alphaAcid}%α
+            </Text>
+            <Pressable
+              onPress={() => {
+                const updated = hopfenList.filter((_, i) => i !== idx);
+                setHopfenList(updated);
+                handleChange("hopfenList", updated);
+              }}
+              style={[styles.removeButton, { backgroundColor: colors.remove }]}
+            >
+              <Ionicons name="remove" size={20} color="#fff" />
+            </Pressable>
           </View>
-          {/* {hefeList.map((item, idx) => (
+        ))}
+
+        {/* Hefe section */}
+        <Text style={styles.sectionTitle}>Hefe</Text>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 8,
+          }}
+        >
+          <IngredientInput
+            input={hefeInput}
+            setInput={setHefeInput}
+            onAdd={() =>
+              addIngredient(
+                hefeInput,
+                hefeList,
+                setHefeList,
+                setHefeInput,
+                "hefeList"
+              )
+            }
+            colors={theme.colors}
+            amountPlaceholder="Menge (g)"
+            showErrors={!!errors.hefeList}
+          />
+        </View>
+        {/* {hefeList.map((item, idx) => (
             <Text key={idx} style={styles.ingredientItem}>
               &bull; {item.name}: {item.amount} g
             </Text>
           ))} */}
-          {hefeList.map((item, idx) => (
-            <View key={idx} style={styles.ingredientRow}>
-              <Text style={[styles.ingredientItem, { flex: 1 }]}>
-                &bull; {item.name}: {item.amount} g
-              </Text>
-              <Pressable
-                onPress={() => {
-                  const updated = hefeList.filter((_, i) => i !== idx);
-                  setHefeList(updated);
-                  handleChange("hefeList", updated);
-                }}
-                style={[
-                  styles.removeButton,
-                  { backgroundColor: colors.remove },
-                ]}
-              >
-                <Ionicons name="remove" size={20} color="#fff" />
-              </Pressable>
-            </View>
-          ))}
-
-          <View style={{ marginVertical: 16 }}>
+        {hefeList.map((item, idx) => (
+          <View key={idx} style={styles.ingredientRow}>
+            <Text style={[styles.ingredientItem, { flex: 1 }]}>
+              &bull; {item.name}: {item.amount} g
+            </Text>
             <Pressable
-              onPress={handleSaveAndOpenModal}
-              style={[styles.brewButton, { backgroundColor: colors.secondary }]}
+              onPress={() => {
+                const updated = hefeList.filter((_, i) => i !== idx);
+                setHefeList(updated);
+                handleChange("hefeList", updated);
+              }}
+              style={[styles.removeButton, { backgroundColor: colors.remove }]}
             >
-              <Text style={styles.brewButtonText}>Maisch- & Kochplan</Text>
-            </Pressable>
-            <Pressable onPress={handleAddRecipe} style={styles.brewButton}>
-              <Text style={styles.brewButtonText}>Rezept speichern</Text>
+              <Ionicons name="remove" size={20} color="#fff" />
             </Pressable>
           </View>
-        </KeyboardAwareScrollView>
-      </TouchableWithoutFeedback>
+        ))}
 
-      <Snackbar
+        <View style={{ marginVertical: 16 }}>
+          <Pressable onPress={handleAddRecipe} style={styles.brewButton}>
+            <Text style={styles.brewButtonText}>Änderungen speichern</Text>
+          </Pressable>
+        </View>
+
+    </KeyboardAwareScrollView>
+    </TouchableWithoutFeedback>
+    <Snackbar
         visible={showSavedMessage}
         onDismiss={() => setShowSavedMessage(false)}
         duration={2000}
@@ -609,7 +612,7 @@ function IngredientInput({
         />
       )}
       <Pressable onPress={onAdd} style={styles.addButton}>
-        <Ionicons name="add" size={20} color="#fff" />
+        <Ionicons name="add" size={24} color="#fff" />
       </Pressable>
     </View>
   );
@@ -618,9 +621,10 @@ function IngredientInput({
 function createStyles(colors: AppTheme["colors"]) {
   return StyleSheet.create({
     container: {
-      paddingTop: 32,
+      paddingTop: 8,
       flex: 1,
       backgroundColor: colors.background,
+      paddingBottom: 32,
     },
     content: {
       padding: 16,
@@ -720,4 +724,4 @@ function createStyles(colors: AppTheme["colors"]) {
     },
   });
 }
-// recipe index.tsx, 29/05/2025
+// recipe index.tsx, 22/05/2025
