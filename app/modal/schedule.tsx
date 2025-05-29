@@ -271,6 +271,7 @@ export default function MashScheduleModal() {
               hopSchedule,
             };
             addRecipe(updatedRecipe);
+            setShowSavedMessage(true);
             router.back();
           }}
         >
@@ -292,7 +293,7 @@ export default function MashScheduleModal() {
         borderRadius: 8,
       }}
     >
-      Maischplan gespeichert!
+      Maisch- & Kochplan gespeichert!
     </Snackbar>
   </View>
 );
