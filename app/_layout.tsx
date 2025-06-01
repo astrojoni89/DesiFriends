@@ -41,21 +41,37 @@ function AppWithTheming() {
       <NavigationThemeProvider value={navigationTheme}>
         <Stack>
           <Stack.Screen name="(drawer)" options={{ headerShown: false }} />
-          <Stack.Screen
+          {/* <Stack.Screen
             name="modal/brew"
             options={{ presentation: "modal", title: "Brautag" }}
-          />
+          /> */}
           <Stack.Screen
+            name="modal/brew"
+            options={{ animation: "slide_from_bottom", headerShown: false, gestureEnabled: true, title: "Brautag" }}
+          />
+          {/* <Stack.Screen
             name="modal/schedule"
             options={{ presentation: "modal", title: "Maisch- & Kochplan" }}
-          />
+          /> */}
           <Stack.Screen
+            name="modal/schedule"
+            options={{ animation: "slide_from_bottom", headerShown: false, gestureEnabled: true, title: "Maisch- & Kochplan" }}
+          />
+          {/* <Stack.Screen
             name="modal/edit"
             options={{ presentation: "modal", title: "Rezept bearbeiten" }}
-          />
+          /> */}
           <Stack.Screen
+            name="modal/edit"
+            options={{animation: "slide_from_bottom", headerShown: false, gestureEnabled: true, title: "Rezept bearbeiten" }}
+          />
+          {/* <Stack.Screen
             name="brewflow"
             options={{ presentation: "modal", title: "Brautag starten" }}
+          /> */}
+          <Stack.Screen
+            name="brewflow"
+            options={{ animation: "slide_from_right", headerShown: false, gestureEnabled: true, title: "Brautag starten" }}
           />
         </Stack>
         <StatusBar style="auto" />

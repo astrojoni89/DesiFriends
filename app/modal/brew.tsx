@@ -8,6 +8,8 @@ import {
   StyleSheet,
   Alert,
   TouchableWithoutFeedback,
+  ScrollView,
+  KeyboardAvoidingView,
   Keyboard,
   Platform,
 } from "react-native";
@@ -201,7 +203,11 @@ export default function BrewModal() {
                   ? `<li>Hauptguss: ${scaledWater.hauptguss} L</li>`
                   : ""
               }
-              ${scaledWater.nachguss ? `<li>Nachguss: ${scaledWater.nachguss} L</li>` : ""}
+              ${
+                scaledWater.nachguss
+                  ? `<li>Nachguss: ${scaledWater.nachguss} L</li>`
+                  : ""
+              }
             </ul>
 
             <h2>Malz</h2>
@@ -317,115 +323,126 @@ export default function BrewModal() {
   };
 
   return (
-  <View style={{ flex: 1 }}>
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <KeyboardAwareScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-        enableOnAndroid
-        extraScrollHeight={Platform.OS === "ios" ? 80 : 0}
-      >
-        <Text style={styles.title}>{recipe.name}</Text>
-
-        <Text style={styles.section}>Zielmenge (Liter)</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Zielmenge (Liter)"
-          keyboardType="decimal-pad"
-          value={targetSize}
-          onChangeText={setTargetSize}
-          placeholderTextColor={colors.outline}
-        />
-
-        <Text style={styles.section}>Hopfen Alpha-Säure (%α)</Text>
-        {recipe.hopfen.map((h, i) => (
-          <TextInput
-            key={i}
-            style={styles.input}
-            placeholder={`für ${h.name}`}
-            value={actualAlphaAcids[i] || ""}
-            keyboardType="decimal-pad"
-            onChangeText={(val) =>
-              setActualAlphaAcids((prev) => ({ ...prev, [i]: val }))
-            }
-            placeholderTextColor={colors.outline}
-          />
-        ))}
-
-        <Text style={styles.section}>Wasser</Text>
-        {scaledWater.hauptguss && (
-          <Text style={styles.text}>
-            &bull; Hauptguss: {scaledWater.hauptguss} L
-          </Text>
-        )}
-        {scaledWater.nachguss && (
-          <Text style={styles.text}>
-            &bull; Nachguss: {scaledWater.nachguss} L
-          </Text>
-        )}
-
-        <Text style={styles.section}>Malz</Text>
-        {scaled.malz.map((m, i) => (
-          <Text key={i} style={styles.text}>
-            &bull; {m.name}: {m.amount} kg
-          </Text>
-        ))}
-
-        <Text style={styles.section}>Hopfen</Text>
-        {scaled.hopfen.map((h, i) => (
-          <Text key={i} style={styles.text}>
-            &bull; {h.name}: {h.amount} g @{" "}
-            {actualAlphaAcids[i] || h.alphaAcid}%α
-          </Text>
-        ))}
-
-        <Text style={styles.section}>Hefe</Text>
-        {scaled.hefe.map((h, i) => (
-          <Text key={i} style={styles.text}>
-            &bull; {h.name}: {h.amount} g
-          </Text>
-        ))}
-
-        <View style={{ marginTop: 24 }} />
-
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "flex-end",
-            gap: 12,
-            marginTop: 8,
-          }}
+      <View style={{ flex: 1 }}>
+        <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
         >
-          <Tooltip title="Kopieren">
-            <Pressable onPress={copyToClipboard} style={styles.iconButton}>
-              <Ionicons name="clipboard-outline" size={24} color={colors.primary} />
-            </Pressable>
-          </Tooltip>
-          <Tooltip title="Drucken">
-            <Pressable onPress={exportToPDF} style={styles.iconButton}>
-              <Ionicons name="print-outline" size={24} color={colors.primary} />
-            </Pressable>
-          </Tooltip>
-        </View>
-
-        <View style={{ marginTop: 8 }}>
-          <Pressable
-            style={styles.button}
-            onPress={() =>
-              router.push({
-                pathname: "/brewflow/[id]",
-                params: { id: recipe.id },
-              })
-            }
+          <ScrollView
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
           >
-            <Text style={styles.buttontext}>Brautag starten</Text>
-          </Pressable>
-        </View>
-      </KeyboardAwareScrollView>
+            <Text style={styles.title}>{recipe.name}</Text>
+
+            <Text style={styles.section}>Zielmenge (Liter)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Zielmenge (Liter)"
+              keyboardType="decimal-pad"
+              value={targetSize}
+              onChangeText={setTargetSize}
+              placeholderTextColor={colors.outline}
+            />
+
+            <Text style={styles.section}>Hopfen Alpha-Säure (%α)</Text>
+            {recipe.hopfen.map((h, i) => (
+              <TextInput
+                key={i}
+                style={styles.input}
+                placeholder={`für ${h.name}`}
+                value={actualAlphaAcids[i] || ""}
+                keyboardType="decimal-pad"
+                onChangeText={(val) =>
+                  setActualAlphaAcids((prev) => ({ ...prev, [i]: val }))
+                }
+                placeholderTextColor={colors.outline}
+              />
+            ))}
+
+            <Text style={styles.section}>Wasser</Text>
+            {scaledWater.hauptguss && (
+              <Text style={styles.text}>
+                &bull; Hauptguss: {scaledWater.hauptguss} L
+              </Text>
+            )}
+            {scaledWater.nachguss && (
+              <Text style={styles.text}>
+                &bull; Nachguss: {scaledWater.nachguss} L
+              </Text>
+            )}
+
+            <Text style={styles.section}>Malz</Text>
+            {scaled.malz.map((m, i) => (
+              <Text key={i} style={styles.text}>
+                &bull; {m.name}: {m.amount} kg
+              </Text>
+            ))}
+
+            <Text style={styles.section}>Hopfen</Text>
+            {scaled.hopfen.map((h, i) => (
+              <Text key={i} style={styles.text}>
+                &bull; {h.name}: {h.amount} g @{" "}
+                {actualAlphaAcids[i] || h.alphaAcid}%α
+              </Text>
+            ))}
+
+            <Text style={styles.section}>Hefe</Text>
+            {scaled.hefe.map((h, i) => (
+              <Text key={i} style={styles.text}>
+                &bull; {h.name}: {h.amount} g
+              </Text>
+            ))}
+
+            <View style={{ marginTop: 24 }} />
+
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "flex-end",
+                gap: 12,
+                marginTop: 8,
+              }}
+            >
+              <Tooltip title="Kopieren">
+                <Pressable onPress={copyToClipboard} style={styles.iconButton}>
+                  <Ionicons
+                    name="clipboard-outline"
+                    size={24}
+                    color={colors.primary}
+                  />
+                </Pressable>
+              </Tooltip>
+              <Tooltip title="Drucken">
+                <Pressable onPress={exportToPDF} style={styles.iconButton}>
+                  <Ionicons
+                    name="print-outline"
+                    size={24}
+                    color={colors.primary}
+                  />
+                </Pressable>
+              </Tooltip>
+            </View>
+
+            <View style={{ marginTop: 8, marginBottom: 64 }}>
+              <Pressable
+                style={styles.button}
+                onPress={() =>
+                  router.push({
+                    pathname: "/brewflow/[id]",
+                    params: { id: recipe.id },
+                  })
+                }
+              >
+                <Text style={styles.buttontext}>Brautag starten</Text>
+              </Pressable>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
     </TouchableWithoutFeedback>
-  </View>
-);
+  );
 }
 
 function createStyles(colors: AppTheme["colors"]) {
@@ -434,6 +451,7 @@ function createStyles(colors: AppTheme["colors"]) {
       flex: 1,
       backgroundColor: colors.background,
       marginBottom: 50,
+      paddingTop: 32,
     },
     content: {
       padding: 16,

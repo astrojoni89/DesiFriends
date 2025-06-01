@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useState} from "react";
+import { useState } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   Platform,
+  KeyboardAvoidingView,
 } from "react-native";
 
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
@@ -29,6 +30,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme, Snackbar, Tooltip } from "react-native-paper";
 import type { AppTheme } from "@/theme/theme";
 import { useValidation } from "@/hooks/useValidation";
+import { ScrollView } from "react-native-gesture-handler";
 
 // Updated RecipesScreen to highlight missing name, batchSize, and ingredient lists on validation
 export default function RecipesScreen() {
@@ -254,291 +256,291 @@ export default function RecipesScreen() {
   const [showSavedMessage, setShowSavedMessage] = useState(false);
 
   return (
-    <View style={{ flex: 1 , paddingTop: 32}}>
-      <TouchableWithoutFeedback
-        onPress={() => {
-          Keyboard.dismiss();
-          setErrors({});
-        }}
-      >
-        <KeyboardAwareScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={styles.content}
-          enableOnAndroid
-          extraScrollHeight={Platform.OS === "ios" ? 80 : 20}
-          keyboardShouldPersistTaps="handled"
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View style={{ flex: 1 }}>
+        <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
         >
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 12,
-            }}
+          <ScrollView
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
           >
-            <Text style={styles.title}>Rezept erstellen</Text>
-            <Tooltip title="Rezept importieren (.dfr)">
-              <Pressable onPress={importRecipe} style={styles.iconButton}>
-                <Ionicons
-                  name="share-outline"
-                  size={24}
-                  color={colors.primary}
-                />
-              </Pressable>
-            </Tooltip>
-          </View>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 12,
+              }}
+            >
+              <Text style={styles.title}>Rezept erstellen</Text>
+              <Tooltip title="Rezept importieren (.dfr)">
+                <Pressable onPress={importRecipe} style={styles.iconButton}>
+                  <Ionicons
+                    name="share-outline"
+                    size={24}
+                    color={colors.primary}
+                  />
+                </Pressable>
+              </Tooltip>
+            </View>
 
-          <TextInput
-            style={[
-              styles.input,
-              errors.name && { borderColor: "red", borderWidth: 2 },
-            ]}
-            placeholder="Rezeptname"
-            value={values.name}
-            onChangeText={(text) => handleChange("name", text)}
-            placeholderTextColor={colors.outline}
-          />
-
-          <TextInput
-            style={[
-              styles.input,
-              errors.batchSize && { borderColor: "red", borderWidth: 2 },
-            ]}
-            placeholder="Zielmenge (Liter)"
-            keyboardType="numeric"
-            value={values.batchSize}
-            onChangeText={(text) => handleChange("batchSize", text)}
-            placeholderTextColor={colors.outline}
-          />
-
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 8,
-              marginBottom: 8,
-            }}
-          >
             <TextInput
               style={[
                 styles.input,
-                { flex: 1 },
-                errors.hauptguss && { borderColor: "red", borderWidth: 2 },
+                errors.name && { borderColor: "red", borderWidth: 2 },
               ]}
-              placeholder="Hauptguss (Liter)"
-              keyboardType="decimal-pad"
-              value={values.hauptguss}
-              onChangeText={(text) => handleChange("hauptguss", text)}
+              placeholder="Rezeptname"
+              value={values.name}
+              onChangeText={(text) => handleChange("name", text)}
               placeholderTextColor={colors.outline}
             />
+
             <TextInput
               style={[
                 styles.input,
-                { flex: 1 },
-                errors.nachguss && { borderColor: "red", borderWidth: 2 },
+                errors.batchSize && { borderColor: "red", borderWidth: 2 },
               ]}
-              placeholder="Nachguss (Liter)"
-              keyboardType="decimal-pad"
-              value={values.nachguss}
-              onChangeText={(text) => handleChange("nachguss", text)}
+              placeholder="Zielmenge (Liter)"
+              keyboardType="numeric"
+              value={values.batchSize}
+              onChangeText={(text) => handleChange("batchSize", text)}
               placeholderTextColor={colors.outline}
             />
-          </View>
 
-          {/* Malz section */}
-          <Text style={styles.sectionTitle}>Malz</Text>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 8,
-              marginBottom: 8,
-            }}
-          >
-            <IngredientInput
-              input={malzInput}
-              setInput={setMalzInput}
-              onAdd={() =>
-                addIngredient(
-                  malzInput,
-                  malzList,
-                  setMalzList,
-                  setMalzInput,
-                  "malzList"
-                )
-              }
-              colors={theme.colors}
-              amountPlaceholder="Menge (kg)"
-              showErrors={!!errors.malzList}
-            />
-          </View>
-          {/* {malzList.map((item, idx) => (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 8,
+              }}
+            >
+              <TextInput
+                style={[
+                  styles.input,
+                  { flex: 1 },
+                  errors.hauptguss && { borderColor: "red", borderWidth: 2 },
+                ]}
+                placeholder="Hauptguss (Liter)"
+                keyboardType="decimal-pad"
+                value={values.hauptguss}
+                onChangeText={(text) => handleChange("hauptguss", text)}
+                placeholderTextColor={colors.outline}
+              />
+              <TextInput
+                style={[
+                  styles.input,
+                  { flex: 1 },
+                  errors.nachguss && { borderColor: "red", borderWidth: 2 },
+                ]}
+                placeholder="Nachguss (Liter)"
+                keyboardType="decimal-pad"
+                value={values.nachguss}
+                onChangeText={(text) => handleChange("nachguss", text)}
+                placeholderTextColor={colors.outline}
+              />
+            </View>
+
+            {/* Malz section */}
+            <Text style={styles.sectionTitle}>Malz</Text>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 8,
+              }}
+            >
+              <IngredientInput
+                input={malzInput}
+                setInput={setMalzInput}
+                onAdd={() =>
+                  addIngredient(
+                    malzInput,
+                    malzList,
+                    setMalzList,
+                    setMalzInput,
+                    "malzList"
+                  )
+                }
+                colors={theme.colors}
+                amountPlaceholder="Menge (kg)"
+                showErrors={!!errors.malzList}
+              />
+            </View>
+            {/* {malzList.map((item, idx) => (
             <Text key={idx} style={styles.ingredientItem}>
               &bull; {item.name}: {item.amount} kg
             </Text>
           ))} */}
-          {malzList.map((item, idx) => (
-            <View key={idx} style={styles.ingredientRow}>
-              <Text style={[styles.ingredientItem, { flex: 1 }]}>
-                &bull; {item.name}: {item.amount} kg
-              </Text>
-              <Pressable
-                onPress={() => {
-                  const updated = malzList.filter((_, i) => i !== idx);
-                  setMalzList(updated);
-                  handleChange("malzList", updated);
-                }}
-                style={[
-                  styles.removeButton,
-                  { backgroundColor: colors.remove },
-                ]}
-              >
-                <Ionicons name="remove" size={20} color="#fff" />
-              </Pressable>
-            </View>
-          ))}
+            {malzList.map((item, idx) => (
+              <View key={idx} style={styles.ingredientRow}>
+                <Text style={[styles.ingredientItem, { flex: 1 }]}>
+                  &bull; {item.name}: {item.amount} kg
+                </Text>
+                <Pressable
+                  onPress={() => {
+                    const updated = malzList.filter((_, i) => i !== idx);
+                    setMalzList(updated);
+                    handleChange("malzList", updated);
+                  }}
+                  style={[
+                    styles.removeButton,
+                    { backgroundColor: colors.remove },
+                  ]}
+                >
+                  <Ionicons name="remove" size={20} color="#fff" />
+                </Pressable>
+              </View>
+            ))}
 
-          {/* Hopfen section */}
-          <Text style={styles.sectionTitle}>Hopfen</Text>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 8,
-              marginBottom: 8,
-            }}
-          >
-            <IngredientInput
-              input={hopfenInput}
-              setInput={setHopfenInput}
-              onAdd={() =>
-                addIngredient(
-                  hopfenInput,
-                  hopfenList,
-                  setHopfenList,
-                  setHopfenInput,
-                  "hopfenList"
-                )
-              }
-              colors={theme.colors}
-              amountPlaceholder="Menge (g)"
-              extraField={{
-                key: "alphaAcid",
-                placeholder: "%α",
-                keyboardType: "decimal-pad",
+            {/* Hopfen section */}
+            <Text style={styles.sectionTitle}>Hopfen</Text>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 8,
               }}
-              showErrors={!!errors.hopfenList}
-            />
-          </View>
-          {/* {hopfenList.map((item, idx) => (
+            >
+              <IngredientInput
+                input={hopfenInput}
+                setInput={setHopfenInput}
+                onAdd={() =>
+                  addIngredient(
+                    hopfenInput,
+                    hopfenList,
+                    setHopfenList,
+                    setHopfenInput,
+                    "hopfenList"
+                  )
+                }
+                colors={theme.colors}
+                amountPlaceholder="Menge (g)"
+                extraField={{
+                  key: "alphaAcid",
+                  placeholder: "%α",
+                  keyboardType: "decimal-pad",
+                }}
+                showErrors={!!errors.hopfenList}
+              />
+            </View>
+            {/* {hopfenList.map((item, idx) => (
             <Text key={idx} style={styles.ingredientItem}>
               &bull; {item.name}: {item.amount} g @ {item.alphaAcid}%α
             </Text>
           ))} */}
-          {hopfenList.map((item, idx) => (
-            <View key={idx} style={styles.ingredientRow}>
-              <Text style={[styles.ingredientItem, { flex: 1 }]}>
-                &bull; {item.name}: {item.amount} g @ {item.alphaAcid}%α
-              </Text>
-              <Pressable
-                onPress={() => {
-                  const updated = hopfenList.filter((_, i) => i !== idx);
-                  setHopfenList(updated);
-                  handleChange("hopfenList", updated);
-                }}
-                style={[
-                  styles.removeButton,
-                  { backgroundColor: colors.remove },
-                ]}
-              >
-                <Ionicons name="remove" size={20} color="#fff" />
-              </Pressable>
-            </View>
-          ))}
+            {hopfenList.map((item, idx) => (
+              <View key={idx} style={styles.ingredientRow}>
+                <Text style={[styles.ingredientItem, { flex: 1 }]}>
+                  &bull; {item.name}: {item.amount} g @ {item.alphaAcid}%α
+                </Text>
+                <Pressable
+                  onPress={() => {
+                    const updated = hopfenList.filter((_, i) => i !== idx);
+                    setHopfenList(updated);
+                    handleChange("hopfenList", updated);
+                  }}
+                  style={[
+                    styles.removeButton,
+                    { backgroundColor: colors.remove },
+                  ]}
+                >
+                  <Ionicons name="remove" size={20} color="#fff" />
+                </Pressable>
+              </View>
+            ))}
 
-          {/* Hefe section */}
-          <Text style={styles.sectionTitle}>Hefe</Text>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 8,
-              marginBottom: 8,
-            }}
-          >
-            <IngredientInput
-              input={hefeInput}
-              setInput={setHefeInput}
-              onAdd={() =>
-                addIngredient(
-                  hefeInput,
-                  hefeList,
-                  setHefeList,
-                  setHefeInput,
-                  "hefeList"
-                )
-              }
-              colors={theme.colors}
-              amountPlaceholder="Menge (g)"
-              showErrors={!!errors.hefeList}
-            />
-          </View>
-          {/* {hefeList.map((item, idx) => (
+            {/* Hefe section */}
+            <Text style={styles.sectionTitle}>Hefe</Text>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 8,
+              }}
+            >
+              <IngredientInput
+                input={hefeInput}
+                setInput={setHefeInput}
+                onAdd={() =>
+                  addIngredient(
+                    hefeInput,
+                    hefeList,
+                    setHefeList,
+                    setHefeInput,
+                    "hefeList"
+                  )
+                }
+                colors={theme.colors}
+                amountPlaceholder="Menge (g)"
+                showErrors={!!errors.hefeList}
+              />
+            </View>
+            {/* {hefeList.map((item, idx) => (
             <Text key={idx} style={styles.ingredientItem}>
               &bull; {item.name}: {item.amount} g
             </Text>
           ))} */}
-          {hefeList.map((item, idx) => (
-            <View key={idx} style={styles.ingredientRow}>
-              <Text style={[styles.ingredientItem, { flex: 1 }]}>
-                &bull; {item.name}: {item.amount} g
-              </Text>
+            {hefeList.map((item, idx) => (
+              <View key={idx} style={styles.ingredientRow}>
+                <Text style={[styles.ingredientItem, { flex: 1 }]}>
+                  &bull; {item.name}: {item.amount} g
+                </Text>
+                <Pressable
+                  onPress={() => {
+                    const updated = hefeList.filter((_, i) => i !== idx);
+                    setHefeList(updated);
+                    handleChange("hefeList", updated);
+                  }}
+                  style={[
+                    styles.removeButton,
+                    { backgroundColor: colors.remove },
+                  ]}
+                >
+                  <Ionicons name="remove" size={20} color="#fff" />
+                </Pressable>
+              </View>
+            ))}
+
+            <View style={{ marginVertical: 16 }}>
               <Pressable
-                onPress={() => {
-                  const updated = hefeList.filter((_, i) => i !== idx);
-                  setHefeList(updated);
-                  handleChange("hefeList", updated);
-                }}
+                onPress={handleSaveAndOpenModal}
                 style={[
-                  styles.removeButton,
-                  { backgroundColor: colors.remove },
+                  styles.brewButton,
+                  { backgroundColor: colors.secondary },
                 ]}
               >
-                <Ionicons name="remove" size={20} color="#fff" />
+                <Text style={styles.brewButtonText}>Maisch- & Kochplan</Text>
+              </Pressable>
+              <Pressable onPress={handleAddRecipe} style={styles.brewButton}>
+                <Text style={styles.brewButtonText}>Rezept speichern</Text>
               </Pressable>
             </View>
-          ))}
-
-          <View style={{ marginVertical: 16 }}>
-            <Pressable
-              onPress={handleSaveAndOpenModal}
-              style={[styles.brewButton, { backgroundColor: colors.secondary }]}
-            >
-              <Text style={styles.brewButtonText}>Maisch- & Kochplan</Text>
-            </Pressable>
-            <Pressable onPress={handleAddRecipe} style={styles.brewButton}>
-              <Text style={styles.brewButtonText}>Rezept speichern</Text>
-            </Pressable>
-          </View>
-        </KeyboardAwareScrollView>
-      </TouchableWithoutFeedback>
-
-      <Snackbar
-        visible={showSavedMessage}
-        onDismiss={() => setShowSavedMessage(false)}
-        duration={2000}
-        style={{
-          backgroundColor: colors.primary,
-          position: "absolute",
-          bottom: 2,
-          left: 16,
-          right: 16,
-          borderRadius: 8,
-        }}
-      >
-        Rezept gespeichert!
-      </Snackbar>
-    </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+        <Snackbar
+          visible={showSavedMessage}
+          onDismiss={() => setShowSavedMessage(false)}
+          duration={2000}
+          style={{
+            backgroundColor: colors.primary,
+            position: "absolute",
+            bottom: 16,
+            left: 16,
+            right: 16,
+            borderRadius: 8,
+          }}
+        >
+          Rezept gespeichert!
+        </Snackbar>
+      </View>
+    </TouchableWithoutFeedback>
   );
 }
 

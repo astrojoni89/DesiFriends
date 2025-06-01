@@ -7,6 +7,8 @@ import {
   Pressable,
   Keyboard,
   Platform,
+  ScrollView,
+  KeyboardAvoidingView,
   TouchableWithoutFeedback,
   Alert,
 } from "react-native";
@@ -78,225 +80,239 @@ export default function MashScheduleModal() {
   const [showSavedMessage, setShowSavedMessage] = useState(false);
 
   return (
-  <View style={{ flex: 1 }}>
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <KeyboardAwareScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-        enableOnAndroid
-        extraScrollHeight={Platform.OS === "ios" ? 80 : 60}
-      >
-        <Text style={styles.title}>{recipe.name}</Text>
-
-        <Text style={styles.sectionTitle}>Rasten</Text>
-        {mashSteps.map((step, idx) => (
-          <View key={idx} style={styles.row}>
-            <Text style={[styles.ingredientItem, { flex: 1 }]}>
-              &bull; {step.temperature}°C für {step.duration} min
-            </Text>
-            <Pressable
-              onPress={() => setMashSteps(mashSteps.filter((_, i) => i !== idx))}
-              style={[styles.removeButton, { backgroundColor: colors.remove }]}
-            >
-              <Ionicons name="remove" size={20} color="#fff" />
-            </Pressable>
-          </View>
-        ))}
-
-        <View style={styles.row}>
-          <TextInput
-            placeholder="Temperatur (°C)"
-            keyboardType="decimal-pad"
-            value={newMashStep.temperature}
-            onChangeText={(t) =>
-              setNewMashStep({ ...newMashStep, temperature: t })
-            }
-            style={[styles.input, { flex: 1 }]}
-            placeholderTextColor={colors.outline}
-          />
-          <TextInput
-            placeholder="Dauer (min)"
-            keyboardType="numeric"
-            value={newMashStep.duration}
-            onChangeText={(t) =>
-              setNewMashStep({ ...newMashStep, duration: t })
-            }
-            style={[styles.input, { flex: 1 }]}
-            placeholderTextColor={colors.outline}
-          />
-          <Pressable
-            style={styles.addButton}
-            onPress={() => {
-              if (!newMashStep.temperature || !newMashStep.duration) return;
-              setMashSteps([...mashSteps, newMashStep]);
-              setNewMashStep({ temperature: "", duration: "" });
-            }}
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View style={{ flex: 1 }}>
+        <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+        >
+          <ScrollView
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
           >
-            <Ionicons name="add" size={20} color="#fff" />
-          </Pressable>
-        </View>
+            <Text style={styles.title}>{recipe.name}</Text>
 
-        <Text style={styles.sectionTitle}>Würzekochen</Text>
-        <TextInput
-          placeholder="Kochzeit (min)"
-          keyboardType="numeric"
-          value={boilTime}
-          onChangeText={setBoilTime}
-          style={styles.input}
-          placeholderTextColor={colors.outline}
-        />
+            <Text style={styles.sectionTitle}>Rasten</Text>
+            {mashSteps.map((step, idx) => (
+              <View key={idx} style={styles.row}>
+                <Text style={[styles.ingredientItem, { flex: 1 }]}>
+                  &bull; {step.temperature}°C für {step.duration} min
+                </Text>
+                <Pressable
+                  onPress={() =>
+                    setMashSteps(mashSteps.filter((_, i) => i !== idx))
+                  }
+                  style={[
+                    styles.removeButton,
+                    { backgroundColor: colors.remove },
+                  ]}
+                >
+                  <Ionicons name="remove" size={20} color="#fff" />
+                </Pressable>
+              </View>
+            ))}
 
-        <Text style={styles.sectionTitle}>
-          Angepeilte Stammwürze (°Plato)
-        </Text>
-        <TextInput
-          placeholder="z. B. 12"
-          keyboardType="decimal-pad"
-          value={expectedPlato}
-          onChangeText={setExpectedPlato}
-          style={styles.input}
-          placeholderTextColor={colors.outline}
-        />
-
-        <Text style={styles.sectionTitle}>Hopfengaben</Text>
-        {hopSchedule
-          .sort((a, b) => parseFloat(b.time) - parseFloat(a.time))
-          .map((hop, idx) => (
-            <View key={idx} style={styles.row}>
-              <Text style={[styles.ingredientItem, { flex: 1 }]}>
-                &bull; {hop.name}, {hop.amount}g bei {hop.time} min
-              </Text>
-              <Pressable
-                onPress={() =>
-                  setHopSchedule(hopSchedule.filter((_, i) => i !== idx))
+            <View style={styles.row}>
+              <TextInput
+                placeholder="Temperatur (°C)"
+                keyboardType="decimal-pad"
+                value={newMashStep.temperature}
+                onChangeText={(t) =>
+                  setNewMashStep({ ...newMashStep, temperature: t })
                 }
-                style={[styles.removeButton, { backgroundColor: colors.remove }]}
+                style={[styles.input, { flex: 1 }]}
+                placeholderTextColor={colors.outline}
+              />
+              <TextInput
+                placeholder="Dauer (min)"
+                keyboardType="numeric"
+                value={newMashStep.duration}
+                onChangeText={(t) =>
+                  setNewMashStep({ ...newMashStep, duration: t })
+                }
+                style={[styles.input, { flex: 1 }]}
+                placeholderTextColor={colors.outline}
+              />
+              <Pressable
+                style={styles.addButton}
+                onPress={() => {
+                  if (!newMashStep.temperature || !newMashStep.duration) return;
+                  setMashSteps([...mashSteps, newMashStep]);
+                  setNewMashStep({ temperature: "", duration: "" });
+                }}
               >
-                <Ionicons name="remove" size={20} color="#fff" />
+                <Ionicons name="add" size={20} color="#fff" />
               </Pressable>
             </View>
-          ))}
 
-        <View style={styles.row}>
-          <View style={{ flex: 2 }}>
-            <Menu
-              visible={menuVisible}
-              onDismiss={() => setMenuVisible(false)}
-              anchor={
-                <Pressable
-                  onPress={() => setMenuVisible(true)}
-                  style={[styles.input, { justifyContent: "center" }]}
-                >
-                  <Text
-                    style={{
-                      color: newHop.name ? colors.text : colors.outline,
-                    }}
-                  >
-                    {newHop.name || "Hopfen wählen"}
+            <Text style={styles.sectionTitle}>Würzekochen</Text>
+            <TextInput
+              placeholder="Kochzeit (min)"
+              keyboardType="numeric"
+              value={boilTime}
+              onChangeText={setBoilTime}
+              style={styles.input}
+              placeholderTextColor={colors.outline}
+            />
+
+            <Text style={styles.sectionTitle}>
+              Angepeilte Stammwürze (°Plato)
+            </Text>
+            <TextInput
+              placeholder="z. B. 12"
+              keyboardType="decimal-pad"
+              value={expectedPlato}
+              onChangeText={setExpectedPlato}
+              style={styles.input}
+              placeholderTextColor={colors.outline}
+            />
+
+            <Text style={styles.sectionTitle}>Hopfengaben</Text>
+            {hopSchedule
+              .sort((a, b) => parseFloat(b.time) - parseFloat(a.time))
+              .map((hop, idx) => (
+                <View key={idx} style={styles.row}>
+                  <Text style={[styles.ingredientItem, { flex: 1 }]}>
+                    &bull; {hop.name}, {hop.amount}g bei {hop.time} min
                   </Text>
-                </Pressable>
-              }
-            >
-              {hopOptions.map((hop, idx) => (
-                <Menu.Item
-                  key={idx}
-                  onPress={() => {
-                    setNewHop({ ...newHop, name: hop });
-                    setMenuVisible(false);
-                  }}
-                  title={hop}
-                />
+                  <Pressable
+                    onPress={() =>
+                      setHopSchedule(hopSchedule.filter((_, i) => i !== idx))
+                    }
+                    style={[
+                      styles.removeButton,
+                      { backgroundColor: colors.remove },
+                    ]}
+                  >
+                    <Ionicons name="remove" size={20} color="#fff" />
+                  </Pressable>
+                </View>
               ))}
-            </Menu>
-          </View>
 
-          <TextInput
-            placeholder={`g (max ${getMaxHopAmount()})`}
-            keyboardType="decimal-pad"
-            value={newHop.amount}
-            onChangeText={(t) => setNewHop({ ...newHop, amount: t })}
-            style={[styles.input, { flex: 1 }]}
-            placeholderTextColor={colors.outline}
-          />
-          <TextInput
-            placeholder={`bei (max ${boilTime || "?"} min)`}
-            keyboardType="numeric"
-            value={newHop.time}
-            onChangeText={(t) => setNewHop({ ...newHop, time: t })}
-            style={[styles.input, { flex: 1 }]}
-            placeholderTextColor={colors.outline}
-          />
-          <Pressable
-            style={styles.addButton}
-            onPress={() => {
-              const amt = parseFloat(newHop.amount);
-              const t = parseFloat(newHop.time);
-              if (!newHop.name || isNaN(amt) || isNaN(t)) return;
-              if (amt > getMaxHopAmount()) {
-                Alert.alert(
-                  "Zuviel Hopfen",
-                  `Maximal ${getMaxHopAmount()}g erlaubt.`
-                );
-                return;
-              }
-              if (maxBoilTime && t > maxBoilTime) {
-                Alert.alert(
-                  "Ungültige Zeit",
-                  `Maximalzeit ist ${boilTime} min.`
-                );
-                return;
-              }
-              setHopSchedule([...hopSchedule, newHop]);
-              setNewHop({ name: "", amount: "", time: "" });
-            }}
-          >
-            <Ionicons name="add" size={20} color="#fff" />
-          </Pressable>
-        </View>
+            <View style={styles.row}>
+              <View style={{ flex: 2 }}>
+                <Menu
+                  visible={menuVisible}
+                  onDismiss={() => setMenuVisible(false)}
+                  anchor={
+                    <Pressable
+                      onPress={() => setMenuVisible(true)}
+                      style={[styles.input, { justifyContent: "center" }]}
+                    >
+                      <Text
+                        style={{
+                          color: newHop.name ? colors.text : colors.outline,
+                        }}
+                      >
+                        {newHop.name || "Hopfen wählen"}
+                      </Text>
+                    </Pressable>
+                  }
+                >
+                  {hopOptions.map((hop, idx) => (
+                    <Menu.Item
+                      key={idx}
+                      onPress={() => {
+                        setNewHop({ ...newHop, name: hop });
+                        setMenuVisible(false);
+                      }}
+                      title={hop}
+                    />
+                  ))}
+                </Menu>
+              </View>
 
-        {hopSchedule.length > 0 && (
-          <Text style={{ marginTop: 8, color: colors.outline }}>
-            Geschätzte IBU: {getEstimatedIBU()}
-          </Text>
-        )}
+              <TextInput
+                placeholder={`g (max ${getMaxHopAmount()})`}
+                keyboardType="decimal-pad"
+                value={newHop.amount}
+                onChangeText={(t) => setNewHop({ ...newHop, amount: t })}
+                style={[styles.input, { flex: 1 }]}
+                placeholderTextColor={colors.outline}
+              />
+              <TextInput
+                placeholder={`bei (max ${boilTime || "?"} min)`}
+                keyboardType="numeric"
+                value={newHop.time}
+                onChangeText={(t) => setNewHop({ ...newHop, time: t })}
+                style={[styles.input, { flex: 1 }]}
+                placeholderTextColor={colors.outline}
+              />
+              <Pressable
+                style={styles.addButton}
+                onPress={() => {
+                  const amt = parseFloat(newHop.amount);
+                  const t = parseFloat(newHop.time);
+                  if (!newHop.name || isNaN(amt) || isNaN(t)) return;
+                  if (amt > getMaxHopAmount()) {
+                    Alert.alert(
+                      "Zuviel Hopfen",
+                      `Maximal ${getMaxHopAmount()}g erlaubt.`
+                    );
+                    return;
+                  }
+                  if (maxBoilTime && t > maxBoilTime) {
+                    Alert.alert(
+                      "Ungültige Zeit",
+                      `Maximalzeit ist ${boilTime} min.`
+                    );
+                    return;
+                  }
+                  setHopSchedule([...hopSchedule, newHop]);
+                  setNewHop({ name: "", amount: "", time: "" });
+                }}
+              >
+                <Ionicons name="add" size={20} color="#fff" />
+              </Pressable>
+            </View>
 
-        <Pressable
-          style={styles.brewButton}
-          onPress={() => {
-            const updatedRecipe = {
-              ...recipe,
-              mashSteps,
-              boilTime,
-              hopSchedule,
-            };
-            addRecipe(updatedRecipe);
-            setShowSavedMessage(true);
-            router.back();
+            {hopSchedule.length > 0 && (
+              <Text style={{ marginTop: 8, color: colors.outline }}>
+                Geschätzte IBU: {getEstimatedIBU()}
+              </Text>
+            )}
+
+            <Pressable
+              style={[styles.brewButton, { marginBottom: 32 }]}
+              onPress={() => {
+                const updatedRecipe = {
+                  ...recipe,
+                  mashSteps,
+                  boilTime,
+                  hopSchedule,
+                };
+                addRecipe(updatedRecipe);
+                setShowSavedMessage(true);
+                // wait for 2 seconds before router.back()
+                setTimeout(() => {
+                  router.back();
+                }, 2000);
+              }}
+            >
+              <Text style={styles.brewButtonText}>Fertig</Text>
+            </Pressable>
+          </ScrollView>
+        </KeyboardAvoidingView>
+
+        <Snackbar
+          visible={showSavedMessage}
+          onDismiss={() => setShowSavedMessage(false)}
+          duration={2000}
+          style={{
+            backgroundColor: colors.primary,
+            position: "absolute",
+            bottom: 48,
+            left: 16,
+            right: 16,
+            borderRadius: 8,
           }}
         >
-          <Text style={styles.brewButtonText}>Fertig</Text>
-        </Pressable>
-      </KeyboardAwareScrollView>
+          Maisch- & Kochplan gespeichert!
+        </Snackbar>
+      </View>
     </TouchableWithoutFeedback>
-
-    <Snackbar
-      visible={showSavedMessage}
-      onDismiss={() => setShowSavedMessage(false)}
-      duration={2000}
-      style={{
-        backgroundColor: colors.primary,
-        position: "absolute",
-        bottom: 16,
-        left: 16,
-        right: 16,
-        borderRadius: 8,
-      }}
-    >
-      Maisch- & Kochplan gespeichert!
-    </Snackbar>
-  </View>
-);
+  );
 }
 
 function createStyles(colors: AppTheme["colors"]) {
@@ -305,6 +321,7 @@ function createStyles(colors: AppTheme["colors"]) {
       flex: 1,
       backgroundColor: colors.background,
       marginBottom: 50,
+      paddingTop: 32,
     },
     content: {
       padding: 16,

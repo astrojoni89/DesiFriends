@@ -49,17 +49,22 @@ export default function MashTimerStep() {
   const [frozenTime, setFrozenTime] = useState<number | null>(null);
 
   const togglePause = () => {
-    if (!paused) {
-      const timeLeft = endTime
-        ? Math.max(0, Math.floor((endTime - Date.now()) / 1000))
-        : 0;
-      setFrozenTime(timeLeft); // Capture the current time left
-    } else {
-      setNow(Date.now()); // Re-sync timer base when resuming
-      setFrozenTime(null); // Clear the frozen value
+  if (!paused) {
+    const timeLeft = endTime
+      ? Math.max(0, Math.floor((endTime - Date.now()) / 1000))
+      : 0;
+    setFrozenTime(timeLeft);
+  } else {
+    if (frozenTime !== null) {
+      const newEndTime = Date.now() + frozenTime * 1000;
+      setEndTime(newEndTime);
     }
-    setPaused((prev) => !prev);
-  };
+    setFrozenTime(null);
+    setNow(Date.now()); // Re-sync
+  }
+  setPaused((prev) => !prev);
+};
+
 
   const resetStep = () => {
     if (!step) return;

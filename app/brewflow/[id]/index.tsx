@@ -18,7 +18,8 @@ export default function BrewStartScreen() {
   if (!recipe) return <Text style={styles.title}>Rezept nicht gefunden</Text>;
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.content}>
       <Text style={styles.title}>{recipe.name}</Text>
 
       <Text style={styles.section}>Zielmenge</Text>
@@ -54,13 +55,21 @@ export default function BrewStartScreen() {
       </Pressable>
 
     </ScrollView>
+    </View>
   );
 }
 
 function createStyles(colors: AppTheme["colors"]) {
   return StyleSheet.create({
     container: {
+      flex: 1,
+      backgroundColor: colors.background,
+      marginBottom: 50,
+      paddingTop: 32,
+    },
+    content: {
       padding: 16,
+      flexGrow: 1,
     },
     title: {
       fontSize: 24,
