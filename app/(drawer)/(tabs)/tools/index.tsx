@@ -450,7 +450,6 @@ function createStyles(colors: AppTheme["colors"]) {
       marginBottom: 4,
       color: colors.onBackground,
     },
-
     hamburger: {
       position: "absolute",
       top: 16,

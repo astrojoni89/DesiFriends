@@ -295,7 +295,6 @@ export default function RecipesScreen() {
   const [showSavedMessage, setShowSavedMessage] = useState(false);
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <View
         style={{
           flex: 1,
@@ -309,6 +308,7 @@ export default function RecipesScreen() {
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
         >
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
           <ScrollView
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
@@ -541,6 +541,7 @@ export default function RecipesScreen() {
               </Pressable>
             </View>
           </ScrollView>
+          </TouchableWithoutFeedback>
         </KeyboardAvoidingView>
         <Snackbar
           visible={showSavedMessage}
@@ -559,7 +560,7 @@ export default function RecipesScreen() {
         </Snackbar>
         <View style={{ marginBottom: 32 }}></View>
       </View>
-    </TouchableWithoutFeedback>
+    
   );
 }
 

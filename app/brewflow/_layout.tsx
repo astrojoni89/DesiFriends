@@ -2,5 +2,5 @@
 import { Stack } from "expo-router";
 
 export default function BrewFlowLayout() {
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return <Stack screenOptions={{ animation: "slide_from_right", headerShown: false }} />;
 }

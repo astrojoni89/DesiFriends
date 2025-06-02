@@ -1,31 +1,28 @@
-// app/brewflow/[id]/mash.tsx
-import { useEffect, useRef, useState } from "react";
+// // app/brewflow/[id]/mash.tsx
+import { useEffect, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   View,
   Text,
   Pressable,
   StyleSheet,
-  AppState,
-  AppStateStatus,
   Platform,
 } from "react-native";
 import * as Notifications from "expo-notifications";
-import type { NotificationRequestInput } from "expo-notifications";
 import * as Device from "expo-device";
 import { useRecipes } from "@/context/RecipeContext";
-import { Icon, useTheme } from "react-native-paper";
+import { useTheme } from "react-native-paper";
 import type { AppTheme } from "@/theme/theme";
 import { Ionicons } from "@expo/vector-icons";
+import { useTimer } from "@/hooks/useTimer";
 
-// Configure notifications
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
-    shouldShowBanner: true, // required in SDK 50+
-    shouldShowList: true, // required in SDK 50+
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
@@ -40,73 +37,25 @@ export default function MashTimerStep() {
 
   const steps = recipe?.mashSteps?.length ? recipe.mashSteps : [];
   const [stepIndex, setStepIndex] = useState(0);
-  const [endTime, setEndTime] = useState<number | null>(null);
-  const [now, setNow] = useState(Date.now());
-  const appState = useRef(AppState.currentState);
-
   const step = steps[stepIndex];
-  const [paused, setPaused] = useState(false);
-  const [frozenTime, setFrozenTime] = useState<number | null>(null);
+  const durationSec = parseInt(step?.duration || "0") * 60;
 
-  const togglePause = () => {
-  if (!paused) {
-    const timeLeft = endTime
-      ? Math.max(0, Math.floor((endTime - Date.now()) / 1000))
-      : 0;
-    setFrozenTime(timeLeft);
-  } else {
-    if (frozenTime !== null) {
-      const newEndTime = Date.now() + frozenTime * 1000;
-      setEndTime(newEndTime);
-    }
-    setFrozenTime(null);
-    setNow(Date.now()); // Re-sync
-  }
-  setPaused((prev) => !prev);
-};
-
-
-  const resetStep = () => {
-    if (!step) return;
-
-    const durationSec = parseInt(step.duration) * 60;
-    const targetEndTime = Date.now() + durationSec * 1000;
-
-    setEndTime(targetEndTime);
-    setNow(Date.now());
-    setPaused(false);
-    setFrozenTime(null);
-  };
-
-  // Set up app state listener to re-sync timer
-  useEffect(() => {
-    const subscription = AppState.addEventListener(
-      "change",
-      handleAppStateChange
-    );
-    return () => subscription.remove();
-  }, []);
-
-  const handleAppStateChange = (nextAppState: AppStateStatus) => {
-    if (
-      appState.current.match(/inactive|background/) &&
-      nextAppState === "active"
-    ) {
-      setNow(Date.now()); // Resync timer
-    }
-    appState.current = nextAppState;
-  };
+  const {
+    timeLeft,
+    minutes,
+    seconds,
+    paused,
+    togglePause,
+    reset,
+  } = useTimer(durationSec);
 
   useEffect(() => {
     if (!step) return;
 
-    const schedule = async () => {
-      const durationSec = parseInt(step.duration) * 60;
-      const targetEndTime = Date.now() + durationSec * 1000;
-      setEndTime(targetEndTime);
-      setNow(Date.now());
+    // Auto-start timer + notification on step change
+    const startStep = async () => {
+      reset(true); // start immediately
 
-      // Schedule a notification
       if (Device.isDevice) {
         await Notifications.scheduleNotificationAsync({
           content: {
@@ -114,45 +63,15 @@ export default function MashTimerStep() {
             body: "Der nächste Schritt kann beginnen.",
           },
           trigger: {
-            seconds: 10,
+            seconds: durationSec,
             repeats: false,
           } as Notifications.TimeIntervalTriggerInput,
         });
       }
     };
 
-    schedule();
+    startStep();
   }, [stepIndex]);
-
-  useEffect(() => {
-    if (!endTime || paused) return;
-    const interval = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(interval);
-  }, [endTime, paused]);
-
-  if (!recipe || steps.length === 0 || !step) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.title}>Keine Rasten gefunden</Text>
-        <Pressable
-          style={styles.button}
-          onPress={() =>
-            router.push({ pathname: "/brewflow/[id]/boil", params: { id } })
-          }
-        >
-          <Text style={styles.buttonText}>Zum Kochen springen</Text>
-        </Pressable>
-      </View>
-    );
-  }
-
-  const timeLeft =
-    endTime && !paused
-      ? Math.max(0, Math.floor((endTime - now) / 1000))
-      : frozenTime ?? 0; // Display frozen time when paused
-
-  const minutes = Math.floor(timeLeft / 60);
-  const seconds = timeLeft % 60;
 
   const nextStep = () => {
     setStepIndex((prev) => prev + 1);
@@ -161,6 +80,17 @@ export default function MashTimerStep() {
   const goToBoil = () => {
     router.push({ pathname: "/brewflow/[id]/boil", params: { id } });
   };
+
+  if (!recipe || steps.length === 0 || !step) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>Keine Rasten gefunden</Text>
+        <Pressable style={styles.button} onPress={goToBoil}>
+          <Text style={styles.buttonText}>Zum Kochen springen</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -187,10 +117,7 @@ export default function MashTimerStep() {
       )}
 
       <View style={{ flexDirection: "row", gap: 12 }}>
-        <Pressable
-          style={styles.iconButton}
-          onPress={togglePause}
-        >
+        <Pressable style={styles.iconButton} onPress={togglePause}>
           <Ionicons
             name={paused ? "play" : "pause"}
             size={28}
@@ -200,7 +127,7 @@ export default function MashTimerStep() {
 
         <Pressable
           style={[styles.iconButton, { backgroundColor: colors.secondary }]}
-          onPress={resetStep}
+          onPress={() => reset(false)}
         >
           <Ionicons name="refresh" size={28} color={colors.onPrimary} />
         </Pressable>

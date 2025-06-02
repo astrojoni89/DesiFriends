@@ -63,8 +63,6 @@ export default function RecipesScreen() {
   const { colors } = theme;
   const styles = createStyles(theme.colors);
 
-  const [modalVisible, setModalVisible] = useState(false);
-
   // Validation
   type RecipeForm = {
     name: string;
@@ -107,19 +105,6 @@ export default function RecipesScreen() {
   const [boilTime, setBoilTime] = useState("");
   const [hopSchedule, setHopSchedule] = useState<HopSchedule[]>([]);
 
-  // const addIngredient = (
-  //   input: Ingredient,
-  //   list: Ingredient[],
-  //   setter: Function,
-  //   resetter: Function,
-  //   key: keyof RecipeForm
-  // ) => {
-  //   if (!input.name || !input.amount) return;
-  //   const updatedList = [...list, input];
-  //   setter(updatedList);
-  //   handleChange(key, updatedList);
-  //   resetter({ name: "", amount: "" });
-  // };
   const addIngredient = (
     input: Ingredient | HopIngredient,
     list: Ingredient[] | HopIngredient[],
@@ -256,13 +241,13 @@ export default function RecipesScreen() {
   const [showSavedMessage, setShowSavedMessage] = useState(false);
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      <View style={{ flex: 1 }}>
-        <KeyboardAvoidingView
-          style={styles.container}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
-        >
+    <View style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
           <ScrollView
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
@@ -288,10 +273,7 @@ export default function RecipesScreen() {
             </View>
 
             <TextInput
-              style={[
-                styles.input,
-                errors.name && { borderColor: "red", borderWidth: 2 },
-              ]}
+              style={[styles.input, errors.name && { borderColor: "red" }]}
               placeholder="Rezeptname"
               value={values.name}
               onChangeText={(text) => handleChange("name", text)}
@@ -299,10 +281,7 @@ export default function RecipesScreen() {
             />
 
             <TextInput
-              style={[
-                styles.input,
-                errors.batchSize && { borderColor: "red", borderWidth: 2 },
-              ]}
+              style={[styles.input, errors.batchSize && { borderColor: "red" }]}
               placeholder="Zielmenge (Liter)"
               keyboardType="numeric"
               value={values.batchSize}
@@ -322,7 +301,7 @@ export default function RecipesScreen() {
                 style={[
                   styles.input,
                   { flex: 1 },
-                  errors.hauptguss && { borderColor: "red", borderWidth: 2 },
+                  errors.hauptguss && { borderColor: "red" },
                 ]}
                 placeholder="Hauptguss (Liter)"
                 keyboardType="decimal-pad"
@@ -334,7 +313,7 @@ export default function RecipesScreen() {
                 style={[
                   styles.input,
                   { flex: 1 },
-                  errors.nachguss && { borderColor: "red", borderWidth: 2 },
+                  errors.nachguss && { borderColor: "red" },
                 ]}
                 placeholder="Nachguss (Liter)"
                 keyboardType="decimal-pad"
@@ -523,24 +502,24 @@ export default function RecipesScreen() {
               </Pressable>
             </View>
           </ScrollView>
-        </KeyboardAvoidingView>
-        <Snackbar
-          visible={showSavedMessage}
-          onDismiss={() => setShowSavedMessage(false)}
-          duration={2000}
-          style={{
-            backgroundColor: colors.primary,
-            position: "absolute",
-            bottom: 16,
-            left: 16,
-            right: 16,
-            borderRadius: 8,
-          }}
-        >
-          Rezept gespeichert!
-        </Snackbar>
-      </View>
-    </TouchableWithoutFeedback>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
+      <Snackbar
+        visible={showSavedMessage}
+        onDismiss={() => setShowSavedMessage(false)}
+        duration={2000}
+        style={{
+          backgroundColor: colors.primary,
+          position: "absolute",
+          bottom: 16,
+          left: 16,
+          right: 16,
+          borderRadius: 8,
+        }}
+      >
+        Rezept gespeichert!
+      </Snackbar>
+    </View>
   );
 }
 
@@ -575,7 +554,7 @@ function IngredientInput({
         style={[
           styles.input,
           { flex: 2 },
-          hasError("name") && { borderColor: "red", borderWidth: 2 },
+          hasError("name") && { borderColor: "red" },
         ]}
         placeholder="Name"
         value={input.name}
@@ -586,7 +565,7 @@ function IngredientInput({
         style={[
           styles.input,
           { flex: 2 },
-          hasError("amount") && { borderColor: "red", borderWidth: 2 },
+          hasError("amount") && { borderColor: "red" },
         ]}
         placeholder={amountPlaceholder}
         value={input.amount}
@@ -599,7 +578,7 @@ function IngredientInput({
           style={[
             styles.input,
             { flex: 1 },
-            hasError(extraField.key) && { borderColor: "red", borderWidth: 2 },
+            hasError(extraField.key) && { borderColor: "red" },
           ]}
           placeholder={extraField.placeholder}
           value={input[extraField.key]}

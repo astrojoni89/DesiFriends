@@ -80,13 +80,13 @@ export default function MashScheduleModal() {
   const [showSavedMessage, setShowSavedMessage] = useState(false);
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <View style={{ flex: 1 }}>
         <KeyboardAvoidingView
           style={styles.container}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
         >
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
           <ScrollView
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
@@ -169,6 +169,7 @@ export default function MashScheduleModal() {
             />
 
             <Text style={styles.sectionTitle}>Hopfengaben</Text>
+            <Text style={styles.note}>Zeitangaben beziehen sich auf Minuten vor Kochende</Text>
             {hopSchedule
               .sort((a, b) => parseFloat(b.time) - parseFloat(a.time))
               .map((hop, idx) => (
@@ -224,7 +225,7 @@ export default function MashScheduleModal() {
               </View>
 
               <TextInput
-                placeholder={`g (max ${getMaxHopAmount()})`}
+                placeholder={`g`} //(max ${getMaxHopAmount()})
                 keyboardType="decimal-pad"
                 value={newHop.amount}
                 onChangeText={(t) => setNewHop({ ...newHop, amount: t })}
@@ -232,7 +233,7 @@ export default function MashScheduleModal() {
                 placeholderTextColor={colors.outline}
               />
               <TextInput
-                placeholder={`bei (max ${boilTime || "?"} min)`}
+                placeholder={`bei min`} //(max ${boilTime || "?"} min)
                 keyboardType="numeric"
                 value={newHop.time}
                 onChangeText={(t) => setNewHop({ ...newHop, time: t })}
@@ -293,6 +294,7 @@ export default function MashScheduleModal() {
               <Text style={styles.brewButtonText}>Fertig</Text>
             </Pressable>
           </ScrollView>
+          </TouchableWithoutFeedback>
         </KeyboardAvoidingView>
 
         <Snackbar
@@ -311,7 +313,6 @@ export default function MashScheduleModal() {
           Maisch- & Kochplan gespeichert!
         </Snackbar>
       </View>
-    </TouchableWithoutFeedback>
   );
 }
 
@@ -350,6 +351,13 @@ function createStyles(colors: AppTheme["colors"]) {
       marginBottom: 8,
       flex: 1,
       justifyContent: "center",
+    },
+    note: {
+      fontSize: 12,
+      color: colors.outline,
+      fontStyle: "italic",
+      marginBottom: 8,
+      marginLeft: 4,
     },
     row: {
       flexDirection: "row",
