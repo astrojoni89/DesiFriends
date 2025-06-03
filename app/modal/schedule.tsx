@@ -175,7 +175,7 @@ export default function MashScheduleModal() {
               .map((hop, idx) => (
                 <View key={idx} style={styles.row}>
                   <Text style={[styles.ingredientItem, { flex: 1 }]}>
-                    &bull; {hop.name}, {hop.amount}g bei {hop.time} min
+                    &bull; {hop.name}, {hop.amount} g bei {hop.time} min
                   </Text>
                   <Pressable
                     onPress={() =>
@@ -194,12 +194,13 @@ export default function MashScheduleModal() {
             <View style={styles.row}>
               <View style={{ flex: 2 }}>
                 <Menu
+                  style={{width: 150}}
                   visible={menuVisible}
                   onDismiss={() => setMenuVisible(false)}
                   anchor={
                     <Pressable
                       onPress={() => setMenuVisible(true)}
-                      style={[styles.input, { justifyContent: "center" }]}
+                      style={styles.input}
                     >
                       <Text
                         style={{
@@ -224,20 +225,22 @@ export default function MashScheduleModal() {
                 </Menu>
               </View>
 
+              <View style={{ flex: 0.8 }}>
               <TextInput
                 placeholder={`g`} //(max ${getMaxHopAmount()})
                 keyboardType="decimal-pad"
                 value={newHop.amount}
                 onChangeText={(t) => setNewHop({ ...newHop, amount: t })}
-                style={[styles.input, { flex: 1 }]}
+                style={styles.input}
                 placeholderTextColor={colors.outline}
               />
+              </View>
               <TextInput
                 placeholder={`bei min`} //(max ${boilTime || "?"} min)
                 keyboardType="numeric"
                 value={newHop.time}
                 onChangeText={(t) => setNewHop({ ...newHop, time: t })}
-                style={[styles.input, { flex: 1 }]}
+                style={styles.input}
                 placeholderTextColor={colors.outline}
               />
               <Pressable
@@ -249,7 +252,7 @@ export default function MashScheduleModal() {
                   if (amt > getMaxHopAmount()) {
                     Alert.alert(
                       "Zuviel Hopfen",
-                      `Maximal ${getMaxHopAmount()}g erlaubt.`
+                      `Maximal ${getMaxHopAmount()} g erlaubt.`
                     );
                     return;
                   }

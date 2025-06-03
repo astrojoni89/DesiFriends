@@ -1,13 +1,7 @@
 // // app/brewflow/[id]/mash.tsx
 import { useEffect, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  Platform,
-} from "react-native";
+import { View, Text, Pressable, StyleSheet, Platform } from "react-native";
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { useRecipes } from "@/context/RecipeContext";
@@ -27,7 +21,10 @@ Notifications.setNotificationHandler({
 });
 
 export default function MashTimerStep() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, targetSize } = useLocalSearchParams<{
+    id: string;
+    targetSize?: string;
+  }>();
   const { getRecipeById } = useRecipes();
   const recipe = getRecipeById(id || "");
   const theme = useTheme() as AppTheme;
@@ -38,47 +35,47 @@ export default function MashTimerStep() {
   const steps = recipe?.mashSteps?.length ? recipe.mashSteps : [];
   const [stepIndex, setStepIndex] = useState(0);
   const step = steps[stepIndex];
+  useEffect(() => {
+    reset(false); // Preload time without starting the timer
+  }, [stepIndex]);
+
   const durationSec = parseInt(step?.duration || "0") * 60;
 
-  const {
-    timeLeft,
-    minutes,
-    seconds,
-    paused,
-    togglePause,
-    reset,
-  } = useTimer(durationSec);
+  const { timeLeft, minutes, seconds, paused, togglePause, reset } =
+    useTimer(durationSec);
 
-  useEffect(() => {
-    if (!step) return;
+  const cancelMashNotification = async () => {
+    await Notifications.cancelAllScheduledNotificationsAsync();
+  };
 
-    // Auto-start timer + notification on step change
-    const startStep = async () => {
-      reset(true); // start immediately
+  const handleTogglePause = async () => {
+    if (paused && Device.isDevice) {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "Timer abgelaufen",
+          body: "Der nächste Schritt kann beginnen.",
+        },
+        trigger: {
+          seconds: durationSec,
+          repeats: false,
+        } as Notifications.TimeIntervalTriggerInput,
+      });
+    } else {
+      await cancelMashNotification(); // cancel if pausing
+    }
 
-      if (Device.isDevice) {
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title: "Timer abgelaufen",
-            body: "Der nächste Schritt kann beginnen.",
-          },
-          trigger: {
-            seconds: durationSec,
-            repeats: false,
-          } as Notifications.TimeIntervalTriggerInput,
-        });
-      }
-    };
-
-    startStep();
-  }, [stepIndex]);
+    togglePause();
+  };
 
   const nextStep = () => {
     setStepIndex((prev) => prev + 1);
   };
 
   const goToBoil = () => {
-    router.push({ pathname: "/brewflow/[id]/boil", params: { id } });
+    router.push({
+      pathname: "/brewflow/[id]/boil",
+      params: { id, targetSize },
+    });
   };
 
   if (!recipe || steps.length === 0 || !step) {
@@ -117,7 +114,7 @@ export default function MashTimerStep() {
       )}
 
       <View style={{ flexDirection: "row", gap: 12 }}>
-        <Pressable style={styles.iconButton} onPress={togglePause}>
+        <Pressable style={styles.iconButton} onPress={handleTogglePause}>
           <Ionicons
             name={paused ? "play" : "pause"}
             size={28}
@@ -127,7 +124,10 @@ export default function MashTimerStep() {
 
         <Pressable
           style={[styles.iconButton, { backgroundColor: colors.secondary }]}
-          onPress={() => reset(false)}
+          onPress={async () => {
+            await cancelMashNotification();
+            reset(false);
+          }}
         >
           <Ionicons name="refresh" size={28} color={colors.onPrimary} />
         </Pressable>

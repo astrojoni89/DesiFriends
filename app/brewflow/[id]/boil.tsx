@@ -20,7 +20,10 @@ Notifications.setNotificationHandler({
 });
 
 export default function BoilTimer() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, targetSize } = useLocalSearchParams<{
+    id: string;
+    targetSize?: string;
+  }>();
   const { getRecipeById } = useRecipes();
   const recipe = getRecipeById(id || "");
   const theme = useTheme() as AppTheme;
@@ -32,31 +35,42 @@ export default function BoilTimer() {
   const boilSeconds = boilMinutes * 60;
   const hopSchedule = recipe?.hopSchedule || [];
 
+  const scaleFactor =
+    recipe && recipe.batchSize && targetSize
+      ? parseFloat(targetSize) / recipe.batchSize
+      : 1;
+
   const { timeLeft, minutes, seconds, paused, togglePause, reset } =
     useTimer(boilSeconds);
-
-  // Schedule hop notifications once at mount
   useEffect(() => {
+    reset(false);
+  }, []);
+
+  const scheduleHopNotifications = async () => {
     if (!Device.isDevice || !hopSchedule.length) return;
 
-    hopSchedule.forEach(async (hop) => {
+    for (const hop of hopSchedule) {
       const hopSecondsBeforeEnd = parseInt(hop.time) * 60;
       const delay = Math.max(1, boilSeconds - hopSecondsBeforeEnd);
 
-      if (delay > 0) {
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title: "Hopfengabe",
-            body: `${parseFloat(hop.amount).toFixed(1)} g ${hop.name} jetzt zugeben (${hop.time} Minuten vor Ende)!`,
-          },
-          trigger: {
-            seconds: delay,
-            repeats: false,
-          } as Notifications.TimeIntervalTriggerInput,
-        });
-      }
-    });
-  }, []);
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "Hopfengabe",
+          body: `${(parseFloat(hop.amount) * scaleFactor).toFixed(1)} g ${
+            hop.name
+          } jetzt zugeben (${hop.time} Minuten vor Ende)!`,
+        },
+        trigger: {
+          seconds: delay,
+          repeats: false,
+        } as Notifications.TimeIntervalTriggerInput,
+      });
+    }
+  };
+
+  const cancelHopNotifications = async () => {
+    await Notifications.cancelAllScheduledNotificationsAsync();
+  };
 
   if (!recipe || boilMinutes <= 0) {
     return (
@@ -79,7 +93,17 @@ export default function BoilTimer() {
       </Text>
 
       <View style={{ flexDirection: "row", gap: 12 }}>
-        <Pressable style={styles.iconButton} onPress={togglePause}>
+        <Pressable
+          style={styles.iconButton}
+          onPress={async () => {
+            if (paused) {
+              await scheduleHopNotifications();
+            } else {
+              await cancelHopNotifications(); // cancel when pausing
+            }
+            togglePause();
+          }}
+        >
           <Ionicons
             name={paused ? "play" : "pause"}
             size={28}
@@ -89,7 +113,10 @@ export default function BoilTimer() {
 
         <Pressable
           style={[styles.iconButton, { backgroundColor: colors.secondary }]}
-          onPress={() => reset(false)}
+          onPress={async () => {
+            await cancelHopNotifications();
+            reset(false);
+          }}
         >
           <Ionicons name="refresh" size={28} color={colors.onPrimary} />
         </Pressable>
@@ -101,7 +128,8 @@ export default function BoilTimer() {
           .sort((a, b) => parseInt(b.time) - parseInt(a.time))
           .map((hop, idx) => (
             <Text key={idx} style={styles.text}>
-              {parseFloat(hop.amount).toFixed(1)} g {hop.name} – {hop.time} min vor Ende
+              {(parseFloat(hop.amount) * scaleFactor).toFixed(1)} g {hop.name} –{" "}
+              {hop.time} min vor Ende
             </Text>
           ))
       ) : (

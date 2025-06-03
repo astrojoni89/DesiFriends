@@ -112,28 +112,28 @@ export default function BrewModal() {
 
     Wasser:
       ${
-        scaledWater.hauptguss ? `- Hauptguss: ${scaledWater.hauptguss} L\n` : ""
-      }${scaledWater.nachguss ? `- Nachguss: ${scaledWater.nachguss} L` : ""}
+        scaledWater.hauptguss ? `• Hauptguss: ${scaledWater.hauptguss} L\n` : ""
+      }${scaledWater.nachguss ? `• Nachguss: ${scaledWater.nachguss} L` : ""}
 
       
     Malz:
-    ${scaled?.malz.map((m) => `- ${m.name}: ${m.amount} kg`).join("\n")}
+    ${scaled?.malz.map((m) => `• ${m.name}: ${m.amount} kg`).join("\n")}
       
     Hopfen:
     ${scaled?.hopfen
       .map(
         (h, i) =>
-          `- ${h.name}: ${h.amount} g @ ${actualAlphaAcids[i] || h.alphaAcid}%α`
+          `• ${h.name}: ${h.amount} g @ ${actualAlphaAcids[i] || h.alphaAcid}%α`
       )
       .join("\n")}
     
     Hefe:
-    ${scaled?.hefe.map((h) => `- ${h.name}: ${h.amount} g`).join("\n")}
+    ${scaled?.hefe.map((h) => `• ${h.name}: ${h.amount} g`).join("\n")}
     
     ${
       recipe.mashSteps?.length
         ? `Maischplan:\n${recipe.mashSteps
-            .map((s) => `- ${s.temperature}°C für ${s.duration} min`)
+            .map((s) => `• ${s.temperature}°C für ${s.duration} min`)
             .join("\n")}`
         : ""
     }
@@ -431,7 +431,7 @@ export default function BrewModal() {
                 onPress={() =>
                   router.push({
                     pathname: "/brewflow/[id]",
-                    params: { id: recipe.id },
+                    params: { id: recipe.id, targetSize },
                   })
                 }
               >
