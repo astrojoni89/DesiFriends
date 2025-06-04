@@ -10,6 +10,7 @@ import { Provider as PaperProvider } from "react-native-paper";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ThemeProvider, useThemeContext } from "@/context/ThemeContext";
 import { DeleteModeProvider } from "@/context/DeleteModeContext";
+import { TimerProvider } from "@/context/TimerContext";
 
 export default function RootLayout() {
   return (
@@ -31,7 +32,9 @@ function AppWithTheming() {
   const navigationTheme = {
     ...(theme === "dark" ? NavigationDarkTheme : NavigationLightTheme),
     colors: {
-      ...(theme === "dark" ? NavigationDarkTheme.colors : NavigationLightTheme.colors),
+      ...(theme === "dark"
+        ? NavigationDarkTheme.colors
+        : NavigationLightTheme.colors),
       ...appTheme.colors,
     },
   };
@@ -39,44 +42,49 @@ function AppWithTheming() {
   return (
     <PaperProvider theme={appTheme}>
       <NavigationThemeProvider value={navigationTheme}>
-        <Stack>
-          <Stack.Screen name="(drawer)" options={{ headerShown: false }} />
-          {/* <Stack.Screen
-            name="modal/brew"
-            options={{ presentation: "modal", title: "Brautag" }}
-          /> */}
-          <Stack.Screen
-            name="modal/brew"
-            options={{ animation: "slide_from_bottom", headerShown: false, gestureEnabled: true, title: "Brautag" }}
-          />
-          {/* <Stack.Screen
-            name="modal/schedule"
-            options={{ presentation: "modal", title: "Maisch- & Kochplan" }}
-          /> */}
-          <Stack.Screen
-            name="modal/schedule"
-            options={{ animation: "slide_from_bottom", headerShown: false, gestureEnabled: true, title: "Maisch- & Kochplan" }}
-          />
-          {/* <Stack.Screen
-            name="modal/edit"
-            options={{ presentation: "modal", title: "Rezept bearbeiten" }}
-          /> */}
-          <Stack.Screen
-            name="modal/edit"
-            options={{animation: "slide_from_bottom", headerShown: false, gestureEnabled: true, title: "Rezept bearbeiten" }}
-          />
-          {/* <Stack.Screen
-            name="brewflow"
-            options={{ presentation: "modal", title: "Brautag starten" }}
-          /> */}
-          <Stack.Screen
-            name="brewflow"
-            options={{ animation: "slide_from_right", headerShown: false, gestureEnabled: true, title: "Brautag starten" }}
-          />
-        </Stack>
-        <StatusBar style="auto" />
+        <TimerProvider>
+          <Stack>
+            <Stack.Screen name="(drawer)" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="modal/brew"
+              options={{
+                animation: "slide_from_bottom",
+                headerShown: false,
+                gestureEnabled: true,
+                title: "Brautag",
+              }}
+            />
+            <Stack.Screen
+              name="modal/schedule"
+              options={{
+                animation: "slide_from_bottom",
+                headerShown: false,
+                gestureEnabled: true,
+                title: "Maisch- & Kochplan",
+              }}
+            />
+            <Stack.Screen
+              name="modal/edit"
+              options={{
+                animation: "slide_from_bottom",
+                headerShown: false,
+                gestureEnabled: true,
+                title: "Rezept bearbeiten",
+              }}
+            />
+            <Stack.Screen
+              name="brewflow"
+              options={{
+                animation: "slide_from_right",
+                headerShown: false,
+                gestureEnabled: true,
+                title: "Brautag starten",
+              }}
+            />
+          </Stack>
+          <StatusBar style="auto" />
+        </TimerProvider>
       </NavigationThemeProvider>
     </PaperProvider>
   );
 }
-

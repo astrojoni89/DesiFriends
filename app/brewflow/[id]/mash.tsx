@@ -1,16 +1,14 @@
-// // app/brewflow/[id]/mash.tsx
 import { useEffect, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { View, Text, Pressable, StyleSheet, Platform } from "react-native";
+import { View, Text, Pressable, StyleSheet } from "react-native";
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { useRecipes } from "@/context/RecipeContext";
 import { useTheme } from "react-native-paper";
 import type { AppTheme } from "@/theme/theme";
 import { Ionicons } from "@expo/vector-icons";
-import { useTimer } from "@/hooks/useTimer";
+import { useTimerContext } from "@/context/TimerContext";
 
-// Notification handler
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowBanner: true,
@@ -32,51 +30,117 @@ export default function MashTimerStep() {
   const styles = createStyles(colors);
   const router = useRouter();
 
-  const steps = recipe?.mashSteps?.length ? recipe.mashSteps : [];
+  const steps = recipe?.mashSteps ?? [];
   const [stepIndex, setStepIndex] = useState(0);
   const step = steps[stepIndex];
-  useEffect(() => {
-    reset(false); // Preload time without starting the timer
-  }, [stepIndex]);
-
+  const mashTimerId = `mash-${id}-step-${stepIndex}`;
   const durationSec = parseInt(step?.duration || "0") * 60;
 
-  const { timeLeft, minutes, seconds, paused, togglePause, reset } =
-    useTimer(durationSec);
+  const {
+    timer,
+    startTimer,
+    pauseTimer,
+    resumeTimer,
+    resetTimer,
+    getTimeLeft,
+    getFormattedTime,
+    isPaused,
+    isRunning,
+    setNotificationId,
+    cancelNotification,
+  } = useTimerContext();
 
-  const cancelMashNotification = async () => {
-    await Notifications.cancelAllScheduledNotificationsAsync();
+  useEffect(() => {
+    resetTimer(); // Clear any previous timer state when switching steps
+  }, [stepIndex]);
+
+  const getDisplayTime = () => {
+    if (!timer) {
+      const secs = durationSec;
+      const m = Math.floor(secs / 60);
+      const s = secs % 60;
+      return `${m}:${s.toString().padStart(2, "0")}`;
+    }
+    return getFormattedTime();
   };
+
+  const timeLeft = getTimeLeft();
+  const paused = isPaused();
 
   const handleTogglePause = async () => {
-    if (paused && Device.isDevice) {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: "Timer abgelaufen",
-          body: "Der nächste Schritt kann beginnen.",
-        },
-        trigger: {
-          seconds: durationSec,
-          repeats: false,
-        } as Notifications.TimeIntervalTriggerInput,
+    if (!timer) {
+      // no timer yet → start
+      startTimer({
+        id: mashTimerId,
+        type: "mash",
+        stepIndex,
+        duration: durationSec,
       });
-    } else {
-      await cancelMashNotification(); // cancel if pausing
+
+      // optional: schedule notification immediately
+      if (Device.isDevice) {
+        setTimeout(() => {
+          const delay = Math.max(1, durationSec);
+          Notifications.scheduleNotificationAsync({
+            content: {
+              title: "Timer abgelaufen",
+              body: "Der nächste Schritt kann beginnen.",
+            },
+            trigger: {
+              type: "timeInterval",
+              seconds: delay,
+              repeats: false,
+            } as Notifications.TimeIntervalTriggerInput,
+          }).then((notifId) => {
+            setNotificationId(stepIndex, notifId);
+          });
+        }, 10);
+      }
+
+      return;
     }
 
-    togglePause();
+    if (paused) {
+      resumeTimer();
+
+      if (Device.isDevice) {
+        setTimeout(() => {
+          const delay = Math.max(1, getTimeLeft());
+          Notifications.scheduleNotificationAsync({
+            content: {
+              title: "Timer abgelaufen",
+              body: "Der nächste Schritt kann beginnen.",
+            },
+            trigger: {
+              type: "timeInterval",
+              seconds: delay,
+              repeats: false,
+            } as Notifications.TimeIntervalTriggerInput,
+          }).then((notifId) => {
+            setNotificationId(timer.stepIndex, notifId);
+          });
+        }, 10);
+      }
+    } else {
+      await cancelNotification(timer.stepIndex);
+      pauseTimer();
+    }
   };
 
-  const nextStep = () => {
-    setStepIndex((prev) => prev + 1);
+  const handleReset = async () => {
+    if (timer) {
+      await cancelNotification(timer.stepIndex);
+    }
+    resetTimer(); // this will show planned time via getDisplayTime()
   };
 
-  const goToBoil = () => {
+  const nextStep = () => setStepIndex((prev) => prev + 1);
+
+  const goToBoil = () =>
     router.push({
       pathname: "/brewflow/[id]/boil",
       params: { id, targetSize },
     });
-  };
 
   if (!recipe || steps.length === 0 || !step) {
     return (
@@ -97,21 +161,7 @@ export default function MashTimerStep() {
       <Text style={styles.text}>
         {step.temperature}°C für {step.duration} min
       </Text>
-      <Text style={styles.timer}>
-        {minutes}:{seconds.toString().padStart(2, "0")}
-      </Text>
-
-      {timeLeft <= 0 && stepIndex < steps.length - 1 && (
-        <Pressable style={styles.button} onPress={nextStep}>
-          <Text style={styles.buttonText}>Nächster Schritt</Text>
-        </Pressable>
-      )}
-
-      {timeLeft <= 0 && stepIndex === steps.length - 1 && (
-        <Pressable style={styles.button} onPress={goToBoil}>
-          <Text style={styles.buttonText}>Kochen starten</Text>
-        </Pressable>
-      )}
+      <Text style={styles.timer}>{getDisplayTime()}</Text>
 
       <View style={{ flexDirection: "row", gap: 12 }}>
         <Pressable style={styles.iconButton} onPress={handleTogglePause}>
@@ -124,20 +174,36 @@ export default function MashTimerStep() {
 
         <Pressable
           style={[styles.iconButton, { backgroundColor: colors.secondary }]}
-          onPress={async () => {
-            await cancelMashNotification();
-            reset(false);
-          }}
+          onPress={handleReset}
         >
           <Ionicons name="refresh" size={28} color={colors.onPrimary} />
         </Pressable>
       </View>
 
+      {stepIndex < steps.length - 1 && (
+        <Pressable
+          style={[
+            styles.button,
+            {
+              marginTop: 20,
+              opacity: isRunning() ? 0.5 : 1,
+            },
+          ]}
+          onPress={nextStep}
+          disabled={isRunning()}
+        >
+          <Text style={styles.buttonText}>Nächster Schritt</Text>
+        </Pressable>
+      )}
+
+      {timeLeft <= 0 && stepIndex === steps.length - 1 && (
+        <Pressable style={[styles.button, { marginTop: 20 }]} onPress={goToBoil}>
+          <Text style={styles.buttonText}>Kochen starten</Text>
+        </Pressable>
+      )}
+
       <Pressable
-        style={[
-          styles.button,
-          { backgroundColor: colors.secondary, marginTop: 20 },
-        ]}
+        style={[styles.button, { backgroundColor: colors.secondary }]}
         onPress={goToBoil}
       >
         <Text style={styles.buttonText}>Überspringen</Text>

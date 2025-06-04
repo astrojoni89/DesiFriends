@@ -1,13 +1,14 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { View, Text, Pressable, StyleSheet, Platform } from "react-native";
+import { View, Text, Pressable, StyleSheet, Alert } from "react-native";
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { useRecipes } from "@/context/RecipeContext";
 import { useTheme } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import type { AppTheme } from "@/theme/theme";
-import { useEffect } from "react";
-import { useTimer } from "@/hooks/useTimer";
+import { useEffect, useState } from "react";
+import { useTimerContext } from "@/context/TimerContext";
+import { scheduleHopNotifications } from "@/hooks/useHopNotifications";
 
 // Notification handler
 Notifications.setNotificationHandler({
@@ -40,33 +41,133 @@ export default function BoilTimer() {
       ? parseFloat(targetSize) / recipe.batchSize
       : 1;
 
-  const { timeLeft, minutes, seconds, paused, togglePause, reset } =
-    useTimer(boilSeconds);
+  const [stepIndex, setStepIndex] = useState(0);
+
+  const {
+    timer,
+    startTimer,
+    pauseTimer,
+    resumeTimer,
+    resetTimer,
+    getTimeLeft,
+    getFormattedTime,
+    isPaused,
+    isRunning,
+  } = useTimerContext();
+
+  const paused = isPaused();
+  const timeLeft = getTimeLeft();
+
   useEffect(() => {
-    reset(false);
-  }, []);
+    resetTimer(); // Clear any previous timer state when switching steps
+  }, [stepIndex]);
 
-  const scheduleHopNotifications = async () => {
-    if (!Device.isDevice || !hopSchedule.length) return;
+  useEffect(() => {
+    const reapplyNotificationsIfNeeded = async () => {
+      if (
+        Device.isDevice &&
+        timer?.type === "boil" &&
+        !timer.paused &&
+        recipe?.hopSchedule &&
+        recipe?.boilTime
+      ) {
+        const boilSeconds = parseInt(recipe.boilTime) * 60;
+        const scaleFactor =
+          recipe.batchSize && targetSize
+            ? parseFloat(targetSize) / recipe.batchSize
+            : 1;
 
-    for (const hop of hopSchedule) {
-      const hopSecondsBeforeEnd = parseInt(hop.time) * 60;
-      const delay = Math.max(1, boilSeconds - hopSecondsBeforeEnd);
+        await scheduleHopNotifications({
+          hopSchedule: recipe.hopSchedule,
+          boilSeconds,
+          scaleFactor,
+        });
+      }
+    };
 
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: "Hopfengabe",
-          body: `${(parseFloat(hop.amount) * scaleFactor).toFixed(1)} g ${
-            hop.name
-          } jetzt zugeben (${hop.time} Minuten vor Ende)!`,
-        },
-        trigger: {
-          seconds: delay,
-          repeats: false,
-        } as Notifications.TimeIntervalTriggerInput,
-      });
+    reapplyNotificationsIfNeeded();
+  }, [timer?.id]); // or [timer?.startTimestamp] if you want tighter control
+
+  const getDisplayTime = () => {
+    if (!timer) {
+      const m = Math.floor(boilSeconds / 60);
+      const s = boilSeconds % 60;
+      return `${m}:${s.toString().padStart(2, "0")}`;
+    }
+    return getFormattedTime();
+  };
+
+  const handleTogglePause = async () => {
+    if (!timer) {
+      if (hopsAtStart.length > 0) {
+        const hopText = hopsAtStart
+          .map(
+            (hop) =>
+              `${(parseFloat(hop.amount) * scaleFactor).toFixed(1)} g ${
+                hop.name
+              }`
+          )
+          .join(", ");
+        Alert.alert("Vorderwürzehopfen", hopText, [
+          {
+            text: "Starte Kochtimer",
+            onPress: async () => {
+              startTimer({
+                id: `boil-${id}`,
+                type: "boil",
+                stepIndex: 0,
+                duration: boilSeconds,
+              });
+
+              await scheduleHopNotifications({
+                hopSchedule,
+                boilSeconds,
+                scaleFactor,
+              });
+            },
+          },
+        ]);
+      } else {
+        startTimer({
+          id: `boil-${id}`,
+          type: "boil",
+          stepIndex: 0,
+          duration: boilSeconds,
+        });
+
+        await scheduleHopNotifications({
+          hopSchedule,
+          boilSeconds,
+          scaleFactor,
+        });
+      }
+
+      return;
+    }
+
+    if (paused) {
+      resumeTimer();
+      if (Device.isDevice) {
+        await scheduleHopNotifications({
+          hopSchedule,
+          boilSeconds,
+          scaleFactor,
+        });
+      }
+    } else {
+      await cancelHopNotifications();
+      pauseTimer();
     }
   };
+
+  const handleReset = async () => {
+    await cancelHopNotifications();
+    resetTimer();
+  };
+
+  const hopsAtStart = hopSchedule.filter(
+    (hop) => parseInt(hop.time) * 60 >= boilSeconds
+  );
 
   const cancelHopNotifications = async () => {
     await Notifications.cancelAllScheduledNotificationsAsync();
@@ -88,20 +189,18 @@ export default function BoilTimer() {
       <Text style={styles.title}>Kochen</Text>
       <Text style={styles.text}>Gesamtdauer: {boilMinutes} Minuten</Text>
 
-      <Text style={styles.timer}>
-        {minutes}:{seconds.toString().padStart(2, "0")}
-      </Text>
+      <Text style={styles.timer}>{getDisplayTime()}</Text>
 
       <View style={{ flexDirection: "row", gap: 12 }}>
         <Pressable
           style={styles.iconButton}
           onPress={async () => {
             if (paused) {
-              await scheduleHopNotifications();
+              await handleTogglePause();
             } else {
-              await cancelHopNotifications(); // cancel when pausing
+              await cancelHopNotifications();
+              await handleTogglePause();
             }
-            togglePause();
           }}
         >
           <Ionicons
@@ -113,10 +212,7 @@ export default function BoilTimer() {
 
         <Pressable
           style={[styles.iconButton, { backgroundColor: colors.secondary }]}
-          onPress={async () => {
-            await cancelHopNotifications();
-            reset(false);
-          }}
+          onPress={handleReset}
         >
           <Ionicons name="refresh" size={28} color={colors.onPrimary} />
         </Pressable>
