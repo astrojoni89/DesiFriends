@@ -10,20 +10,39 @@ interface Options {
   hopSchedule: Hop[];
   boilSeconds: number;
   scaleFactor: number;
+  timeLeft: number;
 }
 
 export const scheduleHopNotifications = async ({
   hopSchedule,
   boilSeconds,
   scaleFactor,
+  timeLeft,
 }: Options) => {
+  console.log("[scheduleHopNotifications] Scheduling...", {
+    hopSchedule,
+    boilSeconds,
+    scaleFactor,
+    timeLeft,
+  });
+
+  // Clear any previously scheduled notifications (better than duplicates)
+  await Notifications.cancelAllScheduledNotificationsAsync();
+
   for (const hop of hopSchedule) {
     const hopSecondsBeforeEnd = parseInt(hop.time) * 60;
-    const delay = Math.max(1, boilSeconds - hopSecondsBeforeEnd);
 
-    if (hopSecondsBeforeEnd >= boilSeconds) continue; // skip Vorderwürzehopfen
+    if (hopSecondsBeforeEnd >= boilSeconds) continue; // Skip Vorderwürzehopfen
 
-    const hopText = `${(parseFloat(hop.amount) * scaleFactor).toFixed(1)} g ${hop.name}`;
+    const elapsed = Math.max(0, boilSeconds - timeLeft);
+    const delay = Math.max(1, boilSeconds - hopSecondsBeforeEnd - elapsed);
+    const hopText = `${(parseFloat(hop.amount) * scaleFactor).toFixed(1)} g ${
+      hop.name
+    }`;
+
+    console.log(
+      `🔔 Scheduling ${hopText} at T-${hop.time} min (${delay} sec from now)`
+    );
 
     await Notifications.scheduleNotificationAsync({
       content: {
@@ -36,5 +55,8 @@ export const scheduleHopNotifications = async ({
         repeats: false,
       } as Notifications.TimeIntervalTriggerInput,
     });
+
+    // Optional: throttle scheduling a bit to prevent batching issues
+    await new Promise((r) => setTimeout(r, 50));
   }
 };

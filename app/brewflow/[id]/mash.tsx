@@ -1,22 +1,16 @@
 import { useEffect, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { View, Text, Pressable, StyleSheet } from "react-native";
-import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { useRecipes } from "@/context/RecipeContext";
 import { useTheme } from "react-native-paper";
 import type { AppTheme } from "@/theme/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useTimerContext } from "@/context/TimerContext";
-
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+import {
+  scheduleMashNotification,
+  cancelNotification,
+} from "@/hooks/useMashNotifications";
 
 export default function MashTimerStep() {
   const { id, targetSize } = useLocalSearchParams<{
@@ -36,102 +30,76 @@ export default function MashTimerStep() {
   const mashTimerId = `mash-${id}-step-${stepIndex}`;
   const durationSec = parseInt(step?.duration || "0") * 60;
 
-  const {
-    timer,
-    startTimer,
-    pauseTimer,
-    resumeTimer,
-    resetTimer,
-    getTimeLeft,
-    getFormattedTime,
-    isPaused,
-    isRunning,
-    setNotificationId,
-    cancelNotification,
-  } = useTimerContext();
+  const { mash } = useTimerContext();
+  const timeLeft = mash.getTimeLeft();
+  const paused = mash.isPaused();
 
   useEffect(() => {
-    resetTimer(); // Clear any previous timer state when switching steps
+    mash.resetTimer();
   }, [stepIndex]);
 
   const getDisplayTime = () => {
-    if (!timer) {
+    if (!mash.timer) {
       const secs = durationSec;
       const m = Math.floor(secs / 60);
       const s = secs % 60;
       return `${m}:${s.toString().padStart(2, "0")}`;
     }
-    return getFormattedTime();
+    return mash.getFormattedTime();
   };
 
-  const timeLeft = getTimeLeft();
-  const paused = isPaused();
-
   const handleTogglePause = async () => {
-    if (!timer) {
-      // no timer yet → start
-      startTimer({
+    const currentStep = mash.timer?.stepIndex ?? stepIndex;
+
+    if (!mash.timer) {
+      mash.startTimer({
         id: mashTimerId,
         type: "mash",
         stepIndex,
         duration: durationSec,
       });
 
-      // optional: schedule notification immediately
       if (Device.isDevice) {
-        setTimeout(() => {
-          const delay = Math.max(1, durationSec);
-          Notifications.scheduleNotificationAsync({
-            content: {
-              title: "Timer abgelaufen",
-              body: "Der nächste Schritt kann beginnen.",
-            },
-            trigger: {
-              type: "timeInterval",
-              seconds: delay,
-              repeats: false,
-            } as Notifications.TimeIntervalTriggerInput,
-          }).then((notifId) => {
-            setNotificationId(stepIndex, notifId);
-          });
-        }, 10);
+        await scheduleMashNotification({
+          duration: durationSec,
+          stepIndex,
+          onScheduled: (id) => mash.setNotificationId(stepIndex, id),
+        });
       }
-
       return;
     }
 
     if (paused) {
-      resumeTimer();
+      const notifId = mash.getNotificationId(currentStep);
+      if (typeof notifId === "string") {
+        await cancelNotification(notifId);
+      }
+      mash.resumeTimer();
 
       if (Device.isDevice) {
-        setTimeout(() => {
-          const delay = Math.max(1, getTimeLeft());
-          Notifications.scheduleNotificationAsync({
-            content: {
-              title: "Timer abgelaufen",
-              body: "Der nächste Schritt kann beginnen.",
-            },
-            trigger: {
-              type: "timeInterval",
-              seconds: delay,
-              repeats: false,
-            } as Notifications.TimeIntervalTriggerInput,
-          }).then((notifId) => {
-            setNotificationId(timer.stepIndex, notifId);
-          });
-        }, 10);
+        const delay = Math.max(1, mash.getTimeLeft() ?? durationSec);
+        await scheduleMashNotification({
+          duration: delay,
+          stepIndex: currentStep,
+          onScheduled: (id) => mash.setNotificationId(currentStep, id),
+        });
       }
     } else {
-      await cancelNotification(timer.stepIndex);
-      pauseTimer();
+      const notifId = mash.getNotificationId(currentStep);
+      if (typeof notifId === "string") {
+        await cancelNotification(notifId);
+      }
+      mash.pauseTimer();
     }
   };
 
   const handleReset = async () => {
-    if (timer) {
-      await cancelNotification(timer.stepIndex);
+    const currentStep = mash.timer?.stepIndex ?? stepIndex;
+    const notifId = mash.getNotificationId(currentStep);
+    if (typeof notifId === "string") {
+      await cancelNotification(notifId);
     }
-    resetTimer(); // this will show planned time via getDisplayTime()
+    mash.resetTimer();
   };
 
   const nextStep = () => setStepIndex((prev) => prev + 1);
@@ -184,20 +152,20 @@ export default function MashTimerStep() {
         <Pressable
           style={[
             styles.button,
-            {
-              marginTop: 20,
-              opacity: isRunning() ? 0.5 : 1,
-            },
+            { marginTop: 20, opacity: mash.isRunning() ? 0.5 : 1 },
           ]}
           onPress={nextStep}
-          disabled={isRunning()}
+          disabled={mash.isRunning()}
         >
           <Text style={styles.buttonText}>Nächster Schritt</Text>
         </Pressable>
       )}
 
       {timeLeft <= 0 && stepIndex === steps.length - 1 && (
-        <Pressable style={[styles.button, { marginTop: 20 }]} onPress={goToBoil}>
+        <Pressable
+          style={[styles.button, { marginTop: 20 }]}
+          onPress={goToBoil}
+        >
           <Text style={styles.buttonText}>Kochen starten</Text>
         </Pressable>
       )}

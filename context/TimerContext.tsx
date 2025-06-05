@@ -7,7 +7,6 @@ import React, {
 } from "react";
 import * as Notifications from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Device from "expo-device";
 
 export type TimerType = "mash" | "boil";
 
@@ -15,14 +14,14 @@ interface TimerState {
   id: string;
   type: TimerType;
   stepIndex: number;
-  duration: number; // in seconds
-  timeLeft: number; // remaining seconds
+  duration: number;
+  timeLeft: number;
   paused: boolean;
-  startTimestamp: number | null; // Unix ms
-  notificationIds: Record<number, string>; // stepIndex => notifId
+  startTimestamp: number | null;
+  notificationIds: Record<number, string>;
 }
 
-interface TimerContextValue {
+interface TimerMethods {
   timer: TimerState | null;
   startTimer: (
     opts: Omit<
@@ -38,93 +37,68 @@ interface TimerContextValue {
   isPaused: () => boolean;
   isRunning: () => boolean;
   setNotificationId: (stepIndex: number, id: string) => void;
+  getNotificationId: (stepIndex: number) => string | undefined;
   cancelNotification: (stepIndex: number) => Promise<void>;
 }
 
+type TimerContextValue = {
+  mash: TimerMethods;
+  boil: TimerMethods;
+};
+
 const TimerContext = createContext<TimerContextValue | undefined>(undefined);
 
-export const TimerProvider = ({ children }: { children: React.ReactNode }) => {
+function useDualTimer(type: TimerType): TimerMethods {
   const [timer, setTimer] = useState<TimerState | null>(null);
+  const intervalRef = useRef<number | null>(null);
+  const storageKey = `activeTimer-${type}`;
 
   useEffect(() => {
-    const persistTimer = async () => {
+    const persist = async () => {
       if (timer) {
-        await AsyncStorage.setItem("activeTimer", JSON.stringify(timer));
+        await AsyncStorage.setItem(storageKey, JSON.stringify(timer));
       } else {
-        await AsyncStorage.removeItem("activeTimer");
+        await AsyncStorage.removeItem(storageKey);
       }
     };
-    persistTimer();
+    persist();
   }, [timer]);
 
   useEffect(() => {
-    const restoreTimer = async () => {
-      const saved = await AsyncStorage.getItem("activeTimer");
+    const restore = async () => {
+      const saved = await AsyncStorage.getItem(storageKey);
       if (!saved) return;
-
       try {
         const parsed: TimerState = JSON.parse(saved);
         const now = Date.now();
-
         if (!parsed.paused && parsed.startTimestamp) {
           const elapsed = Math.floor((now - parsed.startTimestamp) / 1000);
           const remaining = parsed.duration - elapsed;
-
           if (remaining <= 0) {
             setTimer(null);
-            await AsyncStorage.removeItem("activeTimer");
-            return;
-          }
-
-          setTimer({
-            ...parsed,
-            timeLeft: remaining,
-          });
-
-          // 🔔 Schedule fallback notification again
-          if (Device.isDevice) {
-            await Notifications.scheduleNotificationAsync({
-              content: {
-                title: "Timer abgelaufen",
-                body: "Der nächste Schritt kann beginnen.",
-              },
-              trigger: {
-                type: "timeInterval",
-                seconds: remaining,
-                repeats: false,
-              } as Notifications.TimeIntervalTriggerInput,
-            });
+            await AsyncStorage.removeItem(storageKey);
+          } else {
+            setTimer({ ...parsed, timeLeft: remaining });
           }
         } else {
-          setTimer(parsed); // paused or not started
+          setTimer(parsed);
         }
       } catch (err) {
-        console.warn("Failed to restore timer state:", err);
-        setTimer(null);
+        console.warn("Failed to restore timer:", err);
       }
     };
-
-    restoreTimer();
+    restore();
   }, []);
 
-  const intervalRef = useRef<number | null>(null);
-
-  const tick = () => {
-    setTimer((prev) => {
-      if (!prev || prev.paused || prev.startTimestamp === null) return prev;
-
-      const elapsed = Math.floor((Date.now() - prev.startTimestamp) / 1000);
-      const newTimeLeft = Math.max(0, prev.duration - elapsed);
-
-      return {
-        ...prev,
-        timeLeft: newTimeLeft,
-      };
-    });
-  };
-
   useEffect(() => {
-    intervalRef.current = setInterval(tick, 1000);
+    intervalRef.current = setInterval(() => {
+      setTimer((prev) => {
+        if (!prev || prev.paused || prev.startTimestamp === null) return prev;
+        const elapsed = Math.floor((Date.now() - prev.startTimestamp) / 1000);
+        const timeLeft = Math.max(0, prev.duration - elapsed);
+        return { ...prev, timeLeft };
+      });
+    }, 1000);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
@@ -132,7 +106,6 @@ export const TimerProvider = ({ children }: { children: React.ReactNode }) => {
 
   const startTimer = ({
     id,
-    type,
     stepIndex,
     duration,
   }: Omit<
@@ -154,10 +127,8 @@ export const TimerProvider = ({ children }: { children: React.ReactNode }) => {
   const pauseTimer = () => {
     setTimer((prev) => {
       if (!prev || prev.paused || prev.startTimestamp === null) return prev;
-
       const elapsed = Math.floor((Date.now() - prev.startTimestamp) / 1000);
       const remaining = Math.max(0, prev.duration - elapsed);
-
       return {
         ...prev,
         paused: true,
@@ -170,19 +141,16 @@ export const TimerProvider = ({ children }: { children: React.ReactNode }) => {
   const resumeTimer = () => {
     setTimer((prev) => {
       if (!prev || !prev.paused) return prev;
-
       return {
         ...prev,
         paused: false,
         startTimestamp: Date.now(),
-        duration: prev.timeLeft, // resume from here
+        duration: prev.timeLeft,
       };
     });
   };
 
-  const resetTimer = () => {
-    setTimer(null);
-  };
+  const resetTimer = () => setTimer(null);
 
   const getTimeLeft = () => timer?.timeLeft ?? 0;
 
@@ -194,19 +162,14 @@ export const TimerProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const isPaused = () => timer?.paused ?? true;
-  const isRunning = () => {
-    return !!timer && !timer.paused && timer.timeLeft > 0;
-  };
+  const isRunning = () => !!timer && !timer.paused && timer.timeLeft > 0;
 
   const setNotificationId = (stepIndex: number, id: string) => {
     setTimer((prev) =>
       prev
         ? {
             ...prev,
-            notificationIds: {
-              ...prev.notificationIds,
-              [stepIndex]: id,
-            },
+            notificationIds: { ...prev.notificationIds, [stepIndex]: id },
           }
         : prev
     );
@@ -231,22 +194,32 @@ export const TimerProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const getNotificationId = (stepIndex: number) => {
+    return timer?.notificationIds?.[stepIndex];
+  };
+
+  return {
+    timer,
+    startTimer,
+    pauseTimer,
+    resumeTimer,
+    resetTimer,
+    getTimeLeft,
+    getFormattedTime,
+    isPaused,
+    isRunning,
+    setNotificationId,
+    cancelNotification,
+    getNotificationId,
+  };
+}
+
+export const TimerProvider = ({ children }: { children: React.ReactNode }) => {
+  const mash = useDualTimer("mash");
+  const boil = useDualTimer("boil");
+
   return (
-    <TimerContext.Provider
-      value={{
-        timer,
-        startTimer,
-        pauseTimer,
-        resumeTimer,
-        resetTimer,
-        getTimeLeft,
-        getFormattedTime,
-        isPaused,
-        isRunning,
-        setNotificationId,
-        cancelNotification,
-      }}
-    >
+    <TimerContext.Provider value={{ mash, boil }}>
       {children}
     </TimerContext.Provider>
   );

@@ -6,7 +6,7 @@ import { useRecipes } from "@/context/RecipeContext";
 import { useTheme } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import type { AppTheme } from "@/theme/theme";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useTimerContext } from "@/context/TimerContext";
 import { scheduleHopNotifications } from "@/hooks/useHopNotifications";
 
@@ -43,31 +43,21 @@ export default function BoilTimer() {
 
   const [stepIndex, setStepIndex] = useState(0);
 
-  const {
-    timer,
-    startTimer,
-    pauseTimer,
-    resumeTimer,
-    resetTimer,
-    getTimeLeft,
-    getFormattedTime,
-    isPaused,
-    isRunning,
-  } = useTimerContext();
+  const { boil } = useTimerContext();
 
-  const paused = isPaused();
-  const timeLeft = getTimeLeft();
+  const paused = boil.isPaused();
+  const timeLeft = boil.getTimeLeft();
 
   useEffect(() => {
-    resetTimer(); // Clear any previous timer state when switching steps
+    boil.resetTimer(); // Clear any previous timer state when switching steps
   }, [stepIndex]);
 
   useEffect(() => {
     const reapplyNotificationsIfNeeded = async () => {
       if (
         Device.isDevice &&
-        timer?.type === "boil" &&
-        !timer.paused &&
+        boil.timer?.type === "boil" &&
+        !boil.timer.paused &&
         recipe?.hopSchedule &&
         recipe?.boilTime
       ) {
@@ -81,24 +71,25 @@ export default function BoilTimer() {
           hopSchedule: recipe.hopSchedule,
           boilSeconds,
           scaleFactor,
+          timeLeft,
         });
       }
     };
 
     reapplyNotificationsIfNeeded();
-  }, [timer?.id]); // or [timer?.startTimestamp] if you want tighter control
+  }, [boil.timer?.id]); // or [timer?.startTimestamp] if you want tighter control
 
   const getDisplayTime = () => {
-    if (!timer) {
+    if (!boil.timer) {
       const m = Math.floor(boilSeconds / 60);
       const s = boilSeconds % 60;
       return `${m}:${s.toString().padStart(2, "0")}`;
     }
-    return getFormattedTime();
+    return boil.getFormattedTime();
   };
 
   const handleTogglePause = async () => {
-    if (!timer) {
+    if (!boil.timer) {
       if (hopsAtStart.length > 0) {
         const hopText = hopsAtStart
           .map(
@@ -112,7 +103,7 @@ export default function BoilTimer() {
           {
             text: "Starte Kochtimer",
             onPress: async () => {
-              startTimer({
+              boil.startTimer({
                 id: `boil-${id}`,
                 type: "boil",
                 stepIndex: 0,
@@ -123,12 +114,13 @@ export default function BoilTimer() {
                 hopSchedule,
                 boilSeconds,
                 scaleFactor,
+                timeLeft,
               });
             },
           },
         ]);
       } else {
-        startTimer({
+        boil.startTimer({
           id: `boil-${id}`,
           type: "boil",
           stepIndex: 0,
@@ -139,6 +131,7 @@ export default function BoilTimer() {
           hopSchedule,
           boilSeconds,
           scaleFactor,
+          timeLeft,
         });
       }
 
@@ -146,32 +139,33 @@ export default function BoilTimer() {
     }
 
     if (paused) {
-      resumeTimer();
+      boil.resumeTimer();
       if (Device.isDevice) {
         await scheduleHopNotifications({
           hopSchedule,
           boilSeconds,
           scaleFactor,
+          timeLeft,
         });
       }
     } else {
       await cancelHopNotifications();
-      pauseTimer();
+      boil.pauseTimer();
     }
   };
 
   const handleReset = async () => {
     await cancelHopNotifications();
-    resetTimer();
+    boil.resetTimer();
   };
 
   const hopsAtStart = hopSchedule.filter(
     (hop) => parseInt(hop.time) * 60 >= boilSeconds
   );
 
-  const cancelHopNotifications = async () => {
+  const cancelHopNotifications = useCallback(async () => {
     await Notifications.cancelAllScheduledNotificationsAsync();
-  };
+  }, []);
 
   if (!recipe || boilMinutes <= 0) {
     return (
