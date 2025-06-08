@@ -145,11 +145,26 @@ export default function BrewModal() {
           } min (Beginn)\n${recipe.hopSchedule
             .sort((a, b) => parseFloat(b.time) - parseFloat(a.time))
             .map((h) => {
-              const adjustedAmount =
-                scaled.hopfen.find((s) => s.name === h.name)?.amount ||
-                h.amount;
-              return `- ${h.time} min: ${h.name}, ${adjustedAmount} g`;
+              const hopIndex = recipe.hopfen.findIndex(
+                (hop) => hop.name === h.name
+              );
+              const originalAA = parseFloat(
+                recipe.hopfen[hopIndex]?.alphaAcid || "0"
+              );
+              const actualAA = parseFloat(
+                actualAlphaAcids[hopIndex] || originalAA.toString() || "0"
+              );
+
+              let adjustedAmount = parseFloat(h.amount) * scaleFactor;
+              if (originalAA > 0 && actualAA > 0) {
+                adjustedAmount *= originalAA / actualAA;
+              }
+
+              return `• ${h.time} min: ${h.name}, ${adjustedAmount.toFixed(
+                1
+              )} g`;
             })
+
             .join("\n")}\n0 min (Ende)`
         : ""
     }`;
@@ -167,7 +182,7 @@ export default function BrewModal() {
             <meta charset="utf-8" />
             <style>
               @page { size: A4; margin: 20mm; }
-              body { font-family: sans-serif; padding: 20px; }
+              body { font-family: sans-serif; padding: 20px; font-size: 14px;}
               h1 { font-size: 24px; }
               h2 { margin-top: 20px; }
               ul { padding-left: 20px; }
@@ -191,48 +206,70 @@ export default function BrewModal() {
               left: -16px;
               top: 5px;
             }
+            .row {
+              display: flex;
+              gap: 24px;
+              justify-content: space-between;
+            }
+            .col {
+              flex: 1;
+            }
             </style>
           </head>
           <body>
             <img src="${logoUri}" alt="Logo" />
             <h1>${recipe.name} – ${targetSize} L</h1>
-            <h2>Wasser</h2>
-            <ul>
-              ${
-                scaledWater.hauptguss
-                  ? `<li>Hauptguss: ${scaledWater.hauptguss} L</li>`
-                  : ""
-              }
-              ${
-                scaledWater.nachguss
-                  ? `<li>Nachguss: ${scaledWater.nachguss} L</li>`
-                  : ""
-              }
-            </ul>
-
-            <h2>Malz</h2>
-            <ul>
-              ${scaled.malz
-                .map((m) => `<li>${m.name}: ${m.amount} kg</li>`)
-                .join("")}
-            </ul>
-            <h2>Hopfen</h2>
-            <ul>
-              ${scaled.hopfen
-                .map(
-                  (h, i) =>
-                    `<li>${h.name}: ${h.amount} g @ ${
-                      actualAlphaAcids[i] || h.alphaAcid
-                    }%&alpha;</li>`
-                )
-                .join("")}
-            </ul>
-            <h2>Hefe</h2>
-            <ul>
-              ${scaled.hefe
-                .map((h) => `<li>${h.name}: ${h.amount} g</li>`)
-                .join("")}
-            </ul>
+            <div class="row">
+              <div class="col">
+                <h2>Wasser</h2>
+                <ul>
+                  ${
+                    scaledWater.hauptguss
+                      ? `<li>Hauptguss: ${scaledWater.hauptguss} L</li>`
+                      : ""
+                  }
+                  ${
+                    scaledWater.nachguss
+                      ? `<li>Nachguss: ${scaledWater.nachguss} L</li>`
+                      : ""
+                  }
+                </ul>
+              </div>
+                
+              <div class="col">
+                <h2>Malz</h2>
+                <ul>
+                  ${scaled.malz
+                    .map((m) => `<li>${m.name}: ${m.amount} kg</li>`)
+                    .join("")}
+                </ul>
+              </div>
+            </div>
+                  
+            <div class="row">
+              <div class="col">
+                <h2>Hopfen</h2>
+                <ul>
+                  ${scaled.hopfen
+                    .map(
+                      (h, i) =>
+                        `<li>${h.name}: ${h.amount} g @ ${
+                          actualAlphaAcids[i] || h.alphaAcid
+                        }%&alpha;</li>`
+                    )
+                    .join("")}
+                </ul>
+              </div>
+                  
+              <div class="col">
+                <h2>Hefe</h2>
+                <ul>
+                  ${scaled.hefe
+                    .map((h) => `<li>${h.name}: ${h.amount} g</li>`)
+                    .join("")}
+                </ul>
+              </div>
+            </div>
 
             ${
               recipe.mashSteps?.length
@@ -260,11 +297,28 @@ export default function BrewModal() {
                   ${recipe.hopSchedule
                     .sort((a, b) => parseFloat(b.time) - parseFloat(a.time))
                     .map((h) => {
-                      const adjustedAmount =
-                        scaled.hopfen.find((s) => s.name === h.name)?.amount ||
-                        h.amount;
-                      return `<div class="timeline-entry">${h.time} min: ${h.name}, ${adjustedAmount}g</div>`;
+                      const hopIndex = recipe.hopfen.findIndex(
+                        (hop) => hop.name === h.name
+                      );
+                      const originalAA = parseFloat(
+                        recipe.hopfen[hopIndex]?.alphaAcid || "0"
+                      );
+                      const actualAA = parseFloat(
+                        actualAlphaAcids[hopIndex] ||
+                          originalAA.toString() ||
+                          "0"
+                      );
+
+                      let adjustedAmount = parseFloat(h.amount) * scaleFactor;
+                      if (originalAA > 0 && actualAA > 0) {
+                        adjustedAmount *= originalAA / actualAA;
+                      }
+
+                      return `<div class="timeline-entry">${h.time} min: ${
+                        h.name
+                      }, ${adjustedAmount.toFixed(1)} g</div>`;
                     })
+
                     .join("")}
                   <div class="timeline-entry">0 min (Ende)</div>
                 </div>`
