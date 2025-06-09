@@ -94,15 +94,41 @@ function useDualTimer(type: TimerType): TimerMethods {
     restore();
   }, []);
 
+  // useEffect(() => {
+  //   intervalRef.current = setInterval(() => {
+  //     setTimer((prev) => {
+  //       if (!prev || prev.paused || prev.startTimestamp === null) return prev;
+  //       const elapsed = Math.floor((Date.now() - prev.startTimestamp) / 1000);
+  //       const timeLeft = Math.max(0, prev.duration - elapsed);
+  //       return { ...prev, timeLeft };
+  //     });
+  //   }, 1000);
+  //   return () => {
+  //     if (intervalRef.current) clearInterval(intervalRef.current);
+  //   };
+  // }, []);
   useEffect(() => {
     intervalRef.current = setInterval(() => {
       setTimer((prev) => {
         if (!prev || prev.paused || prev.startTimestamp === null) return prev;
+
         const elapsed = Math.floor((Date.now() - prev.startTimestamp) / 1000);
         const timeLeft = Math.max(0, prev.duration - elapsed);
+
+        // If time is up, pause the timer and clear startTimestamp
+        if (timeLeft === 0 && !prev.paused) {
+          return {
+            ...prev,
+            timeLeft: 0,
+            paused: true,
+            startTimestamp: null,
+          };
+        }
+
         return { ...prev, timeLeft };
       });
     }, 1000);
+
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };

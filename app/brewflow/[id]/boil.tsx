@@ -77,6 +77,15 @@ export default function BoilTimer() {
     maybeReschedule();
   }, [boil.timer?.startTimestamp]);
 
+  useEffect(() => {
+    if (boil.timer && boil.timer.timeLeft <= 0) {
+      router.replace({
+        pathname: "/brewflow/[id]/complete",
+        params: { id, targetSize },
+      });
+    }
+  }, [boil.timer?.timeLeft]);
+
   const getDisplayTime = () => {
     if (!boil.timer) {
       const m = Math.floor(boilSeconds / 60);
@@ -104,6 +113,18 @@ export default function BoilTimer() {
             boilSeconds,
             scaleFactor,
             timeLeft: boilSeconds,
+          });
+
+          await Notifications.scheduleNotificationAsync({
+            content: {
+              title: "Kochen abgeschlossen",
+              body: "Die Kochzeit ist vorbei. Zeit für die nächste Phase!",
+            },
+            trigger: {
+              type: "timeInterval",
+              seconds: boilSeconds,
+              repeats: false,
+            } as Notifications.TimeIntervalTriggerInput,
           });
         }
       };
@@ -146,6 +167,18 @@ export default function BoilTimer() {
           boilSeconds: boil.timer.duration,
           scaleFactor,
           timeLeft: delay,
+        });
+
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: "Kochen abgeschlossen",
+            body: "Die Kochzeit ist vorbei. Zeit für die nächste Phase!",
+          },
+          trigger: {
+            type: "timeInterval",
+            seconds: delay,
+            repeats: false,
+          } as Notifications.TimeIntervalTriggerInput,
         });
       }
     } else {
