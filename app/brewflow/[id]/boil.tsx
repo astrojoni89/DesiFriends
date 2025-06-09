@@ -1,6 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { View, Text, Pressable, StyleSheet, Alert } from "react-native";
-import * as Notifications from "expo-notifications";
+// import * as Notifications from "expo-notifications";
+import notifee from "@notifee/react-native";
 import * as Device from "expo-device";
 import { useRecipes } from "@/context/RecipeContext";
 import { useTheme } from "react-native-paper";
@@ -10,15 +11,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useTimerContext } from "@/context/TimerContext";
 import { scheduleHopNotifications } from "@/hooks/useHopNotifications";
 
-// Notification handler
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+import { AnimatedCircularProgress } from "react-native-circular-progress";
 
 export default function BoilTimer() {
   const { id, targetSize } = useLocalSearchParams<{
@@ -115,16 +108,15 @@ export default function BoilTimer() {
             timeLeft: boilSeconds,
           });
 
-          await Notifications.scheduleNotificationAsync({
-            content: {
-              title: "Kochen abgeschlossen",
-              body: "Die Kochzeit ist vorbei. Zeit für die nächste Phase!",
+          await notifee.displayNotification({
+            title: "Kochen abgeschlossen",
+            body: "Die Kochzeit ist vorbei. Zeit für die nächste Phase!",
+            android: {
+              channelId: "boil-timer",
+              pressAction: { id: "default" },
+              timestamp: Date.now() + boilSeconds * 1000,
+              showTimestamp: true,
             },
-            trigger: {
-              type: "timeInterval",
-              seconds: boilSeconds,
-              repeats: false,
-            } as Notifications.TimeIntervalTriggerInput,
           });
         }
       };
@@ -153,8 +145,6 @@ export default function BoilTimer() {
     }
 
     if (paused) {
-      await stopAllTimers(); // 🧼 clear everything before resuming
-
       boil.resumeTimer();
 
       if (Device.isDevice && boil.timer?.startTimestamp != null) {
@@ -169,20 +159,19 @@ export default function BoilTimer() {
           timeLeft: delay,
         });
 
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title: "Kochen abgeschlossen",
-            body: "Die Kochzeit ist vorbei. Zeit für die nächste Phase!",
+        await notifee.displayNotification({
+          title: "Kochen abgeschlossen",
+          body: "Die Kochzeit ist vorbei. Zeit für die nächste Phase!",
+          android: {
+            channelId: "boil-timer",
+            pressAction: { id: "default" },
+            timestamp: Date.now() + delay * 1000,
+            showTimestamp: true,
           },
-          trigger: {
-            type: "timeInterval",
-            seconds: delay,
-            repeats: false,
-          } as Notifications.TimeIntervalTriggerInput,
         });
       }
     } else {
-      await Notifications.cancelAllScheduledNotificationsAsync();
+      await notifee.cancelAllNotifications();
       boil.pauseTimer();
     }
   };
@@ -194,6 +183,10 @@ export default function BoilTimer() {
   const hopsAtStart = hopSchedule.filter(
     (hop) => parseInt(hop.time) * 60 >= boilSeconds
   );
+
+  const total = boilSeconds;
+  const timer = boil.timer;
+  const circleFill = !timer && timeLeft === 0 ? 100 : (timeLeft / total) * 100;
 
   if (!recipe || boilMinutes <= 0) {
     return (
@@ -211,7 +204,20 @@ export default function BoilTimer() {
       <Text style={styles.title}>Kochen</Text>
       <Text style={styles.text}>Gesamtdauer: {boilMinutes} Minuten</Text>
 
-      <Text style={styles.timer}>{getDisplayTime()}</Text>
+      <AnimatedCircularProgress
+        size={180}
+        width={12}
+        fill={circleFill}
+        tintColor={colors.primary}
+        backgroundColor={colors.surfaceVariant}
+        rotation={0}
+      >
+        {() => (
+          <View style={styles.timerContainer}>
+            <Text style={styles.timer}>{getDisplayTime()}</Text>
+          </View>
+        )}
+      </AnimatedCircularProgress>
 
       <View style={{ flexDirection: "row", gap: 12 }}>
         <Pressable style={styles.iconButton} onPress={handleTogglePause}>
@@ -267,11 +273,18 @@ function createStyles(colors: AppTheme["colors"]) {
       marginBottom: 8,
       color: colors.text,
     },
+    timerContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+    },
     timer: {
       fontSize: 48,
       fontWeight: "bold",
       marginBottom: 24,
       color: colors.primary,
+      textAlign: "center",
+      transform: [{ translateY: 9 }],
     },
     button: {
       backgroundColor: colors.primary,

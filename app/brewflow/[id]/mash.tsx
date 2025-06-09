@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { View, Text, Pressable, StyleSheet } from "react-native";
-import * as Notifications from "expo-notifications";
+// import * as Notifications from "expo-notifications";
+import notifee from "@notifee/react-native";
 import * as Device from "expo-device";
 import { useRecipes } from "@/context/RecipeContext";
 import { useTheme } from "react-native-paper";
@@ -9,6 +10,8 @@ import type { AppTheme } from "@/theme/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useTimerContext } from "@/context/TimerContext";
 import { scheduleMashNotification } from "@/hooks/useMashNotifications";
+
+import { AnimatedCircularProgress } from "react-native-circular-progress";
 
 export default function MashTimerStep() {
   const { id, targetSize } = useLocalSearchParams<{
@@ -93,8 +96,6 @@ export default function MashTimerStep() {
     }
 
     if (paused) {
-      await stopAllTimers(); // wipes everything again — no need for manual cancel
-
       mash.resumeTimer();
 
       if (Device.isDevice && mash.timer?.startTimestamp != null) {
@@ -109,7 +110,7 @@ export default function MashTimerStep() {
         });
       }
     } else {
-      await Notifications.cancelAllScheduledNotificationsAsync();
+      await notifee.cancelAllNotifications();
       mash.pauseTimer();
     }
   };
@@ -125,6 +126,14 @@ export default function MashTimerStep() {
       pathname: "/brewflow/[id]/boil",
       params: { id, targetSize },
     });
+
+  const timer = mash.timer;
+  const total = durationSec;
+
+  // Detect first load: no timer ever started, and no time elapsed
+  const isFirstStart = !timer && timeLeft === 0;
+
+  const circleFill = !timer && timeLeft === 0 ? 100 : (timeLeft / total) * 100;
 
   if (!recipe || steps.length === 0 || !step) {
     return (
@@ -145,7 +154,21 @@ export default function MashTimerStep() {
       <Text style={styles.text}>
         {step.temperature}°C für {step.duration} min
       </Text>
-      <Text style={styles.timer}>{getDisplayTime()}</Text>
+
+      <AnimatedCircularProgress
+        size={180}
+        width={12}
+        fill={circleFill}
+        tintColor={colors.primary}
+        backgroundColor={colors.surfaceVariant}
+        rotation={0}
+      >
+        {() => (
+          <View style={styles.timerContainer}>
+            <Text style={styles.timer}>{getDisplayTime()}</Text>
+          </View>
+        )}
+      </AnimatedCircularProgress>
 
       <View style={{ flexDirection: "row", gap: 12 }}>
         <Pressable style={styles.iconButton} onPress={handleTogglePause}>
@@ -177,7 +200,7 @@ export default function MashTimerStep() {
         </Pressable>
       )}
 
-      {timeLeft <= 0 && stepIndex === steps.length - 1 && (
+      {mash.timer && timeLeft <= 0 && stepIndex === steps.length - 1 && (
         <Pressable
           style={[styles.button, { marginTop: 20 }]}
           onPress={goToBoil}
@@ -187,7 +210,13 @@ export default function MashTimerStep() {
       )}
 
       <Pressable
-        style={[styles.button, { backgroundColor: colors.secondary, opacity: mash.isRunning() ? 0.5 : 1 }]}
+        style={[
+          styles.button,
+          {
+            backgroundColor: colors.secondary,
+            opacity: mash.isRunning() ? 0.5 : 1,
+          },
+        ]}
         onPress={goToBoil}
         disabled={mash.isRunning()}
       >
@@ -217,11 +246,18 @@ function createStyles(colors: AppTheme["colors"]) {
       marginBottom: 12,
       color: colors.text,
     },
+    timerContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+    },
     timer: {
       fontSize: 48,
       fontWeight: "bold",
       marginBottom: 24,
       color: colors.primary,
+      textAlign: "center",
+      transform: [{ translateY: 9 }],
     },
     button: {
       backgroundColor: colors.primary,

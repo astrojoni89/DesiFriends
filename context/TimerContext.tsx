@@ -5,7 +5,8 @@ import React, {
   useRef,
   useState,
 } from "react";
-import * as Notifications from "expo-notifications";
+// import * as Notifications from "expo-notifications";
+import notifee, { TimestampTrigger, TriggerType } from '@notifee/react-native';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export type TimerType = "mash" | "boil";
@@ -55,6 +56,26 @@ function useDualTimer(type: TimerType): TimerMethods {
   const intervalRef = useRef<number | null>(null);
   const storageKey = `activeTimer-${type}`;
   const [isRestoring, setIsRestoring] = useState(true);
+
+  const tick = () => {
+    setTimer((prev) => {
+      if (!prev || prev.paused || prev.startTimestamp === null) return prev;
+
+      const elapsed = Math.floor((Date.now() - prev.startTimestamp) / 1000);
+      const timeLeft = Math.max(0, prev.duration - elapsed);
+
+      if (timeLeft === 0 && !prev.paused) {
+        return {
+          ...prev,
+          timeLeft: 0,
+          paused: true,
+          startTimestamp: null,
+        };
+      }
+
+      return { ...prev, timeLeft };
+    });
+  };
 
   useEffect(() => {
     const persist = async () => {
@@ -127,7 +148,7 @@ function useDualTimer(type: TimerType): TimerMethods {
 
         return { ...prev, timeLeft };
       });
-    }, 1000);
+    }, 500);
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -178,6 +199,8 @@ function useDualTimer(type: TimerType): TimerMethods {
         duration: prev.timeLeft,
       };
     });
+
+    setTimeout(tick, 0); // force immediate update for UI responsiveness
   };
 
   const resetTimer = () => setTimer(null);
@@ -208,7 +231,7 @@ function useDualTimer(type: TimerType): TimerMethods {
   const cancelNotification = async (stepIndex: number) => {
     const notifId = timer?.notificationIds?.[stepIndex];
     if (notifId) {
-      await Notifications.cancelScheduledNotificationAsync(notifId);
+      await notifee.cancelNotification(notifId);
       setTimer((prev) =>
         prev
           ? {
@@ -253,7 +276,7 @@ export const TimerProvider = ({ children }: { children: React.ReactNode }) => {
     if (mash.timer) {
       const mashNotifs = Object.values(mash.timer.notificationIds);
       for (const id of mashNotifs) {
-        await Notifications.cancelScheduledNotificationAsync(id);
+        await notifee.cancelNotification(id);
       }
       mash.resetTimer();
     }
@@ -262,7 +285,7 @@ export const TimerProvider = ({ children }: { children: React.ReactNode }) => {
     if (boil.timer) {
       const boilNotifs = Object.values(boil.timer.notificationIds);
       for (const id of boilNotifs) {
-        await Notifications.cancelScheduledNotificationAsync(id);
+        await notifee.cancelNotification(id);
       }
       boil.resetTimer();
     }

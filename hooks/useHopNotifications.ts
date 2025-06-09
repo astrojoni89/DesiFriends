@@ -1,4 +1,8 @@
-import * as Notifications from "expo-notifications";
+import notifee, {
+  TriggerType,
+  TimestampTrigger,
+  AndroidImportance,
+} from "@notifee/react-native";
 
 export interface Hop {
   name: string;
@@ -26,16 +30,16 @@ export const scheduleHopNotifications = async ({
     timeLeft,
   });
 
-  // Clear any previously scheduled notifications (better than duplicates)
-  await Notifications.cancelAllScheduledNotificationsAsync();
+  // 🚫 Cancel all previous scheduled notifications
+  await notifee.cancelAllNotifications();
 
   for (const hop of hopSchedule) {
     const hopSecondsBeforeEnd = parseInt(hop.time) * 60;
+    if (hopSecondsBeforeEnd >= boilSeconds) continue; // skip Vorderwürzehopfen
 
-    if (hopSecondsBeforeEnd >= boilSeconds) continue; // Skip Vorderwürzehopfen
-
-    const elapsed = Math.max(0, boilSeconds - timeLeft);
+    const elapsed = boilSeconds - timeLeft;
     const delay = Math.max(1, boilSeconds - hopSecondsBeforeEnd - elapsed);
+
     const hopText = `${(parseFloat(hop.amount) * scaleFactor).toFixed(1)} g ${
       hop.name
     }`;
@@ -44,19 +48,27 @@ export const scheduleHopNotifications = async ({
       `🔔 Scheduling ${hopText} at T-${hop.time} min (${delay} sec from now)`
     );
 
-    await Notifications.scheduleNotificationAsync({
-      content: {
+    const triggerTimestamp = Date.now() + delay * 1000;
+
+    const trigger: TimestampTrigger = {
+      type: TriggerType.TIMESTAMP,
+      timestamp: triggerTimestamp,
+      alarmManager: true,
+    };
+
+    await notifee.createTriggerNotification(
+      {
         title: "Hopfengabe",
         body: `${hopText} jetzt zugeben (${hop.time} Minuten vor Ende)!`,
+        android: {
+          channelId: "boil-timer",
+          smallIcon: "ic_launcher", // required in real builds
+          pressAction: { id: "default" },
+        },
       },
-      trigger: {
-        type: "timeInterval",
-        seconds: delay,
-        repeats: false,
-      } as Notifications.TimeIntervalTriggerInput,
-    });
+      trigger
+    );
 
-    // Optional: throttle scheduling a bit to prevent batching issues
     await new Promise((r) => setTimeout(r, 50));
   }
 };

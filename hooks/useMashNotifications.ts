@@ -1,6 +1,8 @@
-// hooks/useMashNotifications.ts
-import * as Notifications from "expo-notifications";
+import notifee, { TimestampTrigger, TriggerType } from "@notifee/react-native";
 
+/**
+ * Schedule a mash step notification.
+ */
 export const scheduleMashNotification = async ({
   duration,
   stepIndex,
@@ -10,17 +12,28 @@ export const scheduleMashNotification = async ({
   stepIndex: number;
   onScheduled?: (id: string) => void;
 }) => {
-  const id = await Notifications.scheduleNotificationAsync({
-    content: {
+  const triggerTimestamp = Date.now() + duration * 1000;
+
+  const trigger: TimestampTrigger = {
+    type: TriggerType.TIMESTAMP,
+    timestamp: triggerTimestamp,
+    alarmManager: true, // more reliable for long delays (Android only)
+  };
+
+  const id = await notifee.createTriggerNotification(
+    {
       title: "Timer abgelaufen",
       body: "Der nächste Schritt kann beginnen.",
+      android: {
+        channelId: "mash-timer",
+        smallIcon: "ic_launcher", // make sure this exists in your resources
+        pressAction: {
+          id: "default",
+        },
+      },
     },
-    trigger: {
-      type: "timeInterval",
-      seconds: Math.max(1, duration),
-      repeats: false,
-    } as Notifications.TimeIntervalTriggerInput,
-  });
+    trigger
+  );
 
   onScheduled?.(id);
 };

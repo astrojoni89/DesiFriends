@@ -15,6 +15,8 @@ import { TimerProvider } from "@/context/TimerContext";
 import { useEffect } from "react";
 import { useRouter } from "expo-router";
 import { useTimerContext } from "@/context/TimerContext";
+import notifee from "@notifee/react-native";
+import { AndroidImportance } from "@notifee/react-native";
 
 export default function RootLayout() {
   return (
@@ -46,6 +48,26 @@ function AppWithTheming() {
   function TimerRedirector() {
     const { mash, boil } = useTimerContext();
     const router = useRouter();
+
+    useEffect(() => {
+      const setupChannels = async () => {
+        await notifee.requestPermission();
+
+        await notifee.createChannel({
+          id: "mash-timer",
+          name: "Maische-Timer",
+          importance: AndroidImportance.HIGH,
+        });
+
+        await notifee.createChannel({
+          id: "boil-timer",
+          name: "Koch-Timer",
+          importance: AndroidImportance.HIGH,
+        });
+      };
+
+      setupChannels();
+    }, []);
 
     useEffect(() => {
       if (mash.isRestoring || boil.isRestoring) return;
