@@ -12,7 +12,6 @@ import {
   TouchableWithoutFeedback,
   Alert,
 } from "react-native";
-import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme, Menu, Snackbar } from "react-native-paper";
 import { useLocalSearchParams, useRouter } from "expo-router";

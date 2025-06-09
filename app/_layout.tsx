@@ -12,6 +12,10 @@ import { ThemeProvider, useThemeContext } from "@/context/ThemeContext";
 import { DeleteModeProvider } from "@/context/DeleteModeContext";
 import { TimerProvider } from "@/context/TimerContext";
 
+import { useEffect } from "react";
+import { useRouter } from "expo-router";
+import { useTimerContext } from "@/context/TimerContext";
+
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -39,10 +43,30 @@ function AppWithTheming() {
     },
   };
 
+  function TimerRedirector() {
+    const { mash, boil } = useTimerContext();
+    const router = useRouter();
+
+    useEffect(() => {
+      if (mash.isRestoring || boil.isRestoring) return;
+
+      if (mash.timer && !mash.timer.paused) {
+        const recipeId = mash.timer.id.split("-")[1];
+        router.replace(`/brewflow/${recipeId}/mash`);
+      } else if (boil.timer && !boil.timer.paused) {
+        const recipeId = boil.timer.id.split("-")[1];
+        router.replace(`/brewflow/${recipeId}/boil`);
+      }
+    }, [mash.isRestoring, boil.isRestoring]);
+
+    return null;
+  }
+
   return (
     <PaperProvider theme={appTheme}>
       <NavigationThemeProvider value={navigationTheme}>
         <TimerProvider>
+          <TimerRedirector />
           <Stack>
             <Stack.Screen name="(drawer)" options={{ headerShown: false }} />
             <Stack.Screen

@@ -1,16 +1,14 @@
 import { useEffect, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { View, Text, Pressable, StyleSheet } from "react-native";
+import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { useRecipes } from "@/context/RecipeContext";
 import { useTheme } from "react-native-paper";
 import type { AppTheme } from "@/theme/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useTimerContext } from "@/context/TimerContext";
-import {
-  scheduleMashNotification,
-  cancelNotification,
-} from "@/hooks/useMashNotifications";
+import { scheduleMashNotification } from "@/hooks/useMashNotifications";
 
 export default function MashTimerStep() {
   const { id, targetSize } = useLocalSearchParams<{
@@ -30,13 +28,36 @@ export default function MashTimerStep() {
   const mashTimerId = `mash-${id}-step-${stepIndex}`;
   const durationSec = parseInt(step?.duration || "0") * 60;
 
-  const { mash } = useTimerContext();
+  const { mash, stopAllTimers } = useTimerContext();
   const timeLeft = mash.getTimeLeft();
   const paused = mash.isPaused();
 
   useEffect(() => {
     mash.resetTimer();
   }, [stepIndex]);
+
+  useEffect(() => {
+    const maybeReschedule = async () => {
+      if (
+        Device.isDevice &&
+        mash.timer &&
+        !mash.timer.paused &&
+        mash.timer.startTimestamp != null
+      ) {
+        const now = Date.now();
+        const elapsed = Math.floor((now - mash.timer.startTimestamp) / 1000);
+        const delay = Math.max(1, mash.timer.duration - elapsed);
+        await scheduleMashNotification({
+          duration: delay,
+          stepIndex: mash.timer.stepIndex,
+          onScheduled: (id) =>
+            mash.setNotificationId(mash.timer!.stepIndex, id),
+        });
+      }
+    };
+
+    maybeReschedule();
+  }, [mash.timer?.startTimestamp]);
 
   const getDisplayTime = () => {
     if (!mash.timer) {
@@ -52,6 +73,8 @@ export default function MashTimerStep() {
     const currentStep = mash.timer?.stepIndex ?? stepIndex;
 
     if (!mash.timer) {
+      await stopAllTimers(); // ensure no other timer or notification is active
+
       mash.startTimer({
         id: mashTimerId,
         type: "mash",
@@ -70,14 +93,15 @@ export default function MashTimerStep() {
     }
 
     if (paused) {
-      const notifId = mash.getNotificationId(currentStep);
-      if (typeof notifId === "string") {
-        await cancelNotification(notifId);
-      }
+      await stopAllTimers(); // wipes everything again — no need for manual cancel
+
       mash.resumeTimer();
 
-      if (Device.isDevice) {
-        const delay = Math.max(1, mash.getTimeLeft() ?? durationSec);
+      if (Device.isDevice && mash.timer?.startTimestamp != null) {
+        const now = Date.now();
+        const elapsed = Math.floor((now - mash.timer.startTimestamp) / 1000);
+        const delay = Math.max(1, mash.timer.duration - elapsed);
+
         await scheduleMashNotification({
           duration: delay,
           stepIndex: currentStep,
@@ -85,21 +109,13 @@ export default function MashTimerStep() {
         });
       }
     } else {
-      const notifId = mash.getNotificationId(currentStep);
-      if (typeof notifId === "string") {
-        await cancelNotification(notifId);
-      }
+      await Notifications.cancelAllScheduledNotificationsAsync();
       mash.pauseTimer();
     }
   };
 
   const handleReset = async () => {
-    const currentStep = mash.timer?.stepIndex ?? stepIndex;
-    const notifId = mash.getNotificationId(currentStep);
-    if (typeof notifId === "string") {
-      await cancelNotification(notifId);
-    }
-    mash.resetTimer();
+    await stopAllTimers();
   };
 
   const nextStep = () => setStepIndex((prev) => prev + 1);
@@ -171,8 +187,9 @@ export default function MashTimerStep() {
       )}
 
       <Pressable
-        style={[styles.button, { backgroundColor: colors.secondary }]}
+        style={[styles.button, { backgroundColor: colors.secondary, opacity: mash.isRunning() ? 0.5 : 1 }]}
         onPress={goToBoil}
+        disabled={mash.isRunning()}
       >
         <Text style={styles.buttonText}>Überspringen</Text>
       </Pressable>

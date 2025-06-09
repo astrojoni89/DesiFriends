@@ -24,11 +24,3 @@ export const scheduleMashNotification = async ({
 
   onScheduled?.(id);
 };
-
-export const cancelNotification = async (id: string) => {
-  try {
-    await Notifications.cancelScheduledNotificationAsync(id);
-  } catch (e) {
-    console.warn("Failed to cancel notification:", e);
-  }
-};

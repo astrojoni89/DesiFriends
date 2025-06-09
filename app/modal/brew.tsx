@@ -13,7 +13,6 @@ import {
   Keyboard,
   Platform,
 } from "react-native";
-import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { Ionicons } from "@expo/vector-icons";
 import { useRecipes } from "../../context/RecipeContext";
 import * as Clipboard from "expo-clipboard";

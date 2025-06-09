@@ -12,8 +12,6 @@ import {
   KeyboardAvoidingView,
 } from "react-native";
 
-import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
-
 import {
   useRecipes,
   Recipe,

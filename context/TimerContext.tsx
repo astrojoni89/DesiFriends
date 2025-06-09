@@ -39,11 +39,13 @@ interface TimerMethods {
   setNotificationId: (stepIndex: number, id: string) => void;
   getNotificationId: (stepIndex: number) => string | undefined;
   cancelNotification: (stepIndex: number) => Promise<void>;
+  isRestoring: boolean;
 }
 
 type TimerContextValue = {
   mash: TimerMethods;
   boil: TimerMethods;
+  stopAllTimers: () => Promise<void>;
 };
 
 const TimerContext = createContext<TimerContextValue | undefined>(undefined);
@@ -52,6 +54,7 @@ function useDualTimer(type: TimerType): TimerMethods {
   const [timer, setTimer] = useState<TimerState | null>(null);
   const intervalRef = useRef<number | null>(null);
   const storageKey = `activeTimer-${type}`;
+  const [isRestoring, setIsRestoring] = useState(true);
 
   useEffect(() => {
     const persist = async () => {
@@ -86,6 +89,7 @@ function useDualTimer(type: TimerType): TimerMethods {
       } catch (err) {
         console.warn("Failed to restore timer:", err);
       }
+      setIsRestoring(false);
     };
     restore();
   }, []);
@@ -211,15 +215,35 @@ function useDualTimer(type: TimerType): TimerMethods {
     setNotificationId,
     cancelNotification,
     getNotificationId,
+    isRestoring,
   };
 }
 
 export const TimerProvider = ({ children }: { children: React.ReactNode }) => {
   const mash = useDualTimer("mash");
   const boil = useDualTimer("boil");
+  const stopAllTimers = async () => {
+    // Cancel all mash notifications
+    if (mash.timer) {
+      const mashNotifs = Object.values(mash.timer.notificationIds);
+      for (const id of mashNotifs) {
+        await Notifications.cancelScheduledNotificationAsync(id);
+      }
+      mash.resetTimer();
+    }
+
+    // Cancel all boil notifications
+    if (boil.timer) {
+      const boilNotifs = Object.values(boil.timer.notificationIds);
+      for (const id of boilNotifs) {
+        await Notifications.cancelScheduledNotificationAsync(id);
+      }
+      boil.resetTimer();
+    }
+  };
 
   return (
-    <TimerContext.Provider value={{ mash, boil }}>
+    <TimerContext.Provider value={{ mash, boil, stopAllTimers }}>
       {children}
     </TimerContext.Provider>
   );
