@@ -44,9 +44,9 @@
             },
             "imageWidth": 200,
             "resizeMode": "contain"
-          },
-          "@notifee/react-native"
-        ]
+          }
+        ],
+        "@notifee/react-native"
       ],
       "experiments": {
         "typedRoutes": true
