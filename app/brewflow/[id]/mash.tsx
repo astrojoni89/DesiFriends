@@ -51,6 +51,7 @@ export default function MashTimerStep() {
         const now = Date.now();
         const elapsed = Math.floor((now - mash.timer.startTimestamp) / 1000);
         const delay = Math.max(1, mash.timer.duration - elapsed);
+
         await scheduleMashNotification({
           duration: delay,
           stepIndex: mash.timer.stepIndex,
@@ -87,6 +88,7 @@ export default function MashTimerStep() {
       });
 
       if (Device.isDevice) {
+
         await scheduleMashNotification({
           duration: durationSec,
           stepIndex,

@@ -56,21 +56,34 @@ function AppWithTheming() {
       const setup = async () => {
         const notifee = await loadNotifee();
 
-        if (!notifee) return;
+        if (!notifee) {
+          console.log("Notifee not loaded");
+          return;
+        }
 
-        await notifee.default.requestPermission();
+        try {
+          console.log("Requesting permission...");
+          await notifee.default.requestPermission();
+          console.log("Permission requested!");
 
-        await notifee.default.createChannel({
-          id: "mash-timer",
-          name: "Maische-Timer",
-          importance: notifee.AndroidImportance.HIGH,
-        });
+          console.log("About to call createChannel for mash-timer");
+          await notifee.default.createChannel({
+            id: "mash-timer",
+            name: "Maische-Timer",
+            importance: notifee.AndroidImportance.HIGH,
+          });
+          console.log("Mash-timer channel created!");
 
-        await notifee.default.createChannel({
-          id: "boil-timer",
-          name: "Koch-Timer",
-          importance: notifee.AndroidImportance.HIGH,
-        });
+          console.log("About to call createChannel for boil-timer");
+          await notifee.default.createChannel({
+            id: "boil-timer",
+            name: "Koch-Timer",
+            importance: notifee.AndroidImportance.HIGH,
+          });
+          console.log("Boil-timer channel created!");
+        } catch (e) {
+          console.error("Error in notifee setup:", e);
+        }
       };
 
       setup();
