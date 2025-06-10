@@ -1,7 +1,8 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { View, Text, Pressable, StyleSheet, Alert } from "react-native";
 // import * as Notifications from "expo-notifications";
-import notifee from "@notifee/react-native";
+// import notifee from "@notifee/react-native";
+import { loadNotifee } from "@/utils/notifeeWrapper";
 import * as Device from "expo-device";
 import { useRecipes } from "@/context/RecipeContext";
 import { useTheme } from "react-native-paper";
@@ -89,6 +90,8 @@ export default function BoilTimer() {
   };
 
   const handleTogglePause = async () => {
+    const notifee = await loadNotifee();
+
     if (!boil.timer) {
       const startBoil = async () => {
         await stopAllTimers(); // 🚫 clear all timers & notifications
@@ -100,7 +103,7 @@ export default function BoilTimer() {
           duration: boilSeconds,
         });
 
-        if (Device.isDevice) {
+        if (Device.isDevice && notifee) {
           await scheduleHopNotifications({
             hopSchedule,
             boilSeconds,
@@ -108,7 +111,7 @@ export default function BoilTimer() {
             timeLeft: boilSeconds,
           });
 
-          await notifee.displayNotification({
+          await notifee.default.displayNotification({
             title: "Kochen abgeschlossen",
             body: "Die Kochzeit ist vorbei. Zeit für die nächste Phase!",
             android: {
@@ -147,7 +150,7 @@ export default function BoilTimer() {
     if (paused) {
       boil.resumeTimer();
 
-      if (Device.isDevice && boil.timer?.startTimestamp != null) {
+      if (Device.isDevice && boil.timer?.startTimestamp != null && notifee) {
         const now = Date.now();
         const elapsed = Math.floor((now - boil.timer.startTimestamp) / 1000);
         const delay = Math.max(1, boil.timer.duration - elapsed);
@@ -159,7 +162,7 @@ export default function BoilTimer() {
           timeLeft: delay,
         });
 
-        await notifee.displayNotification({
+        await notifee.default.displayNotification({
           title: "Kochen abgeschlossen",
           body: "Die Kochzeit ist vorbei. Zeit für die nächste Phase!",
           android: {
@@ -171,7 +174,9 @@ export default function BoilTimer() {
         });
       }
     } else {
-      await notifee.cancelAllNotifications();
+      if (notifee) {
+        await notifee.default.cancelAllNotifications();
+      }
       boil.pauseTimer();
     }
   };

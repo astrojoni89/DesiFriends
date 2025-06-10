@@ -6,7 +6,8 @@ import React, {
   useState,
 } from "react";
 // import * as Notifications from "expo-notifications";
-import notifee, { TimestampTrigger, TriggerType } from '@notifee/react-native';
+// import notifee, { TimestampTrigger, TriggerType } from '@notifee/react-native';
+import { loadNotifee } from "@/utils/notifeeWrapper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export type TimerType = "mash" | "boil";
@@ -229,9 +230,12 @@ function useDualTimer(type: TimerType): TimerMethods {
   };
 
   const cancelNotification = async (stepIndex: number) => {
+    const notifee = await loadNotifee();
+    if (!notifee) return;
+
     const notifId = timer?.notificationIds?.[stepIndex];
     if (notifId) {
-      await notifee.cancelNotification(notifId);
+      await notifee.default.cancelNotification(notifId);
       setTimer((prev) =>
         prev
           ? {
@@ -271,12 +275,22 @@ function useDualTimer(type: TimerType): TimerMethods {
 export const TimerProvider = ({ children }: { children: React.ReactNode }) => {
   const mash = useDualTimer("mash");
   const boil = useDualTimer("boil");
+  const [notifee, setNotifee] = useState<
+    typeof import("@notifee/react-native") | null
+  >(null);
+
+  useEffect(() => {
+    loadNotifee().then(setNotifee);
+  }, []);
+
   const stopAllTimers = async () => {
+    if (!notifee) return;
+
     // Cancel all mash notifications
     if (mash.timer) {
       const mashNotifs = Object.values(mash.timer.notificationIds);
       for (const id of mashNotifs) {
-        await notifee.cancelNotification(id);
+        await notifee?.default.cancelNotification(id);
       }
       mash.resetTimer();
     }
@@ -285,7 +299,7 @@ export const TimerProvider = ({ children }: { children: React.ReactNode }) => {
     if (boil.timer) {
       const boilNotifs = Object.values(boil.timer.notificationIds);
       for (const id of boilNotifs) {
-        await notifee.cancelNotification(id);
+        await notifee?.default.cancelNotification(id);
       }
       boil.resetTimer();
     }

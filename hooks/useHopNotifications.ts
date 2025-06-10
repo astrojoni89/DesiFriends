@@ -1,8 +1,4 @@
-import notifee, {
-  TriggerType,
-  TimestampTrigger,
-  AndroidImportance,
-} from "@notifee/react-native";
+import { loadNotifee } from "@/utils/notifeeWrapper";
 
 export interface Hop {
   name: string;
@@ -23,6 +19,9 @@ export const scheduleHopNotifications = async ({
   scaleFactor,
   timeLeft,
 }: Options) => {
+  const notifee = await loadNotifee();
+  if (!notifee) return;
+
   console.log("[scheduleHopNotifications] Scheduling...", {
     hopSchedule,
     boilSeconds,
@@ -31,7 +30,7 @@ export const scheduleHopNotifications = async ({
   });
 
   // 🚫 Cancel all previous scheduled notifications
-  await notifee.cancelAllNotifications();
+  await notifee.default.cancelAllNotifications();
 
   for (const hop of hopSchedule) {
     const hopSecondsBeforeEnd = parseInt(hop.time) * 60;
@@ -49,26 +48,26 @@ export const scheduleHopNotifications = async ({
     );
 
     const triggerTimestamp = Date.now() + delay * 1000;
-
-    const trigger: TimestampTrigger = {
-      type: TriggerType.TIMESTAMP,
+    const trigger: import("@notifee/react-native").TimestampTrigger = {
+      type: notifee.TriggerType.TIMESTAMP,
       timestamp: triggerTimestamp,
       alarmManager: true,
     };
 
-    await notifee.createTriggerNotification(
+    await notifee.default.createTriggerNotification(
       {
         title: "Hopfengabe",
         body: `${hopText} jetzt zugeben (${hop.time} Minuten vor Ende)!`,
         android: {
           channelId: "boil-timer",
-          smallIcon: "ic_launcher", // required in real builds
+          smallIcon: "ic_stat_desifriends", // required in real builds
+          largeIcon: require("@/assets/images/favicon.png"),
           pressAction: { id: "default" },
         },
       },
       trigger
     );
 
-    await new Promise((r) => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 50)); // spacing out scheduling
   }
 };

@@ -15,8 +15,11 @@ import { TimerProvider } from "@/context/TimerContext";
 import { useEffect } from "react";
 import { useRouter } from "expo-router";
 import { useTimerContext } from "@/context/TimerContext";
-import notifee from "@notifee/react-native";
-import { AndroidImportance } from "@notifee/react-native";
+
+// import notifee from "@notifee/react-native";
+// import { AndroidImportance } from "@notifee/react-native";
+
+import { loadNotifee } from "@/utils/notifeeWrapper";
 
 export default function RootLayout() {
   return (
@@ -50,23 +53,27 @@ function AppWithTheming() {
     const router = useRouter();
 
     useEffect(() => {
-      const setupChannels = async () => {
-        await notifee.requestPermission();
+      const setup = async () => {
+        const notifee = await loadNotifee();
 
-        await notifee.createChannel({
+        if (!notifee) return;
+
+        await notifee.default.requestPermission();
+
+        await notifee.default.createChannel({
           id: "mash-timer",
           name: "Maische-Timer",
-          importance: AndroidImportance.HIGH,
+          importance: notifee.AndroidImportance.HIGH,
         });
 
-        await notifee.createChannel({
+        await notifee.default.createChannel({
           id: "boil-timer",
           name: "Koch-Timer",
-          importance: AndroidImportance.HIGH,
+          importance: notifee.AndroidImportance.HIGH,
         });
       };
 
-      setupChannels();
+      setup();
     }, []);
 
     useEffect(() => {

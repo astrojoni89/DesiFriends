@@ -1,8 +1,5 @@
-import notifee, { TimestampTrigger, TriggerType } from "@notifee/react-native";
+import { loadNotifee } from "@/utils/notifeeWrapper";
 
-/**
- * Schedule a mash step notification.
- */
 export const scheduleMashNotification = async ({
   duration,
   stepIndex,
@@ -12,21 +9,25 @@ export const scheduleMashNotification = async ({
   stepIndex: number;
   onScheduled?: (id: string) => void;
 }) => {
+  const notifee = await loadNotifee();
+  if (!notifee) return;
+
   const triggerTimestamp = Date.now() + duration * 1000;
 
-  const trigger: TimestampTrigger = {
-    type: TriggerType.TIMESTAMP,
+  const trigger: import('@notifee/react-native').TimestampTrigger = {
+    type: notifee.TriggerType.TIMESTAMP as import('@notifee/react-native').TriggerType.TIMESTAMP,
     timestamp: triggerTimestamp,
-    alarmManager: true, // more reliable for long delays (Android only)
+    alarmManager: true,
   };
 
-  const id = await notifee.createTriggerNotification(
+  const id = await notifee.default.createTriggerNotification(
     {
       title: "Timer abgelaufen",
       body: "Der nächste Schritt kann beginnen.",
       android: {
         channelId: "mash-timer",
-        smallIcon: "ic_launcher", // make sure this exists in your resources
+        smallIcon: "ic_stat_desifriends", // ensure this icon exists
+        largeIcon: require("@/assets/images/favicon.png"),
         pressAction: {
           id: "default",
         },
