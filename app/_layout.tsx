@@ -16,9 +16,6 @@ import { useEffect } from "react";
 import { useRouter } from "expo-router";
 import { useTimerContext } from "@/context/TimerContext";
 
-// import notifee from "@notifee/react-native";
-// import { AndroidImportance } from "@notifee/react-native";
-
 import { loadNotifee } from "@/utils/notifeeWrapper";
 
 export default function RootLayout() {
@@ -57,32 +54,32 @@ function AppWithTheming() {
         const notifee = await loadNotifee();
 
         if (!notifee) {
-          console.log("Notifee not loaded");
+          //console.log("Notifee not loaded");
           return;
         }
 
         try {
-          console.log("Requesting permission...");
+          //console.log("Requesting permission...");
           await notifee.default.requestPermission();
-          console.log("Permission requested!");
+          //console.log("Permission requested!");
 
-          console.log("About to call createChannel for mash-timer");
+          //console.log("About to call createChannel for mash-timer");
           await notifee.default.createChannel({
             id: "mash-timer",
             name: "Maische-Timer",
             importance: notifee.AndroidImportance.HIGH,
           });
-          console.log("Mash-timer channel created!");
+          //console.log("Mash-timer channel created!");
 
-          console.log("About to call createChannel for boil-timer");
+          //console.log("About to call createChannel for boil-timer");
           await notifee.default.createChannel({
             id: "boil-timer",
             name: "Koch-Timer",
             importance: notifee.AndroidImportance.HIGH,
           });
-          console.log("Boil-timer channel created!");
+          //console.log("Boil-timer channel created!");
         } catch (e) {
-          console.error("Error in notifee setup:", e);
+          //console.error("Error in notifee setup:", e);
         }
       };
 

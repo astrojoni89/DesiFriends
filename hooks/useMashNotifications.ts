@@ -20,7 +20,7 @@ export const scheduleMashNotification = async ({
     alarmManager: true,
   };
 
-  console.log("About to call createTriggerNotification");
+  //console.log("About to call createTriggerNotification");
   const id = await notifee.default.createTriggerNotification(
     {
       title: "Timer abgelaufen",
