@@ -1,16 +1,18 @@
 import { useEffect, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { View, Text, Pressable, StyleSheet } from "react-native";
-// import * as Notifications from "expo-notifications";
-// import notifee from "@notifee/react-native";
-import { loadNotifee } from "@/utils/notifeeWrapper"; // ✅ dynamic safe import
+import { loadNotifee } from "@/utils/notifeeWrapper"; // dynamic safe import
 import * as Device from "expo-device";
 import { useRecipes } from "@/context/RecipeContext";
 import { useTheme } from "react-native-paper";
 import type { AppTheme } from "@/theme/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useTimerContext } from "@/context/TimerContext";
-import { scheduleMashNotification } from "@/hooks/useMashNotifications";
+import {
+  cancelMashNotifications,
+  scheduleMashNotifications,
+} from "@/hooks/useMashNotifications";
+import { setupMashNotificationChannel } from "@/hooks/useMashNotifications";
 
 import { AnimatedCircularProgress } from "react-native-circular-progress";
 
@@ -30,99 +32,83 @@ export default function MashTimerStep() {
   const [stepIndex, setStepIndex] = useState(0);
   const step = steps[stepIndex];
   const mashTimerId = `mash-${id}-step-${stepIndex}`;
-  const durationSec = parseInt(step?.duration || "0") * 60;
 
-  const { mash, stopAllTimers } = useTimerContext();
-  const timeLeft = mash.getTimeLeft();
-  const paused = mash.isPaused();
+  const durationMin = parseInt(step?.duration || "0") || 0;
+  const durationMs = durationMin * 60 * 1000;
+
+  const { mash } = useTimerContext();
+  const { timeLeft, isRunning, start, pause, resume, reset } = mash;
+  const paused = !isRunning;
 
   useEffect(() => {
-    mash.resetTimer();
+    setupMashNotificationChannel();
+  }, []);
+
+  useEffect(() => {
+    reset(); // only clear timer state
   }, [stepIndex]);
 
-  useEffect(() => {
-    const maybeReschedule = async () => {
-      if (
-        Device.isDevice &&
-        mash.timer &&
-        !mash.timer.paused &&
-        mash.timer.startTimestamp != null
-      ) {
-        const now = Date.now();
-        const elapsed = Math.floor((now - mash.timer.startTimestamp) / 1000);
-        const delay = Math.max(1, mash.timer.duration - elapsed);
-
-        await scheduleMashNotification({
-          duration: delay,
-          stepIndex: mash.timer.stepIndex,
-          onScheduled: (id) =>
-            mash.setNotificationId(mash.timer!.stepIndex, id),
-        });
-      }
-    };
-
-    maybeReschedule();
-  }, [mash.timer?.startTimestamp]);
-
-  const getDisplayTime = () => {
-    if (!mash.timer) {
-      const secs = durationSec;
-      const m = Math.floor(secs / 60);
-      const s = secs % 60;
-      return `${m}:${s.toString().padStart(2, "0")}`;
-    }
-    return mash.getFormattedTime();
+  const formatTimeLeft = (ms: number) => {
+    const totalSec = Math.floor(ms / 1000);
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
-  const handleTogglePause = async () => {
-    const currentStep = mash.timer?.stepIndex ?? stepIndex;
-
-    if (!mash.timer) {
-      await stopAllTimers(); // ensure no other timer or notification is active
-
-      mash.startTimer({
-        id: mashTimerId,
-        type: "mash",
-        stepIndex,
-        duration: durationSec,
-      });
-
-      if (Device.isDevice) {
-
-        await scheduleMashNotification({
-          duration: durationSec,
-          stepIndex,
-          onScheduled: (id) => mash.setNotificationId(stepIndex, id),
-        });
-      }
-      return;
+  const getDisplayTime = () => {
+    if (isRunning || timeLeft > 0) {
+      return formatTimeLeft(timeLeft);
     }
+    return formatTimeLeft(durationMs); // show full duration if not started
+  };
 
-    if (paused) {
-      mash.resumeTimer();
+  const getNotificationSteps = () =>
+    // Map steps to include title and offsetMinutes for notifications
+    steps.map((step, idx) => ({
+      ...step,
+      // Use a fallback title since MashStep has no 'title' property
+      title: `Schritt ${idx + 1}`,
+      offsetMinutes: steps
+        .slice(0, idx)
+        .reduce((sum, s) => sum + (parseInt(s.duration || "0") || 0), 0),
+    }));
 
-      if (Device.isDevice && mash.timer?.startTimestamp != null) {
-        const now = Date.now();
-        const elapsed = Math.floor((now - mash.timer.startTimestamp) / 1000);
-        const delay = Math.max(1, mash.timer.duration - elapsed);
+  const handleTogglePause = async () => {
+    const now = Date.now();
 
-        await scheduleMashNotification({
-          duration: delay,
-          stepIndex: currentStep,
-          onScheduled: (id) => mash.setNotificationId(currentStep, id),
-        });
+    if (!isRunning) {
+      if (timeLeft > 0 && timeLeft < durationMs) {
+        await resume(); // 🔁 Resume
+
+        // 🔁 Schedule just the current step's notification
+        if (Device.isDevice) {
+          const stepsToReschedule = getNotificationSteps().filter(
+            (_, idx) => idx === stepIndex
+          );
+
+          await cancelMashNotifications(stepsToReschedule);
+          await scheduleMashNotifications(stepsToReschedule, now + timeLeft);
+        }
+      } else {
+        await start(durationMs); // ▶️ First start
+
+        // ⏱ Schedule all upcoming mash step notifications
+        if (Device.isDevice) {
+          await scheduleMashNotifications(getNotificationSteps(), now);
+        }
       }
     } else {
-      const notifee = await loadNotifee();
-      if (notifee) {
-        await notifee.default.cancelAllNotifications();
+      await pause(); // ⏸ Pause
+      if (Device.isDevice) {
+        const notifee = await loadNotifee();
+        if (notifee) await notifee.default.cancelAllNotifications();
       }
-      mash.pauseTimer();
     }
   };
 
   const handleReset = async () => {
-    await stopAllTimers();
+    await reset();
+    await cancelMashNotifications(getNotificationSteps());
   };
 
   const nextStep = () => setStepIndex((prev) => prev + 1);
@@ -133,13 +119,10 @@ export default function MashTimerStep() {
       params: { id, targetSize },
     });
 
-  const timer = mash.timer;
-  const total = durationSec;
-
   // Detect first load: no timer ever started, and no time elapsed
-  const isFirstStart = !timer && timeLeft === 0;
-
-  const circleFill = !timer && timeLeft === 0 ? 100 : (timeLeft / total) * 100;
+  const isFirstStart = timeLeft === 0;
+  const effectiveTime = isRunning || timeLeft > 0 ? timeLeft : durationMs;
+  const circleFill = (effectiveTime / durationMs) * 100;
 
   if (!recipe || steps.length === 0 || !step) {
     return (
@@ -197,16 +180,16 @@ export default function MashTimerStep() {
         <Pressable
           style={[
             styles.button,
-            { marginTop: 20, opacity: mash.isRunning() ? 0.5 : 1 },
+            { marginTop: 20, opacity: mash.isRunning ? 0.5 : 1 },
           ]}
           onPress={nextStep}
-          disabled={mash.isRunning()}
+          disabled={mash.isRunning}
         >
           <Text style={styles.buttonText}>Nächster Schritt</Text>
         </Pressable>
       )}
 
-      {mash.timer && timeLeft <= 0 && stepIndex === steps.length - 1 && (
+      {!isRunning && timeLeft <= 0 && stepIndex === steps.length - 1 && (
         <Pressable
           style={[styles.button, { marginTop: 20 }]}
           onPress={goToBoil}
@@ -220,11 +203,11 @@ export default function MashTimerStep() {
           styles.button,
           {
             backgroundColor: colors.secondary,
-            opacity: mash.isRunning() ? 0.5 : 1,
+            opacity: mash.isRunning ? 0.5 : 1,
           },
         ]}
         onPress={goToBoil}
-        disabled={mash.isRunning()}
+        disabled={mash.isRunning}
       >
         <Text style={styles.buttonText}>Überspringen</Text>
       </Pressable>

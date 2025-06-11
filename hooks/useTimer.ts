@@ -1,76 +1,159 @@
+// hooks/useTimer.ts
 import { useEffect, useRef, useState } from "react";
-import { AppState, AppStateStatus } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export function useTimer(initialDuration: number) {
-  const [paused, setPaused] = useState(true);
-  const [endTime, setEndTime] = useState<number | null>(null);
-  const [now, setNow] = useState(Date.now());
-  const [frozenTime, setFrozenTime] = useState<number | null>(initialDuration);
-  const appState = useRef(AppState.currentState);
+interface TimerState {
+  id: string;
+  startTimestamp: number;
+  duration: number;
+  isPaused: boolean;
+  pauseTimestamp?: number;
+}
+
+interface UseTimerProps {
+  id: string;
+  onFinish?: () => void;
+}
+
+export function useTimer({ id, onFinish }: UseTimerProps) {
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [isRunning, setIsRunning] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const storageKey = `TIMER_STATE_${id}`;
+
+  const tick = (start: number, duration: number) => {
+    const now = Date.now();
+    const elapsed = now - start;
+    const remaining = Math.max(0, duration - elapsed);
+    setTimeLeft(remaining);
+
+    if (remaining <= 0) {
+      clearInterval(intervalRef.current!);
+      setIsRunning(false);
+      setIsPaused(false);
+      AsyncStorage.removeItem(storageKey);
+      onFinish?.();
+    }
+  };
+
+  const start = async (duration: number) => {
+    const startTimestamp = Date.now();
+
+    const timerState: TimerState = {
+      id,
+      startTimestamp,
+      duration,
+      isPaused: false,
+    };
+
+    await AsyncStorage.setItem(storageKey, JSON.stringify(timerState));
+    setTimeLeft(duration);
+    setIsRunning(true);
+    setIsPaused(false);
+    tick(startTimestamp, duration);
+    intervalRef.current = setInterval(
+      () => tick(startTimestamp, duration),
+      1000
+    );
+  };
+
+  const pause = async () => {
+    if (!isRunning) return;
+
+    const raw = await AsyncStorage.getItem(storageKey);
+    if (!raw) return;
+
+    const state = JSON.parse(raw) as TimerState;
+    const now = Date.now();
+    const elapsed = now - state.startTimestamp;
+    const remaining = Math.max(0, state.duration - elapsed);
+
+    const updatedState: TimerState = {
+      ...state,
+      duration: remaining,
+      isPaused: true,
+      pauseTimestamp: now,
+    };
+
+    await AsyncStorage.setItem(storageKey, JSON.stringify(updatedState));
+    clearInterval(intervalRef.current!);
+    setTimeLeft(remaining);
+    setIsRunning(false);
+    setIsPaused(true);
+  };
+
+  const resume = async () => {
+    const raw = await AsyncStorage.getItem(storageKey);
+    if (!raw) return;
+
+    const state = JSON.parse(raw) as TimerState;
+    if (!state.isPaused) return;
+
+    const startTimestamp = Date.now();
+
+    const updatedState: TimerState = {
+      id,
+      startTimestamp,
+      duration: state.duration,
+      isPaused: false,
+    };
+
+    await AsyncStorage.setItem(storageKey, JSON.stringify(updatedState));
+    setTimeLeft(state.duration);
+    setIsRunning(true);
+    setIsPaused(false);
+    tick(startTimestamp, state.duration);
+    intervalRef.current = setInterval(
+      () => tick(startTimestamp, state.duration),
+      1000
+    );
+  };
+
+  const reset = async () => {
+    clearInterval(intervalRef.current!);
+    await AsyncStorage.removeItem(storageKey);
+    setIsRunning(false);
+    setIsPaused(false);
+    setTimeLeft(0);
+  };
+
+  const restore = async () => {
+    const raw = await AsyncStorage.getItem(storageKey);
+    if (!raw) return;
+    const state = JSON.parse(raw) as TimerState;
+
+    if (state.isPaused) {
+      setTimeLeft(state.duration);
+      setIsRunning(false);
+      setIsPaused(true);
+    } else {
+      const now = Date.now();
+      const elapsed = now - state.startTimestamp;
+      const remaining = Math.max(0, state.duration - elapsed);
+      setTimeLeft(remaining);
+      setIsRunning(true);
+      setIsPaused(false);
+      intervalRef.current = setInterval(
+        () => tick(state.startTimestamp, state.duration),
+        1000
+      );
+    }
+  };
 
   useEffect(() => {
-    const sub = AppState.addEventListener("change", handleAppStateChange);
-    return () => sub.remove();
+    restore();
+    return () => clearInterval(intervalRef.current!);
   }, []);
-
-  const handleAppStateChange = (nextAppState: AppStateStatus) => {
-    if (
-      appState.current.match(/inactive|background/) &&
-      nextAppState === "active"
-    ) {
-      setNow(Date.now());
-    }
-    appState.current = nextAppState;
-  };
-
-  useEffect(() => {
-    if (!endTime || paused) return;
-    const interval = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(interval);
-  }, [endTime, paused]);
-
-  const timeLeft =
-    endTime && !paused
-      ? Math.max(0, Math.floor((endTime - now) / 1000))
-      : frozenTime ?? 0;
-
-  const minutes = Math.floor(timeLeft / 60);
-  const seconds = timeLeft % 60;
-
-  const togglePause = () => {
-    if (!paused) {
-      setFrozenTime(timeLeft);
-    } else {
-      if (frozenTime !== null) {
-        const newEndTime = Date.now() + frozenTime * 1000;
-        setEndTime(newEndTime);
-      }
-      setFrozenTime(null);
-      setNow(Date.now());
-    }
-    setPaused((p) => !p);
-  };
-
-  const reset = (startImmediately = false) => {
-    if (startImmediately) {
-      const targetEnd = Date.now() + initialDuration * 1000;
-      setEndTime(targetEnd);
-      setPaused(false);
-      setFrozenTime(null);
-    } else {
-      setFrozenTime(initialDuration);
-      setPaused(true);
-      setEndTime(null);
-    }
-    setNow(Date.now());
-  };
 
   return {
     timeLeft,
-    minutes,
-    seconds,
-    paused,
-    togglePause,
+    isRunning,
+    isPaused,
+    start,
+    pause,
+    resume,
     reset,
   };
 }

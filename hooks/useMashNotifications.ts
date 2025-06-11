@@ -1,41 +1,53 @@
-import { loadNotifee } from "@/utils/notifeeWrapper";
+import {
+  createTriggerNotification,
+  cancelNotification,
+  createChannel,
+} from "@/utils/notifeeWrapper";
 
-export const scheduleMashNotification = async ({
-  duration,
-  stepIndex,
-  onScheduled,
-}: {
-  duration: number; // in seconds
-  stepIndex: number;
-  onScheduled?: (id: string) => void;
-}) => {
-  const notifee = await loadNotifee();
-  if (!notifee) return;
+export type MashStep = {
+  title: string;
+  offsetMinutes: number;
+};
 
-  const triggerTimestamp = Date.now() + duration * 1000;
+export async function scheduleMashNotifications(
+  steps: MashStep[],
+  startTimestamp: number
+) {
+  for (let i = 0; i < steps.length; i++) {
+    const step = steps[i];
+    const timestamp = startTimestamp + step.offsetMinutes * 60 * 1000;
 
-  const trigger: import('@notifee/react-native').TimestampTrigger = {
-    type: notifee.TriggerType.TIMESTAMP as import('@notifee/react-native').TriggerType.TIMESTAMP,
-    timestamp: triggerTimestamp,
-    alarmManager: true,
-  };
-
-  //console.log("About to call createTriggerNotification");
-  const id = await notifee.default.createTriggerNotification(
-    {
-      title: "Timer abgelaufen",
-      body: "Der nächste Schritt kann beginnen.",
-      android: {
-        channelId: "mash-timer",
-        smallIcon: "ic_stat_desifriends", // ensure this icon exists
-        largeIcon: require("@/assets/images/favicon.png"),
-        pressAction: {
-          id: "default",
+    await createTriggerNotification(
+      {
+        id: `mash-step-${i}`,
+        title: "Maischeschritt",
+        body: `${step.title} beginnt jetzt`,
+        android: {
+          channelId: "mash-steps",
+          smallIcon: "ic_stat_desifriends", // ensure this icon exists
+          largeIcon: require("@/assets/images/favicon.png"),
+          pressAction: { id: "default" },
         },
       },
-    },
-    trigger
-  );
+      {
+        type: 1, // TriggerType.TIMESTAMP
+        timestamp,
+        alarmManager: { allowWhileIdle: true },
+      }
+    );
+  }
+}
 
-  onScheduled?.(id);
-};
+export async function cancelMashNotifications(steps: MashStep[]) {
+  for (let i = 0; i < steps.length; i++) {
+    await cancelNotification(`mash-step-${i}`);
+  }
+}
+
+export async function setupMashNotificationChannel() {
+  await createChannel({
+    id: "mash-steps",
+    name: "Maischezeit Benachrichtigungen",
+    importance: 4, // AndroidImportance.HIGH
+  });
+}

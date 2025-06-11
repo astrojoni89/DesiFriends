@@ -1,7 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { View, Text, Pressable, StyleSheet, Alert } from "react-native";
-// import * as Notifications from "expo-notifications";
-// import notifee from "@notifee/react-native";
 import { loadNotifee } from "@/utils/notifeeWrapper";
 import * as Device from "expo-device";
 import { useRecipes } from "@/context/RecipeContext";
@@ -10,7 +8,11 @@ import { Ionicons } from "@expo/vector-icons";
 import type { AppTheme } from "@/theme/theme";
 import { useEffect, useState, useCallback } from "react";
 import { useTimerContext } from "@/context/TimerContext";
-import { scheduleHopNotifications } from "@/hooks/useHopNotifications";
+import {
+  scheduleBoilNotifications,
+  cancelBoilNotifications,
+  setupBoilNotificationChannel,
+} from "@/hooks/useBoilNotifications";
 
 import { AnimatedCircularProgress } from "react-native-circular-progress";
 
@@ -28,6 +30,8 @@ export default function BoilTimer() {
 
   const boilMinutes = parseInt(recipe?.boilTime || "0");
   const boilSeconds = boilMinutes * 60;
+  const boilDurationMs = boilSeconds * 1000;
+
   const hopSchedule = recipe?.hopSchedule || [];
 
   const scaleFactor =
@@ -35,163 +39,94 @@ export default function BoilTimer() {
       ? parseFloat(targetSize) / recipe.batchSize
       : 1;
 
-  const [stepIndex, setStepIndex] = useState(0);
-
-  const { boil, stopAllTimers } = useTimerContext();
-
-  const paused = boil.isPaused();
-  const timeLeft = boil.getTimeLeft();
+  const { boil } = useTimerContext();
+  const { timeLeft, isRunning, isPaused, start, pause, resume, reset } = boil;
 
   useEffect(() => {
-    boil.resetTimer(); // Clear any previous timer state when switching steps
-  }, [stepIndex]);
-
-  useEffect(() => {
-    const maybeReschedule = async () => {
-      if (
-        Device.isDevice &&
-        boil.timer &&
-        !boil.timer.paused &&
-        boil.timer.startTimestamp != null &&
-        recipe?.hopSchedule
-      ) {
-        const now = Date.now();
-        const elapsed = Math.floor((now - boil.timer.startTimestamp) / 1000);
-        const delay = Math.max(1, boil.timer.duration - elapsed);
-
-        await scheduleHopNotifications({
-          hopSchedule: recipe.hopSchedule,
-          boilSeconds: boil.timer.duration,
-          scaleFactor,
-          timeLeft: delay,
-        });
-      }
-    };
-
-    maybeReschedule();
-  }, [boil.timer?.startTimestamp]);
-
-  useEffect(() => {
-    if (boil.timer && boil.timer.timeLeft <= 0) {
-      router.replace({
-        pathname: "/brewflow/[id]/complete",
-        params: { id, targetSize },
-      });
-    }
-  }, [boil.timer?.timeLeft]);
+    setupBoilNotificationChannel();
+  }, []);
 
   const getDisplayTime = () => {
-    if (!boil.timer) {
-      const m = Math.floor(boilSeconds / 60);
-      const s = boilSeconds % 60;
-      return `${m}:${s.toString().padStart(2, "0")}`;
-    }
-    return boil.getFormattedTime();
+    const ms = isRunning || timeLeft > 0 ? timeLeft : boilDurationMs;
+    const secs = Math.floor(ms / 1000);
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
-  const handleTogglePause = async () => {
-    const notifee = await loadNotifee();
-
-    if (!boil.timer) {
-      const startBoil = async () => {
-        await stopAllTimers(); // 🚫 clear all timers & notifications
-
-        boil.startTimer({
-          id: `boil-${id}`,
-          type: "boil",
-          stepIndex: 0,
-          duration: boilSeconds,
-        });
-
-        if (Device.isDevice && notifee) {
-          await scheduleHopNotifications({
-            hopSchedule,
-            boilSeconds,
-            scaleFactor,
-            timeLeft: boilSeconds,
-          });
-
-          await notifee.default.displayNotification({
-            title: "Kochen abgeschlossen",
-            body: "Die Kochzeit ist vorbei. Zeit für die nächste Phase!",
-            android: {
-              channelId: "boil-timer",
-              pressAction: { id: "default" },
-              timestamp: Date.now() + boilSeconds * 1000,
-              showTimestamp: true,
-            },
-          });
-        }
-      };
-
-      if (hopsAtStart.length > 0) {
-        const hopText = hopsAtStart
-          .map(
-            (hop) =>
-              `${(parseFloat(hop.amount) * scaleFactor).toFixed(1)} g ${
-                hop.name
-              }`
-          )
-          .join(", ");
-
-        Alert.alert("Vorderwürzehopfen", hopText, [
-          {
-            text: "Starte Kochtimer",
-            onPress: startBoil,
-          },
-        ]);
-      } else {
-        await startBoil();
-      }
-
-      return;
-    }
-
-    if (paused) {
-      boil.resumeTimer();
-
-      if (Device.isDevice && boil.timer?.startTimestamp != null && notifee) {
-        const now = Date.now();
-        const elapsed = Math.floor((now - boil.timer.startTimestamp) / 1000);
-        const delay = Math.max(1, boil.timer.duration - elapsed);
-
-        await scheduleHopNotifications({
-          hopSchedule,
-          boilSeconds: boil.timer.duration,
-          scaleFactor,
-          timeLeft: delay,
-        });
-
-        await notifee.default.displayNotification({
-          title: "Kochen abgeschlossen",
-          body: "Die Kochzeit ist vorbei. Zeit für die nächste Phase!",
-          android: {
-            channelId: "boil-timer",
-            pressAction: { id: "default" },
-            timestamp: Date.now() + delay * 1000,
-            showTimestamp: true,
-          },
-        });
-      }
-    } else {
-      if (notifee) {
-        await notifee.default.cancelAllNotifications();
-      }
-      boil.pauseTimer();
-    }
-  };
-
-  const handleReset = async () => {
-    await stopAllTimers();
-  };
+  const getNotificationHops = () =>
+    hopSchedule.map((hop) => ({
+      name: hop.name,
+      offsetMinutes: boilMinutes - parseInt(hop.time || "0"), // from start
+    }));
 
   const hopsAtStart = hopSchedule.filter(
     (hop) => parseInt(hop.time) * 60 >= boilSeconds
   );
 
-  const total = boilSeconds;
-  const timer = boil.timer;
-  const circleFill = !timer && timeLeft === 0 ? 100 : (timeLeft / total) * 100;
+  const handleTogglePause = async () => {
+    const now = Date.now();
+
+    if (!isRunning) {
+      if (timeLeft > 0 && timeLeft < boilDurationMs) {
+        await resume(); // 🔁 Resume
+
+        if (Device.isDevice) {
+          // Cancel old notifications
+          await cancelBoilNotifications(getNotificationHops());
+
+          // Reschedule only the remaining ones based on timeLeft
+          await scheduleBoilNotifications(
+            getNotificationHops(),
+            now + timeLeft,
+            boilMinutes
+          );
+        }
+      } else {
+        const startBoil = async () => {
+          await start(boilDurationMs); // ▶️ First start
+          if (Device.isDevice) {
+            await scheduleBoilNotifications(
+              getNotificationHops(),
+              now,
+              boilMinutes
+            );
+          }
+        };
+
+        if (hopsAtStart.length > 0) {
+          const hopText = hopsAtStart
+            .map(
+              (hop) =>
+                `${(parseFloat(hop.amount) * scaleFactor).toFixed(1)} g ${
+                  hop.name
+                }`
+            )
+            .join(", ");
+
+          Alert.alert("Vorderwürzehopfen", hopText, [
+            { text: "Starte Kochtimer", onPress: async () => await startBoil() },
+          ]);
+        } else {
+          await startBoil();
+        }
+      }
+    } else {
+      await pause(); // ⏸ Pause
+      if (Device.isDevice) {
+        const notifee = await loadNotifee();
+        if (notifee) await notifee.default.cancelAllNotifications();
+      }
+    }
+  };
+
+  const handleReset = async () => {
+    await reset();
+    await cancelBoilNotifications(getNotificationHops());
+  };
+
+  const effectiveTime = isRunning || timeLeft > 0 ? timeLeft : boilDurationMs;
+  const circleFill = (effectiveTime / boilDurationMs) * 100;
 
   if (!recipe || boilMinutes <= 0) {
     return (
@@ -227,7 +162,7 @@ export default function BoilTimer() {
       <View style={{ flexDirection: "row", gap: 12 }}>
         <Pressable style={styles.iconButton} onPress={handleTogglePause}>
           <Ionicons
-            name={paused ? "play" : "pause"}
+            name={!isRunning ? "play" : "pause"}
             size={28}
             color={colors.onPrimary}
           />
