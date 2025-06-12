@@ -59,7 +59,7 @@ export default function MashTimerStep() {
     if (isRunning || timeLeft > 0) {
       return formatTimeLeft(timeLeft);
     }
-    return formatTimeLeft(durationMs); // show full duration if not started
+    return "0:00";
   };
 
   const getNotificationSteps = () =>
@@ -121,7 +121,7 @@ export default function MashTimerStep() {
 
   // Detect first load: no timer ever started, and no time elapsed
   const isFirstStart = timeLeft === 0;
-  const effectiveTime = isRunning || timeLeft > 0 ? timeLeft : durationMs;
+  const effectiveTime = Math.max(timeLeft, 0); //isRunning || timeLeft > 0 ? timeLeft : durationMs;
   const circleFill = (effectiveTime / durationMs) * 100;
 
   if (!recipe || steps.length === 0 || !step) {

@@ -33,17 +33,30 @@ export async function loadNotifee() {
           console.log("🔐 [MockNotifee] requestPermission");
           return { authorizationStatus: 1 };
         },
+        getNotificationSettings: async () => {
+          console.log("⚙️ [MockNotifee] getNotificationSettings");
+          return {
+            authorizationStatus: 1, // AUTHORIZED
+            android: { alarm: 1 }, // ENABLED
+          };
+        },
+        openAlarmPermissionSettings: async () => {
+          console.log("🛠 [MockNotifee] openAlarmPermissionSettings");
+        },
+        openNotificationSettings: async () => {
+          console.log("🛠 [MockNotifee] openNotificationSettings");
+        },
       },
       AndroidImportance: {
-          HIGH: 4,
-          DEFAULT: 3,
-          LOW: 2,
-          MIN: 1,
-          NONE: 0,
-        },
-        TriggerType: {
-          TIMESTAMP: 1,
-        },
+        HIGH: 4,
+        DEFAULT: 3,
+        LOW: 2,
+        MIN: 1,
+        NONE: 0,
+      },
+      TriggerType: {
+        TIMESTAMP: 1,
+      },
     } as any;
   }
 
@@ -67,7 +80,10 @@ export async function cancelAllNotifications() {
   return notifee?.default.cancelAllNotifications();
 }
 
-export async function createTriggerNotification(notification: any, trigger: any) {
+export async function createTriggerNotification(
+  notification: any,
+  trigger: any
+) {
   const notifee = await loadNotifee();
   return notifee?.default.createTriggerNotification(notification, trigger);
 }
@@ -75,4 +91,24 @@ export async function createTriggerNotification(notification: any, trigger: any)
 export async function cancelNotification(id: string) {
   const notifee = await loadNotifee();
   return notifee?.default.cancelNotification(id);
+}
+
+export async function getNotificationSettings() {
+  const notifee = await loadNotifee();
+  return notifee?.default.getNotificationSettings?.();
+}
+
+export async function openAlarmPermissionSettings() {
+  const notifee = await loadNotifee();
+  return notifee?.default.openAlarmPermissionSettings?.();
+}
+
+export async function requestPermission() {
+  const notifee = await loadNotifee();
+  return notifee?.default.requestPermission?.();
+}
+
+export async function openNotificationSettings() {
+  const notifee = await loadNotifee();
+  return notifee?.default.openNotificationSettings();
 }
