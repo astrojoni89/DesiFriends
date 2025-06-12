@@ -47,7 +47,8 @@ export default function BoilTimer() {
   }, []);
 
   const getDisplayTime = () => {
-    const secs = Math.floor(effectiveTime / 1000);
+    const ms = isRunning || timeLeft > 0 ? timeLeft : boilDurationMs;
+    const secs = Math.floor(ms / 1000);
     const m = Math.floor(secs / 60);
     const s = secs % 60;
     return `${m}:${s.toString().padStart(2, "0")}`;
@@ -104,10 +105,7 @@ export default function BoilTimer() {
             .join(", ");
 
           Alert.alert("Vorderwürzehopfen", hopText, [
-            {
-              text: "Starte Kochtimer",
-              onPress: async () => await startBoil(),
-            },
+            { text: "Starte Kochtimer", onPress: async () => await startBoil() },
           ]);
         } else {
           await startBoil();
@@ -127,8 +125,7 @@ export default function BoilTimer() {
     await cancelBoilNotifications(getNotificationHops());
   };
 
-  const isFirstStart = timeLeft === 0 && !isRunning;
-  const effectiveTime = isFirstStart ? boilDurationMs : Math.max(timeLeft, 0);
+  const effectiveTime = isRunning || timeLeft > 0 ? timeLeft : boilDurationMs;
   const circleFill = (effectiveTime / boilDurationMs) * 100;
 
   if (!recipe || boilMinutes <= 0) {
