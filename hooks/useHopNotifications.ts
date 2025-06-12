@@ -22,12 +22,12 @@ export const scheduleHopNotifications = async ({
   const notifee = await loadNotifee();
   if (!notifee) return;
 
-  //console.log("[scheduleHopNotifications] Scheduling...", {
-  //  hopSchedule,
-  //  boilSeconds,
-  //  scaleFactor,
-  //  timeLeft,
-  //});
+  console.log("[scheduleHopNotifications] Scheduling...", {
+    hopSchedule,
+    boilSeconds,
+    scaleFactor,
+    timeLeft,
+  });
 
   // 🚫 Cancel all previous scheduled notifications
   await notifee.default.cancelAllNotifications();
@@ -43,9 +43,9 @@ export const scheduleHopNotifications = async ({
       hop.name
     }`;
 
-    //console.log(
-    //  `🔔 Scheduling ${hopText} at T-${hop.time} min (${delay} sec from now)`
-    //);
+    console.log(
+      `🔔 Scheduling ${hopText} at T-${hop.time} min (${delay} sec from now)`
+    );
 
     const triggerTimestamp = Date.now() + delay * 1000;
     const trigger: import("@notifee/react-native").TimestampTrigger = {
