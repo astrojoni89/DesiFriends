@@ -14,23 +14,20 @@ export async function loadNotifee() {
     notifee = {
       default: {
         displayNotification: async (...args: any[]) => {
-          console.log("🔔 [MockNotifee] displayNotification", ...args);
+          //console.log("🔔 [MockNotifee] displayNotification", ...args);
         },
         cancelAllNotifications: async () => {
-          console.log("❌ [MockNotifee] cancelAllNotifications");
-        },
-        cancelNotification: async (...args: any[]) => {
-          console.log("❌ [MockNotifee] cancelNotification");
+          //console.log("❌ [MockNotifee] cancelAllNotifications");
         },
         createTriggerNotification: async (...args: any[]) => {
-          console.log("📆 [MockNotifee] createTriggerNotification", ...args);
+          //console.log("📆 [MockNotifee] createTriggerNotification", ...args);
           return "mock-id";
         },
         createChannel: async (...args: any[]) => {
-          console.log("📡 [MockNotifee] createChannel", ...args);
+          //console.log("📡 [MockNotifee] createChannel", ...args);
         },
         requestPermission: async () => {
-          console.log("🔐 [MockNotifee] requestPermission");
+          //console.log("🔐 [MockNotifee] requestPermission");
           return { authorizationStatus: 1 };
         },
       },
@@ -65,14 +62,4 @@ export async function createChannel(channel: any) {
 export async function cancelAllNotifications() {
   const notifee = await loadNotifee();
   return notifee?.default.cancelAllNotifications();
-}
-
-export async function createTriggerNotification(notification: any, trigger: any) {
-  const notifee = await loadNotifee();
-  return notifee?.default.createTriggerNotification(notification, trigger);
-}
-
-export async function cancelNotification(id: string) {
-  const notifee = await loadNotifee();
-  return notifee?.default.cancelNotification(id);
 }

@@ -36,4 +36,5 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
-/backup
+backup.tsx
+colors_backup.ts
