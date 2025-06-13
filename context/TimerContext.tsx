@@ -5,8 +5,6 @@ import React, {
   useRef,
   useState,
 } from "react";
-// import * as Notifications from "expo-notifications";
-// import notifee, { TimestampTrigger, TriggerType } from '@notifee/react-native';
 import { loadNotifee } from "@/utils/notifeeWrapper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -116,19 +114,6 @@ function useDualTimer(type: TimerType): TimerMethods {
     restore();
   }, []);
 
-  // useEffect(() => {
-  //   intervalRef.current = setInterval(() => {
-  //     setTimer((prev) => {
-  //       if (!prev || prev.paused || prev.startTimestamp === null) return prev;
-  //       const elapsed = Math.floor((Date.now() - prev.startTimestamp) / 1000);
-  //       const timeLeft = Math.max(0, prev.duration - elapsed);
-  //       return { ...prev, timeLeft };
-  //     });
-  //   }, 1000);
-  //   return () => {
-  //     if (intervalRef.current) clearInterval(intervalRef.current);
-  //   };
-  // }, []);
   useEffect(() => {
     intervalRef.current = setInterval(() => {
       setTimer((prev) => {

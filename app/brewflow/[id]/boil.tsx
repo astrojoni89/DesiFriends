@@ -1,7 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { View, Text, Pressable, StyleSheet, Alert } from "react-native";
-// import * as Notifications from "expo-notifications";
-// import notifee from "@notifee/react-native";
 import { loadNotifee } from "@/utils/notifeeWrapper";
 import * as Device from "expo-device";
 import { useRecipes } from "@/context/RecipeContext";
@@ -113,7 +111,7 @@ export default function BoilTimer() {
 
           await notifee.default.displayNotification({
             title: "Kochen abgeschlossen",
-            body: "Die Kochzeit ist vorbei. Zeit für die nächste Phase!",
+            body: "Zeit zum Abkühlen! Das geht am besten mit einem Bier!",
             android: {
               channelId: "boil-timer",
               pressAction: { id: "default" },
@@ -137,7 +135,13 @@ export default function BoilTimer() {
         Alert.alert("Vorderwürzehopfen", hopText, [
           {
             text: "Starte Kochtimer",
-            onPress: startBoil,
+            onPress: () => {
+              setTimeout(() => {
+                startBoil().catch((err) =>
+                  console.error("Failed to start boil timer:", err)
+                );
+              }, 0);
+            },
           },
         ]);
       } else {

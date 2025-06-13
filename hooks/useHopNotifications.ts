@@ -1,4 +1,5 @@
-import { loadNotifee } from "@/utils/notifeeWrapper";
+import { loadNotifee, requestPermission } from "@/utils/notifeeWrapper";
+import { ensureNotificationPermissions } from "@/utils/checkPermissions";
 
 export interface Hop {
   name: string;
@@ -22,12 +23,22 @@ export const scheduleHopNotifications = async ({
   const notifee = await loadNotifee();
   if (!notifee) return;
 
-  console.log("[scheduleHopNotifications] Scheduling...", {
-    hopSchedule,
-    boilSeconds,
-    scaleFactor,
-    timeLeft,
-  });
+  const result = await requestPermission();
+
+  const hasPermission = await ensureNotificationPermissions();
+  if (!hasPermission) {
+    console.warn(
+      "❌ Mash notification scheduling skipped due to missing permissions."
+    );
+    return;
+  }
+
+  // console.log("[scheduleHopNotifications] Scheduling...", {
+  //   hopSchedule,
+  //   boilSeconds,
+  //   scaleFactor,
+  //   timeLeft,
+  // });
 
   // 🚫 Cancel all previous scheduled notifications
   await notifee.default.cancelAllNotifications();
@@ -43,15 +54,11 @@ export const scheduleHopNotifications = async ({
       hop.name
     }`;
 
-    console.log(
-      `🔔 Scheduling ${hopText} at T-${hop.time} min (${delay} sec from now)`
-    );
-
     const triggerTimestamp = Date.now() + delay * 1000;
     const trigger: import("@notifee/react-native").TimestampTrigger = {
       type: notifee.TriggerType.TIMESTAMP,
       timestamp: triggerTimestamp,
-      alarmManager: true,
+      alarmManager: { allowWhileIdle: true },
     };
 
     await notifee.default.createTriggerNotification(
@@ -62,6 +69,8 @@ export const scheduleHopNotifications = async ({
           channelId: "boil-timer",
           smallIcon: "ic_stat_desifriends", // required in real builds
           largeIcon: require("@/assets/images/favicon.png"),
+          timestamp: triggerTimestamp,
+          showTimestamp: true,
           pressAction: { id: "default" },
         },
       },

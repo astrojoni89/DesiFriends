@@ -1,4 +1,5 @@
-import { loadNotifee } from "@/utils/notifeeWrapper";
+import { loadNotifee, requestPermission } from "@/utils/notifeeWrapper";
+import { ensureNotificationPermissions } from "@/utils/checkPermissions";
 
 export const scheduleMashNotification = async ({
   duration,
@@ -12,15 +13,24 @@ export const scheduleMashNotification = async ({
   const notifee = await loadNotifee();
   if (!notifee) return;
 
+  const result = await requestPermission();
+
+  const hasPermission = await ensureNotificationPermissions();
+  if (!hasPermission) {
+    console.warn(
+      "❌ Mash notification scheduling skipped due to missing permissions."
+    );
+    return;
+  }
+
   const triggerTimestamp = Date.now() + duration * 1000;
 
-  const trigger: import('@notifee/react-native').TimestampTrigger = {
-    type: notifee.TriggerType.TIMESTAMP as import('@notifee/react-native').TriggerType.TIMESTAMP,
+  const trigger: import("@notifee/react-native").TimestampTrigger = {
+    type: notifee.TriggerType
+      .TIMESTAMP as import("@notifee/react-native").TriggerType.TIMESTAMP,
     timestamp: triggerTimestamp,
-    alarmManager: true,
+    alarmManager: { allowWhileIdle: true },
   };
-
-  console.log("About to call createTriggerNotification");
   const id = await notifee.default.createTriggerNotification(
     {
       title: "Timer abgelaufen",
@@ -29,6 +39,8 @@ export const scheduleMashNotification = async ({
         channelId: "mash-timer",
         smallIcon: "ic_stat_desifriends", // ensure this icon exists
         largeIcon: require("@/assets/images/favicon.png"),
+        timestamp: triggerTimestamp,
+        showTimestamp: true,
         pressAction: {
           id: "default",
         },
