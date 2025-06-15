@@ -85,6 +85,7 @@ export default function MashTimerStep() {
         type: "mash",
         stepIndex,
         duration: durationSec,
+        targetSize: targetSize,
       });
 
       if (Device.isDevice) {

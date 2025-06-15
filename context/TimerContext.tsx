@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import { loadNotifee } from "@/utils/notifeeWrapper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { router, useRouter } from "expo-router";
 
 export type TimerType = "mash" | "boil";
 
@@ -19,6 +20,7 @@ interface TimerState {
   paused: boolean;
   startTimestamp: number | null;
   notificationIds: Record<number, string>;
+  targetSize?: string;
 }
 
 interface TimerMethods {
@@ -145,6 +147,7 @@ function useDualTimer(type: TimerType): TimerMethods {
     id,
     stepIndex,
     duration,
+    targetSize,
   }: Omit<
     TimerState,
     "notificationIds" | "paused" | "timeLeft" | "startTimestamp"
@@ -154,6 +157,7 @@ function useDualTimer(type: TimerType): TimerMethods {
       type,
       stepIndex,
       duration,
+      targetSize,
       paused: false,
       startTimestamp: Date.now(),
       timeLeft: duration,
@@ -267,6 +271,23 @@ export const TimerProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     loadNotifee().then(setNotifee);
   }, []);
+
+  // Auto-redirect on restore
+  useEffect(() => {
+    if (mash.isRestoring || boil.isRestoring) return;
+
+    if (mash.isRunning() && mash.timer?.id) {
+      router.replace({
+        pathname: "/brewflow/[id]/mash",
+        params: { id: mash.timer.id, targetSize: mash.timer.targetSize },
+      });
+    } else if (boil.isRunning() && boil.timer?.id) {
+      router.replace({
+        pathname: "/brewflow/[id]/boil",
+        params: { id: boil.timer.id, targetSize: boil.timer.targetSize },
+      });
+    }
+  }, [mash.isRestoring, boil.isRestoring, mash.timer, boil.timer]);
 
   const stopAllTimers = async () => {
     if (!notifee) return;

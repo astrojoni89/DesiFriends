@@ -37,13 +37,14 @@ export const scheduleMashNotification = async ({
       body: "Der nächste Schritt kann beginnen.",
       android: {
         channelId: "mash-timer",
-        smallIcon: "ic_stat_desifriends", // ensure this icon exists
+        smallIcon: "ic_stat_mash", // ensure this icon exists
         largeIcon: require("@/assets/images/favicon.png"),
         timestamp: triggerTimestamp,
         showTimestamp: true,
         pressAction: {
           id: "default",
         },
+        color: "#face7d",
       },
     },
     trigger

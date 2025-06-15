@@ -33,13 +33,6 @@ export const scheduleHopNotifications = async ({
     return;
   }
 
-  // console.log("[scheduleHopNotifications] Scheduling...", {
-  //   hopSchedule,
-  //   boilSeconds,
-  //   scaleFactor,
-  //   timeLeft,
-  // });
-
   // 🚫 Cancel all previous scheduled notifications
   await notifee.default.cancelAllNotifications();
 
@@ -67,11 +60,12 @@ export const scheduleHopNotifications = async ({
         body: `${hopText} jetzt zugeben (${hop.time} Minuten vor Ende)!`,
         android: {
           channelId: "boil-timer",
-          smallIcon: "ic_stat_desifriends", // required in real builds
+          smallIcon: "ic_stat_hop", // required in real builds
           largeIcon: require("@/assets/images/favicon.png"),
           timestamp: triggerTimestamp,
           showTimestamp: true,
           pressAction: { id: "default" },
+          color: "#face7d",
         },
       },
       trigger
