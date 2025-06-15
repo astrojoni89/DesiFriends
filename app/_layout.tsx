@@ -96,7 +96,7 @@ function AppWithTheming() {
         const recipeId = boil.timer.id.split("-")[1];
         router.replace(`/brewflow/${recipeId}/boil`);
       }
-    }, [mash.isRestoring, boil.isRestoring]);
+    }, [mash.isRestoring, boil.isRestoring, mash.timer, boil.timer]);
 
     return null;
   }

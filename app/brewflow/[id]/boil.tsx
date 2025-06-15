@@ -109,30 +109,6 @@ export default function BoilTimer() {
             scaleFactor,
             timeLeft: boilSeconds,
           });
-
-          const triggerTimestamp = Date.now() + boilSeconds * 1000;
-          const trigger: import("@notifee/react-native").TimestampTrigger = {
-            type: notifee.TriggerType.TIMESTAMP,
-            timestamp: triggerTimestamp,
-            alarmManager: { allowWhileIdle: true },
-          };
-
-          await notifee.default.createTriggerNotification(
-            {
-              title: "Kochen abgeschlossen",
-              body: "Zeit zum Abkühlen! Das geht am besten mit einem Bier!",
-              android: {
-                channelId: "boil-timer",
-                smallIcon: "ic_stat_complete", // required in real builds
-                largeIcon: require("@/assets/images/favicon.png"),
-                timestamp: triggerTimestamp,
-                showTimestamp: true,
-                pressAction: { id: "default" },
-                color: "#face7d",
-              },
-            },
-            trigger
-          );
         }
       };
 
@@ -179,30 +155,6 @@ export default function BoilTimer() {
           scaleFactor,
           timeLeft: delay,
         });
-
-        const triggerTimestamp = Date.now() + delay * 1000;
-        const trigger: import("@notifee/react-native").TimestampTrigger = {
-          type: notifee.TriggerType.TIMESTAMP,
-          timestamp: triggerTimestamp,
-          alarmManager: { allowWhileIdle: true },
-        };
-
-        await notifee.default.createTriggerNotification(
-          {
-            title: "Kochen abgeschlossen",
-            body: "Die Kochzeit ist vorbei. Zeit für die nächste Phase!",
-            android: {
-              channelId: "boil-timer",
-              smallIcon: "ic_stat_complete", // required in real builds
-              largeIcon: require("@/assets/images/favicon.png"),
-              timestamp: triggerTimestamp,
-              showTimestamp: true,
-              pressAction: { id: "default" },
-              color: "#face7d",
-            },
-          },
-          trigger
-        );
       }
     } else {
       if (notifee) {

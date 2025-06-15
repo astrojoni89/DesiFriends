@@ -73,4 +73,28 @@ export const scheduleHopNotifications = async ({
 
     await new Promise((r) => setTimeout(r, 50)); // spacing out scheduling
   }
+
+  const triggerTimestamp = Date.now() + timeLeft * 1000;
+  const trigger: import("@notifee/react-native").TimestampTrigger = {
+    type: notifee.TriggerType.TIMESTAMP,
+    timestamp: triggerTimestamp,
+    alarmManager: { allowWhileIdle: true },
+  };
+
+  await notifee.default.createTriggerNotification(
+    {
+      title: "Kochen abgeschlossen",
+      body: "Zeit zum Abkühlen! Das geht am besten mit einem Bier!",
+      android: {
+        channelId: "boil-timer",
+        smallIcon: "ic_stat_complete", // required in real builds
+        largeIcon: require("@/assets/images/favicon.png"),
+        timestamp: triggerTimestamp,
+        showTimestamp: true,
+        pressAction: { id: "default" },
+        color: "#face7d",
+      },
+    },
+    trigger
+  );
 };
