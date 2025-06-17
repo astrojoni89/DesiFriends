@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { View, Text, Pressable, StyleSheet } from "react-native";
-// import * as Notifications from "expo-notifications";
-// import notifee from "@notifee/react-native";
-import { loadNotifee } from "@/utils/notifeeWrapper"; // ✅ dynamic safe import
+import { loadNotifee } from "@/utils/notifeeWrapper"; // dynamic safe import
 import * as Device from "expo-device";
 import { useRecipes } from "@/context/RecipeContext";
 import { useTheme } from "react-native-paper";
@@ -15,9 +13,10 @@ import { scheduleMashNotification } from "@/hooks/useMashNotifications";
 import { AnimatedCircularProgress } from "react-native-circular-progress";
 
 export default function MashTimerStep() {
-  const { id, targetSize } = useLocalSearchParams<{
+  const { id, targetSize, actualAlphaAcids } = useLocalSearchParams<{
     id: string;
     targetSize?: string;
+    actualAlphaAcids?: string;
   }>();
   const { getRecipeById } = useRecipes();
   const recipe = getRecipeById(id || "");
@@ -25,6 +24,7 @@ export default function MashTimerStep() {
   const { colors } = theme;
   const styles = createStyles(colors);
   const router = useRouter();
+  const parsedAlphaAcids = actualAlphaAcids ? JSON.parse(actualAlphaAcids) : {};
 
   const steps = recipe?.mashSteps ?? [];
   const [stepIndex, setStepIndex] = useState(0);
@@ -131,7 +131,7 @@ export default function MashTimerStep() {
   const goToBoil = () =>
     router.push({
       pathname: "/brewflow/[id]/boil",
-      params: { id, targetSize },
+      params: { id, targetSize, actualAlphaAcids: JSON.stringify(parsedAlphaAcids), },
     });
 
   const timer = mash.timer;

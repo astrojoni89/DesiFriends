@@ -10,14 +10,12 @@ export interface Hop {
 interface Options {
   hopSchedule: Hop[];
   boilSeconds: number;
-  scaleFactor: number;
   timeLeft: number;
 }
 
 export const scheduleHopNotifications = async ({
   hopSchedule,
   boilSeconds,
-  scaleFactor,
   timeLeft,
 }: Options) => {
   const notifee = await loadNotifee();
@@ -43,9 +41,10 @@ export const scheduleHopNotifications = async ({
     const elapsed = boilSeconds - timeLeft;
     const delay = Math.max(1, boilSeconds - hopSecondsBeforeEnd - elapsed);
 
-    const hopText = `${(parseFloat(hop.amount) * scaleFactor).toFixed(1)} g ${
-      hop.name
-    }`;
+    // const hopText = `${(parseFloat(hop.amount) * scaleFactor).toFixed(1)} g ${
+    //   hop.name
+    // }`;
+    const hopText = `${hop.amount} g ${hop.name}`;
 
     const triggerTimestamp = Date.now() + delay * 1000;
     const trigger: import("@notifee/react-native").TimestampTrigger = {

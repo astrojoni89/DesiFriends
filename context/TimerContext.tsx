@@ -103,7 +103,12 @@ function useDualTimer(type: TimerType): TimerMethods {
             setTimer(null);
             await AsyncStorage.removeItem(storageKey);
           } else {
-            setTimer({ ...parsed, timeLeft: remaining });
+            setTimer({
+              ...parsed,
+              timeLeft: remaining,
+              paused: false, // force paused false
+            });
+            setTimeout(tick, 0); // force immediate tick to update UI immediately
           }
         } else {
           setTimer(parsed);

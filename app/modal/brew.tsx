@@ -484,7 +484,7 @@ export default function BrewModal() {
                 onPress={() =>
                   router.push({
                     pathname: "/brewflow/[id]",
-                    params: { id: recipe.id, targetSize },
+                    params: { id: recipe.id, targetSize, actualAlphaAcids: JSON.stringify(actualAlphaAcids), },
                   })
                 }
               >

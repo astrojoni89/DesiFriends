@@ -13,9 +13,10 @@ import { scheduleHopNotifications } from "@/hooks/useHopNotifications";
 import { AnimatedCircularProgress } from "react-native-circular-progress";
 
 export default function BoilTimer() {
-  const { id, targetSize } = useLocalSearchParams<{
+  const { id, targetSize, actualAlphaAcids } = useLocalSearchParams<{
     id: string;
     targetSize?: string;
+    actualAlphaAcids?: string;
   }>();
   const { getRecipeById } = useRecipes();
   const recipe = getRecipeById(id || "");
@@ -23,6 +24,7 @@ export default function BoilTimer() {
   const { colors } = theme;
   const styles = createStyles(colors);
   const router = useRouter();
+  const parsedAlphaAcids = actualAlphaAcids ? JSON.parse(actualAlphaAcids) : {};
 
   const boilMinutes = parseInt(recipe?.boilTime || "0");
   const boilSeconds = boilMinutes * 60;
@@ -32,6 +34,52 @@ export default function BoilTimer() {
     recipe && recipe.batchSize && targetSize
       ? parseFloat(targetSize) / recipe.batchSize
       : 1;
+
+  type Hop = {
+    name: string;
+    amount: string | number;
+    time?: string | number;
+    [key: string]: any;
+  };
+
+  const adjustedAmount = (hop: Hop) => {
+    const hopIndex = recipe?.hopfen?.findIndex((h) => h.name === hop.name);
+    const originalAA =
+      typeof hopIndex === "number" && hopIndex >= 0
+        ? parseFloat(recipe?.hopfen?.[hopIndex]?.alphaAcid || "0")
+        : 0;
+    const actualAA =
+      typeof hopIndex === "number" && hopIndex >= 0
+        ? parseFloat(parsedAlphaAcids[hopIndex] || originalAA.toString() || "0")
+        : 0;
+
+    let amount = parseFloat(hop.amount as string) * scaleFactor;
+    if (originalAA > 0 && actualAA > 0) {
+      amount *= originalAA / actualAA;
+    }
+    return amount;
+  };
+
+  const adjustedHopSchedule = hopSchedule.map((hop) => {
+    if (!recipe || !recipe.hopfen) {
+      return { ...hop, amount: (parseFloat(hop.amount) * scaleFactor).toFixed(1) };
+    }
+    const hopIndex = recipe.hopfen.findIndex((h) => h.name === hop.name);
+    const originalAA = parseFloat(recipe.hopfen[hopIndex]?.alphaAcid || "0");
+    const actualAA = parseFloat(
+      parsedAlphaAcids[hopIndex] || originalAA.toString() || "0"
+    );
+
+    let adjustedAmount = parseFloat(hop.amount) * scaleFactor;
+    if (originalAA > 0 && actualAA > 0) {
+      adjustedAmount *= originalAA / actualAA;
+    }
+
+    return {
+      ...hop,
+      amount: adjustedAmount.toFixed(1),
+    };
+  });
 
   const [stepIndex, setStepIndex] = useState(0);
 
@@ -58,9 +106,8 @@ export default function BoilTimer() {
         const delay = Math.max(1, boil.timer.duration - elapsed);
 
         await scheduleHopNotifications({
-          hopSchedule: recipe.hopSchedule,
+          hopSchedule: adjustedHopSchedule,
           boilSeconds: boil.timer.duration,
-          scaleFactor,
           timeLeft: delay,
         });
       }
@@ -73,7 +120,11 @@ export default function BoilTimer() {
     if (boil.timer && boil.timer.timeLeft <= 0) {
       router.replace({
         pathname: "/brewflow/[id]/complete",
-        params: { id, targetSize },
+        params: {
+          id,
+          targetSize,
+          actualAlphaAcids: JSON.stringify(parsedAlphaAcids),
+        },
       });
     }
   }, [boil.timer?.timeLeft]);
@@ -104,9 +155,8 @@ export default function BoilTimer() {
 
         if (Device.isDevice && notifee) {
           await scheduleHopNotifications({
-            hopSchedule,
-            boilSeconds,
-            scaleFactor,
+            hopSchedule: adjustedHopSchedule,
+            boilSeconds: boilSeconds,
             timeLeft: boilSeconds,
           });
         }
@@ -150,9 +200,8 @@ export default function BoilTimer() {
         const delay = Math.max(1, boil.timer.duration - elapsed);
 
         await scheduleHopNotifications({
-          hopSchedule,
+          hopSchedule: adjustedHopSchedule,
           boilSeconds: boil.timer.duration,
-          scaleFactor,
           timeLeft: delay,
         });
       }
@@ -171,6 +220,10 @@ export default function BoilTimer() {
   const hopsAtStart = hopSchedule.filter(
     (hop) => parseInt(hop.time) * 60 >= boilSeconds
   );
+
+  const hopText = hopsAtStart
+    .map((hop) => `${adjustedAmount(hop).toFixed(1)} g ${hop.name}`)
+    .join(", ");
 
   const total = boilSeconds;
   const timer = boil.timer;
@@ -225,13 +278,25 @@ export default function BoilTimer() {
       </View>
 
       <Text style={[styles.text, { marginTop: 24 }]}>Hopfengaben:</Text>
-      {hopSchedule.length > 0 ? (
+      {/* {hopSchedule.length > 0 ? (
         hopSchedule
           .sort((a, b) => parseInt(b.time) - parseInt(a.time))
           .map((hop, idx) => (
             <Text key={idx} style={styles.text}>
               {(parseFloat(hop.amount) * scaleFactor).toFixed(1)} g {hop.name} –{" "}
               {hop.time} min vor Ende
+            </Text>
+          ))
+      ) : (
+        <Text style={styles.text}>Keine Hopfengaben gefunden.</Text>
+      )} */}
+      {hopSchedule.length > 0 ? (
+        hopSchedule
+          .sort((a, b) => parseInt(b.time) - parseInt(a.time))
+          .map((hop, idx) => (
+            <Text key={idx} style={styles.text}>
+              {adjustedAmount(hop).toFixed(1)} g {hop.name} – {hop.time} min vor
+              Ende
             </Text>
           ))
       ) : (
