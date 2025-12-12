@@ -91,6 +91,49 @@ export function calculateAlc(og: number, fg: number, unit: string): [string, str
   }
 }
 
+
+export function calculateSugarSucrose(co2Difference: number): [number, number] {
+  var neededSugar = co2Difference/0.468;
+  var addedAlcohol = neededSugar * 0.488/10 * 1.267;
+  return [neededSugar, addedAlcohol];
+}
+
+export function calculateSugarWort(co2Difference: number, og: number, fg: number): [number, number] {
+  var fermentableSugar = (0.8192 * (og - fg)) * 10;
+  var neededSugar = co2Difference/0.468*(1000/fermentableSugar);
+  var addedAlcohol = neededSugar * 0.488/10 * 1.267/10;
+  return [neededSugar, addedAlcohol];
+}
+
+export function calculateSugarGlucose(co2Difference: number): [number, number] {
+  var neededSugar = co2Difference/0.468*1.09;
+  var addedAlcohol = neededSugar * 0.488/10 * 1.267;
+  return [neededSugar, addedAlcohol];
+}
+
+/** Calculate priming sugar wrapper */
+/** Taken from https://www.maischemalzundmehr.de/index.php?inhaltmitte=toolsspeiserechner */
+export function calculateSugar(ftemp: number, carb: number, sunit: string, og?: number, fg?: number): [string, string, string, string] {
+  var co2Pressure = 3.1557*Math.exp(-0.032*ftemp);
+  var co2Difference = carb - co2Pressure;
+
+  if (sunit === "sugar") {
+    var [neededSugar, addedAlcohol] = calculateSugarSucrose(co2Difference);
+  } else if (sunit === "wort") {
+    if (og == null || fg == null) {
+      throw new Error("OG and FG are required when unit is 'wort'");
+    }
+    var [neededSugar, addedAlcohol] = calculateSugarWort(co2Difference, og, fg);
+  } else if (sunit === "glucose") {
+    var [neededSugar, addedAlcohol] = calculateSugarGlucose(co2Difference);
+  }
+  else {
+    throw new Error("Invalid unit. Use 'sugar', 'wort', or 'glucose'.");
+  }
+
+  return [co2Pressure.toFixed(1), co2Difference.toFixed(1), neededSugar.toFixed(1), addedAlcohol.toFixed(1)];
+}
+
 /** Convert unit wrapper  */
 export function convertUnit(
   value: number,

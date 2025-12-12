@@ -15,6 +15,7 @@ const extraLightColors = {
   card: "#f5f5f5", // #f5f5f5
   border: "#cccccc", // #cccccc
   shadow: "#000000",
+  disabledText: "#e9e9e9ff",
 };
 
 const extraDarkColors = {
@@ -24,6 +25,7 @@ const extraDarkColors = {
   card: "#1c1c1c", // #262626
   border: "#333333", // #333333
   shadow: "#ffffff",
+  disabledText: "#333333",
 };
 
 export const lightTheme = {
