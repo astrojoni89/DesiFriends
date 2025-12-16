@@ -90,13 +90,38 @@ export default function CalcsScreen() {
           ? "Erforderliche Zuckermenge:"
           : ""}
       </Text>
-      <Text style={[styles.result, { marginTop: 0 }]}>
+      {/* <Text style={[styles.result, { marginTop: 0 }]}>
         {unit === "wort"
-          ? `${amountToAdd} ml/Liter`
+          ? `${parseFloat(amountToAdd).toFixed(0)} ml/Liter\n(=${parseFloat(amountToAdd).toFixed(0)}ml Speise + ${(1000-parseFloat(parseFloat(amountToAdd).toFixed(0))).toFixed(0)}ml Jungbier)`
           : unit === "sugar"
           ? `${amountToAdd} g/Liter`
           : ""}
-      </Text>
+      </Text> */}
+      {unit === "wort" && (
+        <>
+          <Text style={[styles.result, { marginTop: 0, marginBottom: 2 }]}>
+            {`${parseFloat(amountToAdd).toFixed(0)} ml/Liter`}
+          </Text>
+          <Text
+            style={[styles.secondaryResult, { marginBottom: 0, marginLeft: 4 }]}
+          >
+            {`≙ ${parseFloat(amountToAdd).toFixed(0)} ml Speise + ${(
+              1000 - parseFloat(parseFloat(amountToAdd).toFixed(0))
+            ).toFixed(0)} ml Jungbier`}
+          </Text>
+          <Text
+            style={[styles.secondaryResult, { marginBottom: 8, marginLeft: 4 }]}
+          >
+            {`≙ ${(parseFloat(parseFloat(amountToAdd).toFixed(0)) * (1000/(1000-parseFloat(parseFloat(amountToAdd).toFixed(0))))).toFixed(0)} ml Speise + 1000 ml Jungbier`}
+          </Text>
+        </>
+      )}
+
+      {unit === "sugar" && (
+        <Text style={[styles.result, { marginTop: 0 }]}>
+          {`${amountToAdd} g/Liter`}
+        </Text>
+      )}
       <Text style={styles.secondaryResult}>
         Vorhandenes CO&#8322; im Jungbier: {co2Pressure} g/Liter
       </Text>
@@ -321,13 +346,21 @@ export default function CalcsScreen() {
               placeholderTextColor={colors.outline}
             />
             <TextInput
-              style={styles.input}
+              style={[styles.input, { marginBottom: 0 }]}
               placeholder="Zielgehalt CO&#8322; (g/Liter)"
               keyboardType="decimal-pad"
               value={carb}
               onChangeText={setCarb}
               placeholderTextColor={colors.outline}
             />
+            <Text
+              style={[
+                styles.note,
+                { marginTop: 4, marginLeft: 4, marginBottom: 12 },
+              ]}
+            >
+              (Stout~4.0g/L - Pils/Hell~5.0g/L - Weizen~6.0g/L)
+            </Text>
             <TextInput
               style={styles.input}
               placeholder="Stammwürze der Speise (°P)"
@@ -350,7 +383,8 @@ export default function CalcsScreen() {
             {carbTooHigh ? (
               <View style={{ padding: 12 }}>
                 <Text style={styles.note}>
-                  Der Ziel-CO₂-Gehalt darf {maxCarb.toFixed(1)} g/L nicht überschreiten!
+                  Der Ziel-CO₂-Gehalt darf {maxCarb.toFixed(1)} g/L nicht
+                  überschreiten!
                 </Text>
               </View>
             ) : sunit !== "wort" ? (
@@ -412,9 +446,9 @@ export default function CalcsScreen() {
             >
               <View style={styles.radioRow}>
                 <RadioButton value="brix" />
-                <Text style={styles.radioText}>Brix</Text>
+                <Text style={styles.radioText}>°Brix</Text>
                 <RadioButton value="plato" />
-                <Text style={styles.radioText}>Plato</Text>
+                <Text style={styles.radioText}>°Plato</Text>
                 <RadioButton value="gravity" />
                 <Text style={styles.radioText}>Gravity</Text>
               </View>
@@ -427,9 +461,9 @@ export default function CalcsScreen() {
             >
               <View style={styles.radioRow}>
                 <RadioButton value="brix" />
-                <Text style={styles.radioText}>Brix</Text>
+                <Text style={styles.radioText}>°Brix</Text>
                 <RadioButton value="plato" />
-                <Text style={styles.radioText}>Plato</Text>
+                <Text style={styles.radioText}>°Plato</Text>
                 <RadioButton value="gravity" />
                 <Text style={styles.radioText}>Gravity</Text>
               </View>
@@ -437,9 +471,15 @@ export default function CalcsScreen() {
 
             <TextInput
               style={styles.input}
-              placeholder={`Wert in ${
-                convFrom.charAt(0).toUpperCase() + convFrom.slice(1)
-              }`}
+              placeholder={
+                convFrom === "plato"
+                  ? "Wert in °Plato"
+                  : convFrom === "brix"
+                  ? "Wert in °Brix"
+                  : convFrom === "gravity"
+                  ? "Wert in SG"
+                  : "Wert eingeben"
+              }
               keyboardType="decimal-pad"
               value={convInput}
               onChangeText={setConvInput}

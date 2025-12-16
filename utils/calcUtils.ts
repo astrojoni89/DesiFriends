@@ -92,7 +92,7 @@ export function calculateAlc(og: number, fg: number, unit: string): [string, str
 }
 
 
-export function calculateSugarSucrose(co2Difference: number): [number, number] {
+export function calculateSugarSaccharose(co2Difference: number): [number, number] {
   var neededSugar = co2Difference/0.468;
   var addedAlcohol = neededSugar * 0.488/10 * 1.267;
   return [neededSugar, addedAlcohol];
@@ -101,6 +101,7 @@ export function calculateSugarSucrose(co2Difference: number): [number, number] {
 export function calculateSugarWort(co2Difference: number, og: number, fg: number): [number, number] {
   var fermentableSugar = (0.8192 * (og - fg)) * 10;
   var neededSugar = co2Difference/0.468*(1000/fermentableSugar);
+  var neededSugarNormalized = neededSugar * (1000/(1000-neededSugar));
   var addedAlcohol = neededSugar * 0.488/10 * 1.267/10;
   return [neededSugar, addedAlcohol];
 }
@@ -118,7 +119,7 @@ export function calculateSugar(ftemp: number, carb: number, sunit: string, og?: 
   var co2Difference = carb - co2Pressure;
 
   if (sunit === "sugar") {
-    var [neededSugar, addedAlcohol] = calculateSugarSucrose(co2Difference);
+    var [neededSugar, addedAlcohol] = calculateSugarSaccharose(co2Difference);
   } else if (sunit === "wort") {
     if (og == null || fg == null) {
       throw new Error("OG and FG are required when unit is 'wort'");
@@ -130,9 +131,9 @@ export function calculateSugar(ftemp: number, carb: number, sunit: string, og?: 
   else {
     throw new Error("Invalid unit. Use 'sugar', 'wort', or 'glucose'.");
   }
-
   return [co2Pressure.toFixed(1), co2Difference.toFixed(1), neededSugar.toFixed(1), addedAlcohol.toFixed(1)];
 }
+
 
 /** Convert unit wrapper  */
 export function convertUnit(
