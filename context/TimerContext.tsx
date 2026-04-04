@@ -7,7 +7,6 @@ import React, {
 } from "react";
 import { loadNotifee } from "@/utils/notifeeWrapper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { router, useRouter } from "expo-router";
 
 export type TimerType = "mash" | "boil";
 
@@ -34,6 +33,7 @@ interface TimerMethods {
   pauseTimer: () => void;
   resumeTimer: () => void;
   resetTimer: () => void;
+  extendTimer: (extraSeconds: number) => void;
   getTimeLeft: () => number;
   getFormattedTime: () => string;
   isPaused: () => boolean;
@@ -44,10 +44,15 @@ interface TimerMethods {
   isRestoring: boolean;
 }
 
+type BrewSession = { recipeId: string; targetSize?: string; phase?: "lauter" | "boil" };
+
 type TimerContextValue = {
   mash: TimerMethods;
   boil: TimerMethods;
   stopAllTimers: () => Promise<void>;
+  brewSession: BrewSession | null;
+  startBrewSession: (recipeId: string, targetSize?: string) => Promise<void>;
+  setBrewPhase: (phase: "lauter" | "boil") => Promise<void>;
 };
 
 const TimerContext = createContext<TimerContextValue | undefined>(undefined);
@@ -58,6 +63,8 @@ function useDualTimer(type: TimerType): TimerMethods {
   const storageKey = `activeTimer-${type}`;
   const [isRestoring, setIsRestoring] = useState(true);
 
+  // Single tick function — used by the interval and for immediate updates.
+  // Uses a functional setTimer updater so it never closes over stale state.
   const tick = () => {
     setTimer((prev) => {
       if (!prev || prev.paused || prev.startTimestamp === null) return prev;
@@ -65,19 +72,15 @@ function useDualTimer(type: TimerType): TimerMethods {
       const elapsed = Math.floor((Date.now() - prev.startTimestamp) / 1000);
       const timeLeft = Math.max(0, prev.duration - elapsed);
 
-      if (timeLeft === 0 && !prev.paused) {
-        return {
-          ...prev,
-          timeLeft: 0,
-          paused: true,
-          startTimestamp: null,
-        };
+      if (timeLeft === 0) {
+        return { ...prev, timeLeft: 0, paused: true, startTimestamp: null };
       }
 
       return { ...prev, timeLeft };
     });
   };
 
+  // Persist timer state to AsyncStorage on every change.
   useEffect(() => {
     const persist = async () => {
       if (timer) {
@@ -89,60 +92,52 @@ function useDualTimer(type: TimerType): TimerMethods {
     persist();
   }, [timer]);
 
+  // Restore timer state on mount.
   useEffect(() => {
     const restore = async () => {
-      const saved = await AsyncStorage.getItem(storageKey);
-      if (!saved) return;
       try {
-        const parsed: TimerState = JSON.parse(saved);
-        const now = Date.now();
-        if (!parsed.paused && parsed.startTimestamp) {
-          const elapsed = Math.floor((now - parsed.startTimestamp) / 1000);
-          const remaining = parsed.duration - elapsed;
-          if (remaining <= 0) {
-            setTimer(null);
-            await AsyncStorage.removeItem(storageKey);
+        const saved = await AsyncStorage.getItem(storageKey);
+        if (saved) {
+          const parsed: TimerState = JSON.parse(saved);
+          const now = Date.now();
+
+          if (!parsed.paused && parsed.startTimestamp) {
+            const elapsed = Math.floor((now - parsed.startTimestamp) / 1000);
+            const remaining = parsed.duration - elapsed;
+
+            if (remaining <= 0) {
+              // Timer expired while app was closed. Preserve as an expired
+              // state (timeLeft: 0, paused: true) so the screen can react —
+              // e.g. boil.tsx will auto-navigate to the complete screen.
+              setTimer({
+                ...parsed,
+                timeLeft: 0,
+                paused: true,
+                startTimestamp: null,
+              });
+            } else {
+              setTimer({ ...parsed, timeLeft: remaining, paused: false });
+            }
           } else {
-            setTimer({
-              ...parsed,
-              timeLeft: remaining,
-              paused: false, // force paused false
-            });
-            setTimeout(tick, 0); // force immediate tick to update UI immediately
+            // Paused timer — restore as-is.
+            setTimer(parsed);
           }
-        } else {
-          setTimer(parsed);
         }
       } catch (err) {
         console.warn("Failed to restore timer:", err);
+      } finally {
+        // Always mark restore as complete, even if there was nothing to restore
+        // or an error occurred. Without this, isRestoring stays true forever
+        // and blocks the auto-redirect in TimerProvider.
+        setIsRestoring(false);
       }
-      setIsRestoring(false);
     };
     restore();
   }, []);
 
+  // Single interval — uses the shared tick function directly.
   useEffect(() => {
-    intervalRef.current = setInterval(() => {
-      setTimer((prev) => {
-        if (!prev || prev.paused || prev.startTimestamp === null) return prev;
-
-        const elapsed = Math.floor((Date.now() - prev.startTimestamp) / 1000);
-        const timeLeft = Math.max(0, prev.duration - elapsed);
-
-        // If time is up, pause the timer and clear startTimestamp
-        if (timeLeft === 0 && !prev.paused) {
-          return {
-            ...prev,
-            timeLeft: 0,
-            paused: true,
-            startTimestamp: null,
-          };
-        }
-
-        return { ...prev, timeLeft };
-      });
-    }, 500);
-
+    intervalRef.current = setInterval(tick, 500);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
@@ -175,12 +170,7 @@ function useDualTimer(type: TimerType): TimerMethods {
       if (!prev || prev.paused || prev.startTimestamp === null) return prev;
       const elapsed = Math.floor((Date.now() - prev.startTimestamp) / 1000);
       const remaining = Math.max(0, prev.duration - elapsed);
-      return {
-        ...prev,
-        paused: true,
-        startTimestamp: null,
-        timeLeft: remaining,
-      };
+      return { ...prev, paused: true, startTimestamp: null, timeLeft: remaining };
     });
   };
 
@@ -191,14 +181,26 @@ function useDualTimer(type: TimerType): TimerMethods {
         ...prev,
         paused: false,
         startTimestamp: Date.now(),
+        // duration becomes "remaining to count from" so the tick stays correct
         duration: prev.timeLeft,
       };
     });
-
-    setTimeout(tick, 0); // force immediate update for UI responsiveness
   };
 
   const resetTimer = () => setTimer(null);
+
+  // Adds extra seconds to the current step. Updates both duration (so the
+  // running tick stays accurate) and timeLeft (for immediate UI feedback).
+  const extendTimer = (extraSeconds: number) => {
+    setTimer((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        duration: prev.duration + extraSeconds,
+        timeLeft: prev.timeLeft + extraSeconds,
+      };
+    });
+  };
 
   const getTimeLeft = () => timer?.timeLeft ?? 0;
 
@@ -215,10 +217,7 @@ function useDualTimer(type: TimerType): TimerMethods {
   const setNotificationId = (stepIndex: number, id: string) => {
     setTimer((prev) =>
       prev
-        ? {
-            ...prev,
-            notificationIds: { ...prev.notificationIds, [stepIndex]: id },
-          }
+        ? { ...prev, notificationIds: { ...prev.notificationIds, [stepIndex]: id } }
         : prev
     );
   };
@@ -245,9 +244,8 @@ function useDualTimer(type: TimerType): TimerMethods {
     }
   };
 
-  const getNotificationId = (stepIndex: number) => {
-    return timer?.notificationIds?.[stepIndex];
-  };
+  const getNotificationId = (stepIndex: number) =>
+    timer?.notificationIds?.[stepIndex];
 
   return {
     timer,
@@ -255,6 +253,7 @@ function useDualTimer(type: TimerType): TimerMethods {
     pauseTimer,
     resumeTimer,
     resetTimer,
+    extendTimer,
     getTimeLeft,
     getFormattedTime,
     isPaused,
@@ -269,55 +268,46 @@ function useDualTimer(type: TimerType): TimerMethods {
 export const TimerProvider = ({ children }: { children: React.ReactNode }) => {
   const mash = useDualTimer("mash");
   const boil = useDualTimer("boil");
-  const [notifee, setNotifee] = useState<
-    typeof import("@notifee/react-native") | null
-  >(null);
+
+  const [brewSession, setBrewSessionState] = useState<BrewSession | null>(null);
 
   useEffect(() => {
-    loadNotifee().then(setNotifee);
+    AsyncStorage.getItem("brewSession").then((saved) => {
+      if (saved) setBrewSessionState(JSON.parse(saved));
+    });
   }, []);
 
-  // Auto-redirect on restore
-  useEffect(() => {
-    if (mash.isRestoring || boil.isRestoring) return;
+  const startBrewSession = async (recipeId: string, targetSize?: string) => {
+    const session: BrewSession = { recipeId, targetSize };
+    await AsyncStorage.setItem("brewSession", JSON.stringify(session));
+    setBrewSessionState(session);
+  };
 
-    if (mash.isRunning() && mash.timer?.id) {
-      router.replace({
-        pathname: "/brewflow/[id]/mash",
-        params: { id: mash.timer.id, targetSize: mash.timer.targetSize },
-      });
-    } else if (boil.isRunning() && boil.timer?.id) {
-      router.replace({
-        pathname: "/brewflow/[id]/boil",
-        params: { id: boil.timer.id, targetSize: boil.timer.targetSize },
-      });
-    }
-  }, [mash.isRestoring, boil.isRestoring, mash.timer, boil.timer]);
+  const setBrewPhase = async (phase: "lauter" | "boil") => {
+    setBrewSessionState((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, phase };
+      AsyncStorage.setItem("brewSession", JSON.stringify(updated));
+      return updated;
+    });
+  };
 
   const stopAllTimers = async () => {
-    if (!notifee) return;
-
-    // Cancel all mash notifications
-    if (mash.timer) {
-      const mashNotifs = Object.values(mash.timer.notificationIds);
-      for (const id of mashNotifs) {
-        await notifee?.default.cancelNotification(id);
-      }
-      mash.resetTimer();
+    const notifee = await loadNotifee();
+    if (notifee) {
+      // Cancel every scheduled notification in one call rather than
+      // iterating stored IDs, which may be incomplete if a notification
+      // was scheduled before its ID was saved back to state.
+      await notifee.default.cancelAllNotifications();
     }
-
-    // Cancel all boil notifications
-    if (boil.timer) {
-      const boilNotifs = Object.values(boil.timer.notificationIds);
-      for (const id of boilNotifs) {
-        await notifee?.default.cancelNotification(id);
-      }
-      boil.resetTimer();
-    }
+    mash.resetTimer();
+    boil.resetTimer();
+    await AsyncStorage.removeItem("brewSession");
+    setBrewSessionState(null);
   };
 
   return (
-    <TimerContext.Provider value={{ mash, boil, stopAllTimers }}>
+    <TimerContext.Provider value={{ mash, boil, stopAllTimers, brewSession, startBrewSession, setBrewPhase }}>
       {children}
     </TimerContext.Provider>
   );

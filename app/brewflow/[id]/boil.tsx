@@ -3,10 +3,10 @@ import { View, Text, Pressable, StyleSheet, Alert } from "react-native";
 import { loadNotifee } from "@/utils/notifeeWrapper";
 import * as Device from "expo-device";
 import { useRecipes } from "@/context/RecipeContext";
-import { useTheme } from "react-native-paper";
+import { useTheme, Portal, Dialog } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import type { AppTheme } from "@/theme/theme";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTimerContext } from "@/context/TimerContext";
 import { scheduleHopNotifications } from "@/hooks/useHopNotifications";
 
@@ -81,16 +81,46 @@ export default function BoilTimer() {
     };
   });
 
-  const [stepIndex, setStepIndex] = useState(0);
+  // Declared here so handleTogglePause can reference it without a forward-ref.
+  const hopsAtStart = hopSchedule.filter(
+    (hop) => parseInt(hop.time) * 60 >= boilSeconds
+  );
 
-  const { boil, stopAllTimers } = useTimerContext();
+  const { boil, stopAllTimers, setBrewPhase } = useTimerContext();
+
+  useEffect(() => {
+    setBrewPhase("boil");
+  }, []);
 
   const paused = boil.isPaused();
   const timeLeft = boil.getTimeLeft();
 
-  useEffect(() => {
-    boil.resetTimer(); // Clear any previous timer state when switching steps
-  }, [stepIndex]);
+  // In-boil hops: exclude Vorderwürzehopfen (already handled on start) and
+  // flameout hops (time=0, shown on the complete screen).
+  const inBoilHops = adjustedHopSchedule
+    .filter((hop) => {
+      const sec = parseInt(hop.time) * 60;
+      return sec > 0 && sec < boilSeconds;
+    })
+    .sort((a, b) => parseInt(b.time) - parseInt(a.time));
+
+  // Pre-mark hops that were already added before this mount (covers the
+  // restore case — any hop whose threshold the timer has already passed).
+  const initialPassed = new Set<string>();
+  if (boil.timer && boil.timer.timeLeft > 0) {
+    for (const hop of inBoilHops) {
+      if (boil.timer.timeLeft < parseInt(hop.time) * 60) {
+        initialPassed.add(`${hop.name}-${hop.time}`);
+      }
+    }
+  }
+  const shownHops = useRef<Set<string>>(initialPassed);
+
+  const [pendingHop, setPendingHop] = useState<{
+    name: string;
+    amount: string;
+    time: string;
+  } | null>(null);
 
   useEffect(() => {
     const maybeReschedule = async () => {
@@ -129,6 +159,57 @@ export default function BoilTimer() {
     }
   }, [boil.timer?.timeLeft]);
 
+  // Pause and show the hop addition dialog when the timer reaches each hop's
+  // scheduled time. Skip hops that were already added before this mount.
+  useEffect(() => {
+    if (!boil.timer || boil.timer.paused || timeLeft <= 0) return;
+
+    for (const hop of inBoilHops) {
+      const hopKey = `${hop.name}-${hop.time}`;
+      if (timeLeft <= parseInt(hop.time) * 60 && !shownHops.current.has(hopKey)) {
+        shownHops.current.add(hopKey);
+        const pauseAndShow = async () => {
+          const notifee = await loadNotifee();
+          if (notifee) await notifee.default.cancelAllNotifications();
+          boil.pauseTimer();
+          setPendingHop(hop);
+        };
+        pauseAndShow();
+        break; // show one at a time
+      }
+    }
+  }, [timeLeft]);
+
+  const handleHopAdded = () => {
+    setPendingHop(null);
+    boil.resumeTimer();
+    // useEffect watching startTimestamp reschedules notifications automatically.
+  };
+
+  // Handle "Hinzugefügt" tapped directly on the notification while the app
+  // is in the foreground or backgrounded (JS thread still alive).
+  useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
+    let active = true;
+
+    loadNotifee().then((notifee) => {
+      if (!notifee || !active) return;
+      unsubscribe = notifee.default.onForegroundEvent(({ type, detail }: any) => {
+        if (
+          type === notifee.EventType?.ACTION_PRESS &&
+          detail.pressAction?.id === "hop_added"
+        ) {
+          handleHopAdded();
+        }
+      });
+    });
+
+    return () => {
+      active = false;
+      unsubscribe?.();
+    };
+  }, []);
+
   const getDisplayTime = () => {
     if (!boil.timer) {
       const m = Math.floor(boilSeconds / 60);
@@ -143,8 +224,7 @@ export default function BoilTimer() {
 
     if (!boil.timer) {
       const startBoil = async () => {
-        await stopAllTimers(); // 🚫 clear all timers & notifications
-
+        await stopAllTimers();
         boil.startTimer({
           id: `boil-${id}`,
           type: "boil",
@@ -152,27 +232,16 @@ export default function BoilTimer() {
           duration: boilSeconds,
           targetSize: targetSize,
         });
-
-        if (Device.isDevice && notifee) {
-          await scheduleHopNotifications({
-            hopSchedule: adjustedHopSchedule,
-            boilSeconds: boilSeconds,
-            timeLeft: boilSeconds,
-          });
-        }
+        // Notification scheduling handled by the useEffect watching startTimestamp.
       };
 
       if (hopsAtStart.length > 0) {
-        const hopText = hopsAtStart
-          .map(
-            (hop) =>
-              `${(parseFloat(hop.amount) * scaleFactor).toFixed(1)} g ${
-                hop.name
-              }`
-          )
+        // Use adjustedAmount so alpha-acid correction is reflected in the alert.
+        const alertHopText = hopsAtStart
+          .map((hop) => `${adjustedAmount(hop).toFixed(1)} g ${hop.name}`)
           .join(", ");
 
-        Alert.alert("Vorderwürzehopfen", hopText, [
+        Alert.alert("Vorderwürzehopfen", alertHopText, [
           {
             text: "Starte Kochtimer",
             onPress: () => {
@@ -193,18 +262,7 @@ export default function BoilTimer() {
 
     if (paused) {
       boil.resumeTimer();
-
-      if (Device.isDevice && boil.timer?.startTimestamp != null && notifee) {
-        const now = Date.now();
-        const elapsed = Math.floor((now - boil.timer.startTimestamp) / 1000);
-        const delay = Math.max(1, boil.timer.duration - elapsed);
-
-        await scheduleHopNotifications({
-          hopSchedule: adjustedHopSchedule,
-          boilSeconds: boil.timer.duration,
-          timeLeft: delay,
-        });
-      }
+      // Notification rescheduling handled by the useEffect watching startTimestamp.
     } else {
       if (notifee) {
         await notifee.default.cancelAllNotifications();
@@ -216,14 +274,6 @@ export default function BoilTimer() {
   const handleReset = async () => {
     await stopAllTimers();
   };
-
-  const hopsAtStart = hopSchedule.filter(
-    (hop) => parseInt(hop.time) * 60 >= boilSeconds
-  );
-
-  const hopText = hopsAtStart
-    .map((hop) => `${adjustedAmount(hop).toFixed(1)} g ${hop.name}`)
-    .join(", ");
 
   const total = boilSeconds;
   const timer = boil.timer;
@@ -278,30 +328,34 @@ export default function BoilTimer() {
       </View>
 
       <Text style={[styles.text, { marginTop: 24 }]}>Hopfengaben:</Text>
-      {/* {hopSchedule.length > 0 ? (
-        hopSchedule
-          .sort((a, b) => parseInt(b.time) - parseInt(a.time))
-          .map((hop, idx) => (
-            <Text key={idx} style={styles.text}>
-              {(parseFloat(hop.amount) * scaleFactor).toFixed(1)} g {hop.name} –{" "}
-              {hop.time} min vor Ende
-            </Text>
-          ))
-      ) : (
-        <Text style={styles.text}>Keine Hopfengaben gefunden.</Text>
-      )} */}
       {hopSchedule.length > 0 ? (
         hopSchedule
           .sort((a, b) => parseInt(b.time) - parseInt(a.time))
           .map((hop, idx) => (
             <Text key={idx} style={styles.text}>
-              {adjustedAmount(hop).toFixed(1)} g {hop.name} – {hop.time} min vor
-              Ende
+              {adjustedAmount(hop).toFixed(1)} g {hop.name} – {hop.time} min vor Ende
             </Text>
           ))
       ) : (
         <Text style={styles.text}>Keine Hopfengaben gefunden.</Text>
       )}
+
+      <Portal>
+        <Dialog visible={pendingHop !== null} dismissable={false}>
+          <Dialog.Title>Hopfengabe</Dialog.Title>
+          <Dialog.Content>
+            <Text style={styles.dialogText}>
+              Jetzt hinzufügen:{"\n"}
+              {pendingHop?.amount} g {pendingHop?.name}
+            </Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Pressable style={styles.dialogButton} onPress={handleHopAdded}>
+              <Text style={styles.dialogButtonText}>Hinzugefügt</Text>
+            </Pressable>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
     </View>
   );
 }
@@ -358,6 +412,22 @@ function createStyles(colors: AppTheme["colors"]) {
       alignItems: "center",
       justifyContent: "center",
       marginTop: 16,
+    },
+    dialogText: {
+      fontSize: 18,
+      color: colors.text,
+      lineHeight: 28,
+    },
+    dialogButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: 10,
+      paddingHorizontal: 24,
+      borderRadius: 8,
+    },
+    dialogButtonText: {
+      color: colors.onPrimary,
+      fontWeight: "bold",
+      fontSize: 16,
     },
   });
 }

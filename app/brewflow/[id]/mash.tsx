@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { loadNotifee } from "@/utils/notifeeWrapper"; // dynamic safe import
@@ -26,17 +26,30 @@ export default function MashTimerStep() {
   const router = useRouter();
   const parsedAlphaAcids = actualAlphaAcids ? JSON.parse(actualAlphaAcids) : {};
 
+  const { mash, stopAllTimers, startBrewSession } = useTimerContext();
+
   const steps = recipe?.mashSteps ?? [];
-  const [stepIndex, setStepIndex] = useState(0);
+  // Initialise from a restored timer so we return to the correct step.
+  const [stepIndex, setStepIndex] = useState(() => mash.timer?.stepIndex ?? 0);
   const step = steps[stepIndex];
   const mashTimerId = `mash-${id}-step-${stepIndex}`;
   const durationSec = parseInt(step?.duration || "0") * 60;
-
-  const { mash, stopAllTimers } = useTimerContext();
   const timeLeft = mash.getTimeLeft();
   const paused = mash.isPaused();
 
+  // Tracks the full expected duration for the current step, including any
+  // extensions. Initialised from the recipe and reset when the step changes.
+  const [stepDuration, setStepDuration] = useState(durationSec);
+
+  // Skip the reset on the first render — resetting immediately would wipe a
+  // timer that was just restored from AsyncStorage.
+  const isFirstRender = useRef(true);
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    setStepDuration(durationSec);
     mash.resetTimer();
   }, [stepIndex]);
 
@@ -75,11 +88,9 @@ export default function MashTimerStep() {
   };
 
   const handleTogglePause = async () => {
-    const currentStep = mash.timer?.stepIndex ?? stepIndex;
-
     if (!mash.timer) {
-      await stopAllTimers(); // ensure no other timer or notification is active
-
+      await stopAllTimers();
+      await startBrewSession(id!, targetSize);
       mash.startTimer({
         id: mashTimerId,
         type: "mash",
@@ -87,32 +98,13 @@ export default function MashTimerStep() {
         duration: durationSec,
         targetSize: targetSize,
       });
-
-      if (Device.isDevice) {
-
-        await scheduleMashNotification({
-          duration: durationSec,
-          stepIndex,
-          onScheduled: (id) => mash.setNotificationId(stepIndex, id),
-        });
-      }
+      // Notification is scheduled by the useEffect watching startTimestamp.
       return;
     }
 
     if (paused) {
       mash.resumeTimer();
-
-      if (Device.isDevice && mash.timer?.startTimestamp != null) {
-        const now = Date.now();
-        const elapsed = Math.floor((now - mash.timer.startTimestamp) / 1000);
-        const delay = Math.max(1, mash.timer.duration - elapsed);
-
-        await scheduleMashNotification({
-          duration: delay,
-          stepIndex: currentStep,
-          onScheduled: (id) => mash.setNotificationId(currentStep, id),
-        });
-      }
+      // Notification rescheduling handled by the useEffect watching startTimestamp.
     } else {
       const notifee = await loadNotifee();
       if (notifee) {
@@ -126,27 +118,40 @@ export default function MashTimerStep() {
     await stopAllTimers();
   };
 
+  const handleExtend = async (extraMinutes: number) => {
+    const extraSeconds = extraMinutes * 60;
+    setStepDuration((prev) => prev + extraSeconds);
+    mash.extendTimer(extraSeconds);
+
+    // Reschedule the step-complete notification with the new remaining time.
+    if (Device.isDevice && mash.timer && mash.timer.startTimestamp !== null) {
+      const elapsed = Math.floor((Date.now() - mash.timer.startTimestamp) / 1000);
+      const delay = Math.max(1, mash.timer.duration + extraSeconds - elapsed);
+      await scheduleMashNotification({
+        duration: delay,
+        stepIndex: mash.timer.stepIndex ?? stepIndex,
+        onScheduled: (id) => mash.setNotificationId(mash.timer!.stepIndex, id),
+      });
+    }
+  };
+
   const nextStep = () => setStepIndex((prev) => prev + 1);
 
-  const goToBoil = () =>
+  const goToLauter = () =>
     router.push({
-      pathname: "/brewflow/[id]/boil",
-      params: { id, targetSize, actualAlphaAcids: JSON.stringify(parsedAlphaAcids), },
+      pathname: "/brewflow/[id]/lauter",
+      params: { id, targetSize, actualAlphaAcids: JSON.stringify(parsedAlphaAcids) },
     });
 
+
   const timer = mash.timer;
-  const total = durationSec;
-
-  // Detect first load: no timer ever started, and no time elapsed
-  const isFirstStart = !timer && timeLeft === 0;
-
-  const circleFill = !timer && timeLeft === 0 ? 100 : (timeLeft / total) * 100;
+  const circleFill = !timer ? 100 : (timeLeft / stepDuration) * 100;
 
   if (!recipe || steps.length === 0 || !step) {
     return (
       <View style={styles.container}>
         <Text style={styles.title}>Keine Rasten gefunden</Text>
-        <Pressable style={styles.button} onPress={goToBoil}>
+        <Pressable style={styles.button} onPress={goToLauter}>
           <Text style={styles.buttonText}>Zum Kochen springen</Text>
         </Pressable>
       </View>
@@ -210,9 +215,9 @@ export default function MashTimerStep() {
       {mash.timer && timeLeft <= 0 && stepIndex === steps.length - 1 && (
         <Pressable
           style={[styles.button, { marginTop: 20 }]}
-          onPress={goToBoil}
+          onPress={goToLauter}
         >
-          <Text style={styles.buttonText}>Kochen starten</Text>
+          <Text style={styles.buttonText}>Läutern</Text>
         </Pressable>
       )}
 
@@ -224,11 +229,22 @@ export default function MashTimerStep() {
             opacity: mash.isRunning() ? 0.5 : 1,
           },
         ]}
-        onPress={goToBoil}
+        onPress={goToLauter}
         disabled={mash.isRunning()}
       >
         <Text style={styles.buttonText}>Überspringen</Text>
       </Pressable>
+
+      {mash.timer && (
+        <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
+          <Pressable style={styles.extendButton} onPress={() => handleExtend(1)}>
+            <Text style={styles.extendButtonText}>+1 min</Text>
+          </Pressable>
+          <Pressable style={styles.extendButton} onPress={() => handleExtend(5)}>
+            <Text style={styles.extendButtonText}>+5 min</Text>
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 }
@@ -285,6 +301,18 @@ function createStyles(colors: AppTheme["colors"]) {
       alignItems: "center",
       justifyContent: "center",
       marginTop: 16,
+    },
+    extendButton: {
+      borderWidth: 1,
+      borderColor: colors.primary,
+      borderRadius: 8,
+      paddingVertical: 8,
+      paddingHorizontal: 20,
+    },
+    extendButtonText: {
+      color: colors.primary,
+      fontWeight: "600",
+      fontSize: 15,
     },
   });
 }

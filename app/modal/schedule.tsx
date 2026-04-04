@@ -10,10 +10,9 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   TouchableWithoutFeedback,
-  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useTheme, Menu, Snackbar } from "react-native-paper";
+import { useTheme, Menu, Snackbar, Portal, Dialog } from "react-native-paper";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import type { AppTheme } from "@/theme/theme";
 import { useRecipes } from "@/context/RecipeContext";
@@ -78,6 +77,28 @@ export default function MashScheduleModal() {
 
   const [showSavedMessage, setShowSavedMessage] = useState(false);
 
+  const [infoDialog, setInfoDialog] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
+
+  const [pendingRemove, setPendingRemove] = useState<{
+    type: "mash" | "hop";
+    index: number;
+    title: string;
+    description: string;
+  } | null>(null);
+
+  const confirmRemove = () => {
+    if (!pendingRemove) return;
+    if (pendingRemove.type === "mash") {
+      setMashSteps(mashSteps.filter((_, i) => i !== pendingRemove.index));
+    } else {
+      setHopSchedule(hopSchedule.filter((_, i) => i !== pendingRemove.index));
+    }
+    setPendingRemove(null);
+  };
+
   return (
       <View style={{ flex: 1 }}>
         <KeyboardAvoidingView
@@ -100,19 +121,12 @@ export default function MashScheduleModal() {
                 </Text>
                 <Pressable
                   onPress={() =>
-                    Alert.alert(
-                      "Rast entfernen",
-                      `${step.temperature}°C für ${step.duration} min wirklich entfernen?`,
-                      [
-                        { text: "Abbrechen", style: "cancel" },
-                        {
-                          text: "Entfernen",
-                          style: "destructive",
-                          onPress: () =>
-                            setMashSteps(mashSteps.filter((_, i) => i !== idx)),
-                        },
-                      ]
-                    )
+                    setPendingRemove({
+                      type: "mash",
+                      index: idx,
+                      title: "Rast entfernen",
+                      description: `${step.temperature}°C für ${step.duration} min wirklich entfernen?`,
+                    })
                   }
                   style={[
                     styles.removeButton,
@@ -190,21 +204,12 @@ export default function MashScheduleModal() {
                   </Text>
                   <Pressable
                     onPress={() =>
-                      Alert.alert(
-                        "Hopfengabe entfernen",
-                        `${hop.name}, ${hop.amount} g bei ${hop.time} min wirklich entfernen?`,
-                        [
-                          { text: "Abbrechen", style: "cancel" },
-                          {
-                            text: "Entfernen",
-                            style: "destructive",
-                            onPress: () =>
-                              setHopSchedule(
-                                hopSchedule.filter((_, i) => i !== idx)
-                              ),
-                          },
-                        ]
-                      )
+                      setPendingRemove({
+                        type: "hop",
+                        index: idx,
+                        title: "Hopfengabe entfernen",
+                        description: `${hop.name}, ${hop.amount} g bei ${hop.time} min wirklich entfernen?`,
+                      })
                     }
                     style={[
                       styles.removeButton,
@@ -275,17 +280,11 @@ export default function MashScheduleModal() {
                   const t = parseFloat(newHop.time);
                   if (!newHop.name || isNaN(amt) || isNaN(t)) return;
                   if (amt > getMaxHopAmount()) {
-                    Alert.alert(
-                      "Zuviel Hopfen",
-                      `Maximal ${getMaxHopAmount()} g erlaubt.`
-                    );
+                    setInfoDialog({ title: "Zuviel Hopfen", message: `Maximal ${getMaxHopAmount()} g erlaubt.` });
                     return;
                   }
                   if (maxBoilTime && t > maxBoilTime) {
-                    Alert.alert(
-                      "Ungültige Zeit",
-                      `Maximalzeit ist ${boilTime} min.`
-                    );
+                    setInfoDialog({ title: "Ungültige Zeit", message: `Maximalzeit ist ${boilTime} min.` });
                     return;
                   }
                   setHopSchedule([...hopSchedule, newHop]);
@@ -312,6 +311,7 @@ export default function MashScheduleModal() {
                   hopSchedule,
                 };
                 addRecipe(updatedRecipe);
+                Keyboard.dismiss();
                 setShowSavedMessage(true);
               }}
             >
@@ -339,6 +339,37 @@ export default function MashScheduleModal() {
         >
           Maisch- & Kochplan gespeichert!
         </Snackbar>
+
+        <Portal>
+          <Dialog visible={infoDialog !== null} onDismiss={() => setInfoDialog(null)}>
+            <Dialog.Title>{infoDialog?.title}</Dialog.Title>
+            <Dialog.Content>
+              <Text style={styles.dialogText}>{infoDialog?.message}</Text>
+            </Dialog.Content>
+            <Dialog.Actions>
+              <Pressable style={styles.dialogCancelButton} onPress={() => setInfoDialog(null)}>
+                <Text style={styles.dialogCancelText}>OK</Text>
+              </Pressable>
+            </Dialog.Actions>
+          </Dialog>
+        </Portal>
+
+        <Portal>
+          <Dialog visible={pendingRemove !== null} onDismiss={() => setPendingRemove(null)}>
+            <Dialog.Title>{pendingRemove?.title}</Dialog.Title>
+            <Dialog.Content>
+              <Text style={styles.dialogText}>{pendingRemove?.description}</Text>
+            </Dialog.Content>
+            <Dialog.Actions>
+              <Pressable style={styles.dialogCancelButton} onPress={() => setPendingRemove(null)}>
+                <Text style={styles.dialogCancelText}>Abbrechen</Text>
+              </Pressable>
+              <Pressable style={styles.dialogButton} onPress={confirmRemove}>
+                <Text style={styles.dialogButtonText}>Entfernen</Text>
+              </Pressable>
+            </Dialog.Actions>
+          </Dialog>
+        </Portal>
       </View>
   );
 }
@@ -428,6 +459,32 @@ function createStyles(colors: AppTheme["colors"]) {
       fontWeight: "600",
       fontSize: 16,
       margin: 4,
+    },
+    dialogText: {
+      fontSize: 16,
+      color: colors.text,
+      lineHeight: 24,
+    },
+    dialogButton: {
+      backgroundColor: colors.remove,
+      paddingVertical: 10,
+      paddingHorizontal: 20,
+      borderRadius: 8,
+      marginLeft: 8,
+    },
+    dialogButtonText: {
+      color: "#fff",
+      fontWeight: "bold",
+      fontSize: 15,
+    },
+    dialogCancelButton: {
+      paddingVertical: 10,
+      paddingHorizontal: 20,
+      borderRadius: 8,
+    },
+    dialogCancelText: {
+      color: colors.text,
+      fontSize: 15,
     },
   });
 }

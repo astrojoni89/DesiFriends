@@ -19,7 +19,7 @@ import * as Clipboard from "expo-clipboard";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system";
-import { useTheme, Tooltip } from "react-native-paper";
+import { useTheme, Tooltip, Portal, Dialog } from "react-native-paper";
 import type { AppTheme } from "@/theme/theme";
 
 export default function BrewModal() {
@@ -34,6 +34,7 @@ export default function BrewModal() {
   const [actualAlphaAcids, setActualAlphaAcids] = useState<{
     [index: number]: string;
   }>({});
+  const [confirmVisible, setConfirmVisible] = useState(false);
   const theme = useTheme() as AppTheme;
   const { colors } = theme;
   const styles = createStyles(theme.colors);
@@ -481,12 +482,7 @@ export default function BrewModal() {
             <View style={{ marginTop: 8, marginBottom: 64 }}>
               <Pressable
                 style={styles.button}
-                onPress={() =>
-                  router.push({
-                    pathname: "/brewflow/[id]",
-                    params: { id: recipe.id, targetSize, actualAlphaAcids: JSON.stringify(actualAlphaAcids), },
-                  })
-                }
+                onPress={() => setConfirmVisible(true)}
               >
                 <Text style={styles.buttontext}>Brautag starten</Text>
               </Pressable>
@@ -494,6 +490,33 @@ export default function BrewModal() {
           </ScrollView>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
+      <Portal>
+        <Dialog visible={confirmVisible} onDismiss={() => setConfirmVisible(false)}>
+          <Dialog.Title>Brautag starten?</Dialog.Title>
+          <Dialog.Content>
+            <Text style={{ fontSize: 16, color: colors.text, lineHeight: 24 }}>
+              Du startest jetzt deinen Brautag. Um ihn zu beenden, nutze den Exit-Button oben rechts im Brauablauf.
+            </Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Pressable style={styles.dialogCancelButton} onPress={() => setConfirmVisible(false)}>
+              <Text style={styles.dialogCancelText}>Abbrechen</Text>
+            </Pressable>
+            <Pressable
+              style={styles.dialogButton}
+              onPress={() => {
+                setConfirmVisible(false);
+                router.push({
+                  pathname: "/brewflow/[id]",
+                  params: { id: recipe.id, targetSize, actualAlphaAcids: JSON.stringify(actualAlphaAcids) },
+                });
+              }}
+            >
+              <Text style={styles.dialogButtonText}>Starten</Text>
+            </Pressable>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
     </View>
   );
 }
@@ -556,6 +579,27 @@ function createStyles(colors: AppTheme["colors"]) {
       backgroundColor: colors.surfaceVariant,
       alignItems: "center",
       justifyContent: "center",
+    },
+    dialogButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: 10,
+      paddingHorizontal: 20,
+      borderRadius: 8,
+      marginLeft: 8,
+    },
+    dialogButtonText: {
+      color: colors.onPrimary,
+      fontWeight: "bold",
+      fontSize: 15,
+    },
+    dialogCancelButton: {
+      paddingVertical: 10,
+      paddingHorizontal: 20,
+      borderRadius: 8,
+    },
+    dialogCancelText: {
+      color: colors.text,
+      fontSize: 15,
     },
   });
 }

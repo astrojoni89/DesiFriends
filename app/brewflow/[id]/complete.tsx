@@ -3,6 +3,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { useTheme } from "react-native-paper";
 import type { AppTheme } from "@/theme/theme";
 import { useRecipes } from "@/context/RecipeContext";
+import { useTimerContext } from "@/context/TimerContext";
 
 export default function CompleteScreen() {
   const { id, targetSize } = useLocalSearchParams<{
@@ -12,6 +13,7 @@ export default function CompleteScreen() {
   const { getRecipeById } = useRecipes();
   const recipe = getRecipeById(id || "");
   const router = useRouter();
+  const { stopAllTimers } = useTimerContext();
   const theme = useTheme() as AppTheme;
   const { colors } = theme;
   const styles = createStyles(colors);
@@ -22,7 +24,13 @@ export default function CompleteScreen() {
       <Text style={styles.text}>Rezept: {recipe?.name}</Text>
       <Text style={styles.text}>Jetzt mach dir ein Bier auf 🍺</Text>
 
-      <Pressable style={styles.button} onPress={() => router.replace("/")}>
+      <Pressable
+        style={styles.button}
+        onPress={async () => {
+          await stopAllTimers();
+          router.replace("/");
+        }}
+      >
         <Text style={styles.buttonText}>Zurück zur Übersicht</Text>
       </Pressable>
     </View>

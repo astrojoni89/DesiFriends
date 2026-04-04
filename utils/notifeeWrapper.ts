@@ -6,7 +6,7 @@ let notifee: typeof import("@notifee/react-native") | null = null;
 export async function loadNotifee() {
   if (notifee) return notifee;
 
-  if (Constants.appOwnership !== "expo") {
+  if (Constants.executionEnvironment !== "storeClient") {
     notifee = await import("@notifee/react-native");
   } else {
     console.log("📱 [MockNotifee] Using mock in Expo Go");
@@ -48,6 +48,21 @@ export async function loadNotifee() {
         openAlarmPermissionSettings: async () => {
           console.log("⚙️ [MockNotifee] openAlarmPermissionSettings");
         },
+        onForegroundEvent: (_observer: any) => {
+          console.log("👂 [MockNotifee] onForegroundEvent registered");
+          return () => {}; // unsubscribe no-op
+        },
+        onBackgroundEvent: (_handler: any) => {
+          console.log("👂 [MockNotifee] onBackgroundEvent registered");
+        },
+      },
+      EventType: {
+        UNKNOWN: 0,
+        DISMISSED: 1,
+        PRESS: 2,
+        ACTION_PRESS: 3,
+        DELIVERED: 4,
+        TRIGGER_NOTIFICATION_CREATED: 8,
       },
       AuthorizationStatus: {
         AUTHORIZED: 1,

@@ -1,0 +1,558 @@
+import { useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  Pressable,
+  TouchableWithoutFeedback,
+  ScrollView,
+  KeyboardAvoidingView,
+  Keyboard,
+  Platform,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useTheme, Snackbar, Tooltip, Portal, Dialog } from "react-native-paper";
+import type { AppTheme } from "@/theme/theme";
+import { useValidation } from "@/hooks/useValidation";
+import {
+  Ingredient,
+  HopIngredient,
+  MashStep,
+  HopSchedule,
+} from "@/context/RecipeContext";
+
+export type RecipeFormData = {
+  name: string;
+  batchSize: string;
+  hauptguss: string;
+  nachguss: string;
+  malz: Ingredient[];
+  hopfen: HopIngredient[];
+  hefe: Ingredient[];
+  mashSteps: MashStep[];
+  boilTime: string;
+  hopSchedule: HopSchedule[];
+};
+
+type RecipeFields = {
+  name: string;
+  batchSize: string;
+  hauptguss: string;
+  nachguss: string;
+  malzList: Ingredient[];
+  hopfenList: HopIngredient[];
+  hefeList: Ingredient[];
+};
+
+type Props = {
+  title: string;
+  initialValues?: Partial<RecipeFormData>;
+  onSave: (data: RecipeFormData) => void;
+  onSaved?: () => void;
+  showScheduleButton?: boolean;
+  onSchedule?: (data: RecipeFormData) => void;
+  onImport?: () => void;
+};
+
+export function RecipeForm({
+  title,
+  initialValues = {},
+  onSave,
+  onSaved,
+  showScheduleButton = false,
+  onSchedule,
+  onImport,
+}: Props) {
+  const theme = useTheme() as AppTheme;
+  const { colors } = theme;
+  const styles = createStyles(theme.colors);
+
+  const [malzList, setMalzList] = useState<Ingredient[]>(initialValues.malz ?? []);
+  const [hopfenList, setHopfenList] = useState<HopIngredient[]>(initialValues.hopfen ?? []);
+  const [hefeList, setHefeList] = useState<Ingredient[]>(initialValues.hefe ?? []);
+
+  const [malzInput, setMalzInput] = useState<Ingredient>({ name: "", amount: "" });
+  const [hopfenInput, setHopfenInput] = useState<HopIngredient>({ name: "", amount: "", alphaAcid: "" });
+  const [hefeInput, setHefeInput] = useState<Ingredient>({ name: "", amount: "" });
+
+  const emptyFields: RecipeFields = {
+    name: "",
+    batchSize: "",
+    hauptguss: "",
+    nachguss: "",
+    malzList: [],
+    hopfenList: [],
+    hefeList: [],
+  };
+
+  const initialFields: RecipeFields = {
+    name: initialValues.name ?? "",
+    batchSize: initialValues.batchSize ?? "",
+    hauptguss: initialValues.hauptguss ?? "",
+    nachguss: initialValues.nachguss ?? "",
+    malzList: initialValues.malz ?? [],
+    hopfenList: initialValues.hopfen ?? [],
+    hefeList: initialValues.hefe ?? [],
+  };
+
+  const validationRules = {
+    name: (v: string) => (!v ? "Name is required" : null),
+    batchSize: (v: string) => (!v ? "Batch size is required" : null),
+    hauptguss: (v: string) => (!v ? "Main water volume is required" : null),
+    nachguss: (v: string) => (!v ? "Sparge volume is required" : null),
+    malzList: (v: Ingredient[]) => (v.length === 0 ? "At least one malt is required" : null),
+    hopfenList: (v: HopIngredient[]) => (v.length === 0 ? "At least one hop is required" : null),
+    hefeList: (v: Ingredient[]) => (v.length === 0 ? "At least one yeast is required" : null),
+  };
+
+  const { values, errors, handleChange, validate, setValues, setErrors } =
+    useValidation<RecipeFields>(initialFields, validationRules);
+
+  const [pendingRemove, setPendingRemove] = useState<{
+    type: "malz" | "hopfen" | "hefe";
+    index: number;
+    title: string;
+    description: string;
+  } | null>(null);
+
+  const [showSavedMessage, setShowSavedMessage] = useState(false);
+
+  const buildData = (): RecipeFormData => ({
+    name: values.name,
+    batchSize: values.batchSize,
+    hauptguss: values.hauptguss,
+    nachguss: values.nachguss,
+    malz: malzList,
+    hopfen: hopfenList,
+    hefe: hefeList,
+    mashSteps: initialValues.mashSteps ?? [],
+    boilTime: initialValues.boilTime ?? "",
+    hopSchedule: initialValues.hopSchedule ?? [],
+  });
+
+  const syncAndValidate = () => {
+    handleChange("malzList", malzList);
+    handleChange("hopfenList", hopfenList);
+    handleChange("hefeList", hefeList);
+    return validate();
+  };
+
+  const handleSave = () => {
+    const errs = syncAndValidate();
+    if (Object.keys(errs).length > 0) return;
+    onSave(buildData());
+    setMalzList([]);
+    setHopfenList([]);
+    setHefeList([]);
+    setValues(emptyFields);
+    setErrors({});
+    Keyboard.dismiss();
+    setShowSavedMessage(true);
+  };
+
+  const handleSchedule = () => {
+    const errs = syncAndValidate();
+    if (Object.keys(errs).length > 0) return;
+    onSchedule?.(buildData());
+  };
+
+  const addIngredient = (
+    input: Ingredient | HopIngredient,
+    list: Ingredient[] | HopIngredient[],
+    setter: Function,
+    resetter: Function,
+    key: keyof RecipeFields
+  ) => {
+    const isHop = key === "hopfenList";
+    const hasEmptyFields =
+      !input.name || !input.amount || (isHop && !(input as HopIngredient).alphaAcid);
+    if (hasEmptyFields) return;
+    const updatedList = [...list, input];
+    setter(updatedList);
+    handleChange(key, updatedList);
+    resetter(isHop ? { name: "", amount: "", alphaAcid: "" } : { name: "", amount: "" });
+  };
+
+  const confirmRemove = () => {
+    if (!pendingRemove) return;
+    if (pendingRemove.type === "malz") {
+      const updated = malzList.filter((_, i) => i !== pendingRemove.index);
+      setMalzList(updated);
+      handleChange("malzList", updated);
+    } else if (pendingRemove.type === "hopfen") {
+      const updated = hopfenList.filter((_, i) => i !== pendingRemove.index);
+      setHopfenList(updated);
+      handleChange("hopfenList", updated);
+    } else {
+      const updated = hefeList.filter((_, i) => i !== pendingRemove.index);
+      setHefeList(updated);
+      handleChange("hefeList", updated);
+    }
+    setPendingRemove(null);
+  };
+
+  return (
+    <View style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <Text style={styles.title}>{title}</Text>
+              {onImport && (
+                <Tooltip title="Rezept importieren (.dfr)">
+                  <Pressable onPress={onImport} style={styles.iconButton}>
+                    <Ionicons name="share-outline" size={24} color={colors.primary} />
+                  </Pressable>
+                </Tooltip>
+              )}
+            </View>
+
+            <TextInput
+              style={[styles.input, errors.name && { borderColor: "red" }]}
+              placeholder="Rezeptname"
+              value={values.name}
+              onChangeText={(t) => handleChange("name", t)}
+              placeholderTextColor={colors.outline}
+            />
+
+            <TextInput
+              style={[styles.input, errors.batchSize && { borderColor: "red" }]}
+              placeholder="Zielmenge (Liter)"
+              keyboardType="numeric"
+              value={values.batchSize}
+              onChangeText={(t) => handleChange("batchSize", t)}
+              placeholderTextColor={colors.outline}
+            />
+
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <TextInput
+                style={[styles.input, { flex: 1 }, errors.hauptguss && { borderColor: "red" }]}
+                placeholder="Hauptguss (Liter)"
+                keyboardType="decimal-pad"
+                value={values.hauptguss}
+                onChangeText={(t) => handleChange("hauptguss", t)}
+                placeholderTextColor={colors.outline}
+              />
+              <TextInput
+                style={[styles.input, { flex: 1 }, errors.nachguss && { borderColor: "red" }]}
+                placeholder="Nachguss (Liter)"
+                keyboardType="decimal-pad"
+                value={values.nachguss}
+                onChangeText={(t) => handleChange("nachguss", t)}
+                placeholderTextColor={colors.outline}
+              />
+            </View>
+
+            {/* Malz */}
+            <Text style={styles.sectionTitle}>Malz</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <IngredientInput
+                input={malzInput}
+                setInput={setMalzInput}
+                onAdd={() => addIngredient(malzInput, malzList, setMalzList, setMalzInput, "malzList")}
+                colors={theme.colors}
+                amountPlaceholder="Menge (kg)"
+                showErrors={!!errors.malzList}
+              />
+            </View>
+            {malzList.map((item, idx) => (
+              <View key={idx} style={styles.ingredientRow}>
+                <Text style={[styles.ingredientItem, { flex: 1 }]}>&bull; {item.name}: {item.amount} kg</Text>
+                <Pressable
+                  onPress={() => setPendingRemove({ type: "malz", index: idx, title: "Malz entfernen", description: `${item.name} (${item.amount} kg) wirklich entfernen?` })}
+                  style={[styles.removeButton, { backgroundColor: colors.remove }]}
+                >
+                  <Ionicons name="remove" size={20} color="#fff" />
+                </Pressable>
+              </View>
+            ))}
+
+            {/* Hopfen */}
+            <Text style={styles.sectionTitle}>Hopfen</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <IngredientInput
+                input={hopfenInput}
+                setInput={setHopfenInput}
+                onAdd={() => addIngredient(hopfenInput, hopfenList, setHopfenList, setHopfenInput, "hopfenList")}
+                colors={theme.colors}
+                amountPlaceholder="Menge (g)"
+                extraField={{ key: "alphaAcid", placeholder: "%α", keyboardType: "decimal-pad" }}
+                showErrors={!!errors.hopfenList}
+              />
+            </View>
+            {hopfenList.map((item, idx) => (
+              <View key={idx} style={styles.ingredientRow}>
+                <Text style={[styles.ingredientItem, { flex: 1 }]}>&bull; {item.name}: {item.amount} g @ {item.alphaAcid}%α</Text>
+                <Pressable
+                  onPress={() => setPendingRemove({ type: "hopfen", index: idx, title: "Hopfen entfernen", description: `${item.name} (${item.amount} g @ ${item.alphaAcid}%α) wirklich entfernen?` })}
+                  style={[styles.removeButton, { backgroundColor: colors.remove }]}
+                >
+                  <Ionicons name="remove" size={20} color="#fff" />
+                </Pressable>
+              </View>
+            ))}
+
+            {/* Hefe */}
+            <Text style={styles.sectionTitle}>Hefe</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <IngredientInput
+                input={hefeInput}
+                setInput={setHefeInput}
+                onAdd={() => addIngredient(hefeInput, hefeList, setHefeList, setHefeInput, "hefeList")}
+                colors={theme.colors}
+                amountPlaceholder="Menge (g)"
+                showErrors={!!errors.hefeList}
+              />
+            </View>
+            {hefeList.map((item, idx) => (
+              <View key={idx} style={styles.ingredientRow}>
+                <Text style={[styles.ingredientItem, { flex: 1 }]}>&bull; {item.name}: {item.amount} g</Text>
+                <Pressable
+                  onPress={() => setPendingRemove({ type: "hefe", index: idx, title: "Hefe entfernen", description: `${item.name} (${item.amount} g) wirklich entfernen?` })}
+                  style={[styles.removeButton, { backgroundColor: colors.remove }]}
+                >
+                  <Ionicons name="remove" size={20} color="#fff" />
+                </Pressable>
+              </View>
+            ))}
+
+            <View style={{ marginVertical: 16 }}>
+              {showScheduleButton && (
+                <Pressable
+                  onPress={handleSchedule}
+                  style={[styles.brewButton, { backgroundColor: colors.secondary }]}
+                >
+                  <Text style={styles.brewButtonText}>Maisch- & Kochplan</Text>
+                </Pressable>
+              )}
+              <Pressable onPress={handleSave} style={styles.brewButton}>
+                <Text style={styles.brewButtonText}>
+                  {showScheduleButton ? "Rezept speichern" : "Änderungen speichern"}
+                </Text>
+              </Pressable>
+            </View>
+
+          </ScrollView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
+
+      <Snackbar
+        visible={showSavedMessage}
+        onDismiss={() => { setShowSavedMessage(false); onSaved?.(); }}
+        duration={2000}
+        style={{
+          backgroundColor: colors.primary,
+          position: "absolute",
+          bottom: 16,
+          left: 16,
+          right: 16,
+          borderRadius: 8,
+        }}
+      >
+        Rezept gespeichert!
+      </Snackbar>
+
+      <Portal>
+        <Dialog visible={pendingRemove !== null} onDismiss={() => setPendingRemove(null)}>
+          <Dialog.Title>{pendingRemove?.title}</Dialog.Title>
+          <Dialog.Content>
+            <Text style={styles.dialogText}>{pendingRemove?.description}</Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Pressable style={styles.dialogCancelButton} onPress={() => setPendingRemove(null)}>
+              <Text style={styles.dialogCancelText}>Abbrechen</Text>
+            </Pressable>
+            <Pressable style={styles.dialogButton} onPress={confirmRemove}>
+              <Text style={styles.dialogButtonText}>Entfernen</Text>
+            </Pressable>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+    </View>
+  );
+}
+
+function IngredientInput({
+  input,
+  setInput,
+  onAdd,
+  colors,
+  amountPlaceholder = "Menge",
+  extraField,
+  showErrors = false,
+}: {
+  input: any;
+  setInput: Function;
+  onAdd: () => void;
+  colors: AppTheme["colors"];
+  amountPlaceholder?: string;
+  extraField?: {
+    key: string;
+    placeholder: string;
+    keyboardType?: "default" | "numeric" | "decimal-pad";
+  };
+  showErrors?: boolean;
+}) {
+  const theme = useTheme() as AppTheme;
+  const styles = createStyles(theme.colors);
+  const hasError = (key: string) => showErrors && !input[key];
+
+  return (
+    <View style={styles.row}>
+      <TextInput
+        style={[styles.input, { flex: 2 }, hasError("name") && { borderColor: "red" }]}
+        placeholder="Name"
+        value={input.name}
+        onChangeText={(text) => setInput({ ...input, name: text })}
+        placeholderTextColor={colors.outline || "#888"}
+      />
+      <TextInput
+        style={[styles.input, { flex: 2 }, hasError("amount") && { borderColor: "red" }]}
+        placeholder={amountPlaceholder}
+        value={input.amount}
+        onChangeText={(text) => setInput({ ...input, amount: text })}
+        placeholderTextColor={colors.outline || "#888"}
+        keyboardType="decimal-pad"
+      />
+      {extraField && (
+        <TextInput
+          style={[styles.input, { flex: 1 }, hasError(extraField.key) && { borderColor: "red" }]}
+          placeholder={extraField.placeholder}
+          value={input[extraField.key]}
+          onChangeText={(text) => setInput({ ...input, [extraField.key]: text })}
+          placeholderTextColor={colors.outline || "#888"}
+          keyboardType={extraField.keyboardType || "default"}
+        />
+      )}
+      <Pressable onPress={onAdd} style={styles.addButton}>
+        <Ionicons name="add" size={20} color="#fff" />
+      </Pressable>
+    </View>
+  );
+}
+
+function createStyles(colors: AppTheme["colors"]) {
+  return StyleSheet.create({
+    container: {
+      paddingTop: 32,
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      padding: 16,
+    },
+    title: {
+      fontSize: 22,
+      fontWeight: "bold",
+      color: colors.onBackground,
+      marginBottom: 12,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      paddingHorizontal: 12,
+      fontSize: 16,
+      height: 48,
+      borderRadius: 8,
+      color: colors.text,
+      marginBottom: 8,
+      flex: 1,
+    },
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 8,
+      minHeight: 48,
+    },
+    addButton: {
+      height: 48,
+      width: 48,
+      borderRadius: 8,
+      backgroundColor: colors.primary,
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: 8,
+    },
+    removeButton: {
+      height: 32,
+      width: 32,
+      borderRadius: 8,
+      backgroundColor: colors.primary,
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: 4,
+      marginRight: 8,
+    },
+    sectionTitle: {
+      marginTop: 12,
+      marginBottom: 4,
+      fontWeight: "600",
+      color: colors.text,
+    },
+    ingredientItem: {
+      color: colors.text,
+      marginBottom: 2,
+    },
+    brewButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      borderRadius: 8,
+      alignItems: "center",
+      marginTop: 8,
+    },
+    brewButtonText: {
+      color: colors.onPrimary || "#fff",
+      fontWeight: "600",
+      fontSize: 16,
+      margin: 4,
+    },
+    iconButton: {
+      padding: 10,
+      borderRadius: 8,
+      backgroundColor: colors.surfaceVariant,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    ingredientRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 4,
+    },
+    dialogText: {
+      fontSize: 16,
+      color: colors.text,
+      lineHeight: 24,
+    },
+    dialogButton: {
+      backgroundColor: colors.remove,
+      paddingVertical: 10,
+      paddingHorizontal: 20,
+      borderRadius: 8,
+      marginLeft: 8,
+    },
+    dialogButtonText: {
+      color: "#fff",
+      fontWeight: "bold",
+      fontSize: 15,
+    },
+    dialogCancelButton: {
+      paddingVertical: 10,
+      paddingHorizontal: 20,
+      borderRadius: 8,
+    },
+    dialogCancelText: {
+      color: colors.text,
+      fontSize: 15,
+    },
+  });
+}
