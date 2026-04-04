@@ -44,7 +44,7 @@ interface TimerMethods {
   isRestoring: boolean;
 }
 
-type BrewSession = { recipeId: string; targetSize?: string; phase?: "lauter" | "boil" };
+type BrewSession = { recipeId: string; targetSize?: string; phase?: "mash" | "lauter" | "boil" };
 
 type TimerContextValue = {
   mash: TimerMethods;
@@ -52,7 +52,7 @@ type TimerContextValue = {
   stopAllTimers: () => Promise<void>;
   brewSession: BrewSession | null;
   startBrewSession: (recipeId: string, targetSize?: string) => Promise<void>;
-  setBrewPhase: (phase: "lauter" | "boil") => Promise<void>;
+  setBrewPhase: (phase: "mash" | "lauter" | "boil") => Promise<void>;
 };
 
 const TimerContext = createContext<TimerContextValue | undefined>(undefined);
@@ -278,7 +278,7 @@ export const TimerProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const startBrewSession = async (recipeId: string, targetSize?: string) => {
-    const session: BrewSession = { recipeId, targetSize };
+    const session: BrewSession = { recipeId, targetSize, phase: "mash" };
     await AsyncStorage.setItem("brewSession", JSON.stringify(session));
     setBrewSessionState(session);
   };

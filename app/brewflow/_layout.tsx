@@ -5,6 +5,7 @@ import { useTheme, Portal, Dialog } from "react-native-paper";
 import type { AppTheme } from "@/theme/theme";
 import { useTimerContext } from "@/context/TimerContext";
 import { useState } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function BrewFlowLayout() {
   const router = useRouter();
@@ -12,6 +13,7 @@ export default function BrewFlowLayout() {
   const { colors } = theme;
   const { stopAllTimers } = useTimerContext();
 
+  const insets = useSafeAreaInsets();
   const [confirmVisible, setConfirmVisible] = useState(false);
 
   const dialogStyles = StyleSheet.create({
@@ -28,19 +30,19 @@ export default function BrewFlowLayout() {
     <View style={{ flex: 1 }}>
       <Stack screenOptions={{ animation: "slide_from_right", headerShown: false }} />
       <Pressable
-        style={[styles.exitButton, { backgroundColor: colors.card }]}
+        style={[styles.exitButton, { backgroundColor: colors.card, top: insets.top + 12 }]}
         onPress={handleExit}
       >
         <Ionicons name="stop-circle" size={24} color={colors.error} />
       </Pressable>
       <Pressable
-        style={[styles.homeFab, { backgroundColor: colors.card }]}
+        style={[styles.homeFab, { backgroundColor: colors.card, bottom: insets.bottom + 16 }]}
         onPress={() => router.replace("/")}
       >
         <Ionicons name="home-outline" size={22} color={colors.onSurface} />
       </Pressable>
       <Pressable
-        style={[styles.fab, { backgroundColor: colors.primary }]}
+        style={[styles.fab, { backgroundColor: colors.primary, bottom: insets.bottom + 16 }]}
         onPress={() => router.push("/modal/tools")}
       >
         <Ionicons name="calculator-outline" size={22} color={colors.onPrimary} />
@@ -77,7 +79,6 @@ export default function BrewFlowLayout() {
 const styles = StyleSheet.create({
   exitButton: {
     position: "absolute",
-    top: 48,
     right: 20,
     width: 40,
     height: 40,
@@ -93,7 +94,6 @@ const styles = StyleSheet.create({
   },
   homeFab: {
     position: "absolute",
-    bottom: 32,
     left: 20,
     width: 48,
     height: 48,
@@ -108,7 +108,6 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: "absolute",
-    bottom: 32,
     right: 20,
     width: 48,
     height: 48,

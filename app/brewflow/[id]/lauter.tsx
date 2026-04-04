@@ -28,7 +28,9 @@ export default function LauterScreen() {
   // is active (handles skipped mash) and phase is set correctly even if the
   // user navigated back from the boil screen.
   useEffect(() => {
-    if (mash.timer) mash.resetTimer();
+    // Only clear the mash timer if it has truly finished — never reset an
+    // active or paused timer (e.g. user accidentally navigated here).
+    if (mash.timer && mash.getTimeLeft() <= 0) mash.resetTimer();
     if (!brewSession) startBrewSession(id!, targetSize);
     else setBrewPhase("lauter");
   }, []);

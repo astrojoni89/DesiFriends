@@ -11,7 +11,6 @@ import {
   Animated,
   Easing,
   Alert,
-  TouchableWithoutFeedback,
   Keyboard,
 } from "react-native";
 import * as Sharing from "expo-sharing";
@@ -92,15 +91,14 @@ export default function BrewDayScreen() {
 
   return (
     <View style={styles.container}>
-      <TouchableWithoutFeedback
-        onPress={() => {
-          Keyboard.dismiss();
-          if (deleteModeId !== null) setDeleteModeId(null);
-        }}
-      >
         <ScrollView
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          onScrollBeginDrag={() => {
+            Keyboard.dismiss();
+            if (deleteModeId !== null) setDeleteModeId(null);
+          }}
         >
           <Text style={styles.title}>Gespeicherte Rezepte</Text>
 
@@ -324,7 +322,6 @@ export default function BrewDayScreen() {
             );
           })}
         </ScrollView>
-      </TouchableWithoutFeedback>
       <Snackbar
         visible={showSavedMessage}
         onDismiss={() => setShowSavedMessage(false)}

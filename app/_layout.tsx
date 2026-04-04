@@ -217,24 +217,28 @@ function TimerWidget() {
   if (isInBrewflow || isRestoring || (!activeTimer && !brewSession)) return null;
 
   const isMash = !!mash.timer;
-  // No active timer: use the brew session phase to decide which screen to show.
-  const sessionPhase = !activeTimer ? brewSession?.phase : undefined;
-  const isLauter = !activeTimer && sessionPhase !== "boil";
+  // When no active timer, use the brew session phase to decide label + destination.
+  // "mash" phase covers the restore race window: brewSession loads before mash.timer.
+  const sessionPhase = !activeTimer ? (brewSession?.phase ?? "lauter") : undefined;
+  const isSessionMash = !activeTimer && sessionPhase === "mash";
+  const isLauter = !activeTimer && sessionPhase === "lauter";
   const isPreBoil = !activeTimer && sessionPhase === "boil";
 
-  const label = isPreBoil ? "Kochen" : isLauter ? "Läutern" : isMash ? "Maischen" : "Kochen";
-  const timeDisplay = isLauter || isPreBoil
+  const label = isSessionMash ? "Maischen" : isPreBoil ? "Kochen" : isLauter ? "Läutern" : isMash ? "Maischen" : "Kochen";
+  const timeDisplay = isSessionMash || isLauter || isPreBoil
     ? null
     : isMash
     ? mash.getFormattedTime()
     : boil.getFormattedTime();
-  const isPaused = isLauter || isPreBoil ? false : isMash ? mash.isPaused() : boil.isPaused();
+  const isPaused = isSessionMash || isLauter || isPreBoil ? false : isMash ? mash.isPaused() : boil.isPaused();
 
   const recipeId = activeTimer ? activeTimer.id.split("-")[1] : brewSession!.recipeId;
   const targetSize = activeTimer ? activeTimer.targetSize : brewSession!.targetSize;
 
   const goToScreen = () => {
-    if (isPreBoil) {
+    if (isSessionMash) {
+      router.push({ pathname: "/brewflow/[id]/mash", params: { id: recipeId, targetSize } });
+    } else if (isPreBoil) {
       router.push({ pathname: "/brewflow/[id]/boil", params: { id: recipeId, targetSize } });
     } else if (isLauter) {
       router.push({ pathname: "/brewflow/[id]/lauter", params: { id: recipeId, targetSize } });
