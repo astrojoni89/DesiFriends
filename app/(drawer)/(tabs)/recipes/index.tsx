@@ -183,6 +183,9 @@ export default function RecipesScreen() {
       hefe: values.hefeList,
     };
     addRecipe(newRecipe);
+    setMalzList([]);
+    setHopfenList([]);
+    setHefeList([]);
     setValues(initialValues);
     setErrors({});
     router.push({ pathname: "/modal/schedule", params: { id } });
@@ -359,11 +362,24 @@ export default function RecipesScreen() {
                   &bull; {item.name}: {item.amount} kg
                 </Text>
                 <Pressable
-                  onPress={() => {
-                    const updated = malzList.filter((_, i) => i !== idx);
-                    setMalzList(updated);
-                    handleChange("malzList", updated);
-                  }}
+                  onPress={() =>
+                    Alert.alert(
+                      "Malz entfernen",
+                      `${item.name} (${item.amount} kg) wirklich entfernen?`,
+                      [
+                        { text: "Abbrechen", style: "cancel" },
+                        {
+                          text: "Entfernen",
+                          style: "destructive",
+                          onPress: () => {
+                            const updated = malzList.filter((_, i) => i !== idx);
+                            setMalzList(updated);
+                            handleChange("malzList", updated);
+                          },
+                        },
+                      ]
+                    )
+                  }
                   style={[
                     styles.removeButton,
                     { backgroundColor: colors.remove },
@@ -417,11 +433,24 @@ export default function RecipesScreen() {
                   &bull; {item.name}: {item.amount} g @ {item.alphaAcid}%α
                 </Text>
                 <Pressable
-                  onPress={() => {
-                    const updated = hopfenList.filter((_, i) => i !== idx);
-                    setHopfenList(updated);
-                    handleChange("hopfenList", updated);
-                  }}
+                  onPress={() =>
+                    Alert.alert(
+                      "Hopfen entfernen",
+                      `${item.name} (${item.amount} g @ ${item.alphaAcid}%α) wirklich entfernen?`,
+                      [
+                        { text: "Abbrechen", style: "cancel" },
+                        {
+                          text: "Entfernen",
+                          style: "destructive",
+                          onPress: () => {
+                            const updated = hopfenList.filter((_, i) => i !== idx);
+                            setHopfenList(updated);
+                            handleChange("hopfenList", updated);
+                          },
+                        },
+                      ]
+                    )
+                  }
                   style={[
                     styles.removeButton,
                     { backgroundColor: colors.remove },
@@ -470,11 +499,24 @@ export default function RecipesScreen() {
                   &bull; {item.name}: {item.amount} g
                 </Text>
                 <Pressable
-                  onPress={() => {
-                    const updated = hefeList.filter((_, i) => i !== idx);
-                    setHefeList(updated);
-                    handleChange("hefeList", updated);
-                  }}
+                  onPress={() =>
+                    Alert.alert(
+                      "Hefe entfernen",
+                      `${item.name} (${item.amount} g) wirklich entfernen?`,
+                      [
+                        { text: "Abbrechen", style: "cancel" },
+                        {
+                          text: "Entfernen",
+                          style: "destructive",
+                          onPress: () => {
+                            const updated = hefeList.filter((_, i) => i !== idx);
+                            setHefeList(updated);
+                            handleChange("hefeList", updated);
+                          },
+                        },
+                      ]
+                    )
+                  }
                   style={[
                     styles.removeButton,
                     { backgroundColor: colors.remove },

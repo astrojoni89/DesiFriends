@@ -100,7 +100,19 @@ export default function MashScheduleModal() {
                 </Text>
                 <Pressable
                   onPress={() =>
-                    setMashSteps(mashSteps.filter((_, i) => i !== idx))
+                    Alert.alert(
+                      "Rast entfernen",
+                      `${step.temperature}°C für ${step.duration} min wirklich entfernen?`,
+                      [
+                        { text: "Abbrechen", style: "cancel" },
+                        {
+                          text: "Entfernen",
+                          style: "destructive",
+                          onPress: () =>
+                            setMashSteps(mashSteps.filter((_, i) => i !== idx)),
+                        },
+                      ]
+                    )
                   }
                   style={[
                     styles.removeButton,
@@ -178,7 +190,21 @@ export default function MashScheduleModal() {
                   </Text>
                   <Pressable
                     onPress={() =>
-                      setHopSchedule(hopSchedule.filter((_, i) => i !== idx))
+                      Alert.alert(
+                        "Hopfengabe entfernen",
+                        `${hop.name}, ${hop.amount} g bei ${hop.time} min wirklich entfernen?`,
+                        [
+                          { text: "Abbrechen", style: "cancel" },
+                          {
+                            text: "Entfernen",
+                            style: "destructive",
+                            onPress: () =>
+                              setHopSchedule(
+                                hopSchedule.filter((_, i) => i !== idx)
+                              ),
+                          },
+                        ]
+                      )
                     }
                     style={[
                       styles.removeButton,
@@ -287,10 +313,6 @@ export default function MashScheduleModal() {
                 };
                 addRecipe(updatedRecipe);
                 setShowSavedMessage(true);
-                // wait for 2 seconds before router.back()
-                setTimeout(() => {
-                  router.back();
-                }, 2000);
               }}
             >
               <Text style={styles.brewButtonText}>Fertig</Text>
@@ -301,7 +323,10 @@ export default function MashScheduleModal() {
 
         <Snackbar
           visible={showSavedMessage}
-          onDismiss={() => setShowSavedMessage(false)}
+          onDismiss={() => {
+            setShowSavedMessage(false);
+            router.back();
+          }}
           duration={2000}
           style={{
             backgroundColor: colors.primary,
