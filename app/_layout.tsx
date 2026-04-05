@@ -52,7 +52,7 @@ import { TimerProvider } from "@/context/TimerContext";
 import { useEffect, useRef } from "react";
 import { useRouter, usePathname } from "expo-router";
 import { useTimerContext } from "@/context/TimerContext";
-import { Pressable, Text, StyleSheet, View as RNView } from "react-native";
+import { Pressable, Text, StyleSheet, View as RNView, Animated } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "react-native-paper";
 import type { AppTheme } from "@/theme/theme";
@@ -208,6 +208,19 @@ function TimerWidget() {
   const insets = useSafeAreaInsets();
   const theme = useTheme() as AppTheme;
 
+  // Pulse animation for the live dot — hooks must come before any early return.
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 0.2, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
+      ])
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, []);
+
   const isInBrewflow = pathname.includes("brewflow");
   const activeTimer = mash.timer ?? boil.timer;
   const isRestoring = mash.isRestoring || boil.isRestoring;
@@ -231,6 +244,11 @@ function TimerWidget() {
     ? mash.getFormattedTime()
     : boil.getFormattedTime();
   const isPaused = isSessionMash || isLauter || isPreBoil ? false : isMash ? mash.isPaused() : boil.isPaused();
+  const isLive = !isPaused && !!activeTimer;
+
+  const progress = activeTimer
+    ? Math.max(0, Math.min(1, activeTimer.timeLeft / activeTimer.duration))
+    : null;
 
   const recipeId = activeTimer ? activeTimer.id.split("-")[1] : brewSession!.recipeId;
   const targetSize = activeTimer ? activeTimer.targetSize : brewSession!.targetSize;
@@ -255,9 +273,19 @@ function TimerWidget() {
       onPress={goToScreen}
     >
       <RNView style={widgetStyles.row}>
-        <Text style={widgetStyles.label}>{label}{isPaused ? " (pausiert)" : ""}</Text>
+        <RNView style={widgetStyles.labelRow}>
+          {isLive && (
+            <Animated.View style={[widgetStyles.liveDot, { opacity: pulseAnim }]} />
+          )}
+          <Text style={widgetStyles.label}>{label}{isPaused ? " (pausiert)" : ""}</Text>
+        </RNView>
         {timeDisplay && <Text style={widgetStyles.time}>{timeDisplay}</Text>}
       </RNView>
+      {progress !== null && (
+        <RNView style={widgetStyles.progressTrack}>
+          <RNView style={[widgetStyles.progressFill, { width: `${progress * 100}%` as any }]} />
+        </RNView>
+      )}
     </Pressable>
   );
 }
@@ -267,19 +295,30 @@ const widgetStyles = StyleSheet.create({
     position: "absolute",
     left: 16,
     right: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     paddingVertical: 10,
     paddingHorizontal: 16,
-    elevation: 6,
+    elevation: 14,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+  labelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  liveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#FFD700",
   },
   label: {
     color: "#fff",
@@ -291,5 +330,17 @@ const widgetStyles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 18,
     fontVariant: ["tabular-nums"],
+  },
+  progressTrack: {
+    height: 3,
+    backgroundColor: "rgba(255,255,255,0.25)",
+    borderRadius: 2,
+    marginTop: 8,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    backgroundColor: "rgba(255,255,255,0.85)",
+    borderRadius: 2,
   },
 });

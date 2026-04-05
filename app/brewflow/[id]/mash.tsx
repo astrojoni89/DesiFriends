@@ -49,8 +49,13 @@ export default function MashTimerStep() {
       isFirstRender.current = false;
       return;
     }
-    setStepDuration(durationSec);
-    mash.resetTimer();
+    const cancelAndReset = async () => {
+      const notifee = await loadNotifee();
+      if (notifee) await notifee.default.cancelAllNotifications();
+      setStepDuration(durationSec);
+      mash.resetTimer();
+    };
+    cancelAndReset();
   }, [stepIndex]);
 
   useEffect(() => {
@@ -61,6 +66,12 @@ export default function MashTimerStep() {
         !mash.timer.paused &&
         mash.timer.startTimestamp != null
       ) {
+        const notifee = await loadNotifee();
+        // Always cancel first — prevents duplicates when the app is closed and
+        // reopened while a timer is running (restore sets startTimestamp again,
+        // but the OS still has the pre-close notification queued).
+        if (notifee) await notifee.default.cancelAllNotifications();
+
         const now = Date.now();
         const elapsed = Math.floor((now - mash.timer.startTimestamp) / 1000);
         const delay = Math.max(1, mash.timer.duration - elapsed);
@@ -124,7 +135,11 @@ export default function MashTimerStep() {
     mash.extendTimer(extraSeconds);
 
     // Reschedule the step-complete notification with the new remaining time.
+    // Cancel first to avoid a duplicate firing at the original end time.
     if (Device.isDevice && mash.timer && mash.timer.startTimestamp !== null) {
+      const notifee = await loadNotifee();
+      if (notifee) await notifee.default.cancelAllNotifications();
+
       const elapsed = Math.floor((Date.now() - mash.timer.startTimestamp) / 1000);
       const delay = Math.max(1, mash.timer.duration + extraSeconds - elapsed);
       await scheduleMashNotification({

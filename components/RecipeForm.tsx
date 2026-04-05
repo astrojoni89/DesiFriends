@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme, Snackbar, Tooltip, Portal, Dialog } from "react-native-paper";
 import type { AppTheme } from "@/theme/theme";
 import { useValidation } from "@/hooks/useValidation";
+import { useBrewBarOffset } from "@/hooks/useBrewBarOffset";
 import {
   Ingredient,
   HopIngredient,
@@ -67,6 +68,7 @@ export function RecipeForm({
   const theme = useTheme() as AppTheme;
   const { colors } = theme;
   const styles = createStyles(theme.colors);
+  const brewBarOffset = useBrewBarOffset();
 
   const [malzList, setMalzList] = useState<Ingredient[]>(initialValues.malz ?? []);
   const [hopfenList, setHopfenList] = useState<HopIngredient[]>(initialValues.hopfen ?? []);
@@ -200,7 +202,7 @@ export function RecipeForm({
         keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <ScrollView contentContainerStyle={[styles.content, brewBarOffset > 0 && { paddingBottom: brewBarOffset }]} keyboardShouldPersistTaps="handled">
 
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <Text style={styles.title}>{title}</Text>

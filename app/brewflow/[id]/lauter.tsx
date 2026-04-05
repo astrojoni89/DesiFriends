@@ -6,6 +6,7 @@ import { useTheme } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import type { AppTheme } from "@/theme/theme";
 import { useTimerContext } from "@/context/TimerContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const STEP = 0.5; // litres per tap
 
@@ -42,21 +43,35 @@ export default function LauterScreen() {
 
   const totalNachguss = (recipe?.nachguss ?? 0) * scaleFactor;
 
+  const STORAGE_KEY = `lauter-added-${id}`;
   const [added, setAdded] = useState(0);
 
+  useEffect(() => {
+    AsyncStorage.getItem(STORAGE_KEY).then((val) => {
+      if (val !== null) setAdded(parseFloat(val));
+    });
+  }, []);
+
+  const updateAdded = (next: number) => {
+    setAdded(next);
+    AsyncStorage.setItem(STORAGE_KEY, String(next));
+  };
+
   const increment = () =>
-    setAdded((prev) => Math.round((prev + STEP) * 10) / 10);
+    updateAdded(Math.round((added + STEP) * 10) / 10);
   const decrement = () =>
-    setAdded((prev) => Math.max(0, Math.round((prev - STEP) * 10) / 10));
+    updateAdded(Math.max(0, Math.round((added - STEP) * 10) / 10));
 
   const progress = totalNachguss > 0 ? Math.min(added / totalNachguss, 1) : 0;
   const isDone = added >= totalNachguss && totalNachguss > 0;
 
-  const goToBoil = () =>
+  const goToBoil = () => {
+    AsyncStorage.removeItem(STORAGE_KEY);
     router.push({
       pathname: "/brewflow/[id]/boil",
       params: { id, targetSize, actualAlphaAcids },
     });
+  };
 
   if (!recipe) {
     return (

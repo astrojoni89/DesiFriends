@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { View, Text, Pressable, StyleSheet, Alert } from "react-native";
+import { View, Text, Pressable, StyleSheet } from "react-native";
 import { loadNotifee } from "@/utils/notifeeWrapper";
 import * as Device from "expo-device";
 import { useRecipes } from "@/context/RecipeContext";
@@ -87,6 +87,7 @@ export default function BoilTimer() {
   );
 
   const { boil, stopAllTimers, setBrewPhase } = useTimerContext();
+  const [vorderwuerzeDialog, setVorderwuerzeDialog] = useState<string | null>(null);
 
   useEffect(() => {
     setBrewPhase("boil");
@@ -219,40 +220,27 @@ export default function BoilTimer() {
     return boil.getFormattedTime();
   };
 
+  const startBoil = async () => {
+    await stopAllTimers();
+    boil.startTimer({
+      id: `boil-${id}`,
+      type: "boil",
+      stepIndex: 0,
+      duration: boilSeconds,
+      targetSize: targetSize,
+    });
+    // Notification scheduling handled by the useEffect watching startTimestamp.
+  };
+
   const handleTogglePause = async () => {
     const notifee = await loadNotifee();
 
     if (!boil.timer) {
-      const startBoil = async () => {
-        await stopAllTimers();
-        boil.startTimer({
-          id: `boil-${id}`,
-          type: "boil",
-          stepIndex: 0,
-          duration: boilSeconds,
-          targetSize: targetSize,
-        });
-        // Notification scheduling handled by the useEffect watching startTimestamp.
-      };
-
       if (hopsAtStart.length > 0) {
-        // Use adjustedAmount so alpha-acid correction is reflected in the alert.
         const alertHopText = hopsAtStart
           .map((hop) => `${adjustedAmount(hop).toFixed(1)} g ${hop.name}`)
           .join(", ");
-
-        Alert.alert("Vorderwürzehopfen", alertHopText, [
-          {
-            text: "Starte Kochtimer",
-            onPress: () => {
-              setTimeout(() => {
-                startBoil().catch((err) =>
-                  console.error("Failed to start boil timer:", err)
-                );
-              }, 0);
-            },
-          },
-        ]);
+        setVorderwuerzeDialog(alertHopText);
       } else {
         await startBoil();
       }
@@ -352,6 +340,25 @@ export default function BoilTimer() {
           <Dialog.Actions>
             <Pressable style={styles.dialogButton} onPress={handleHopAdded}>
               <Text style={styles.dialogButtonText}>Hinzugefügt</Text>
+            </Pressable>
+          </Dialog.Actions>
+        </Dialog>
+        <Dialog visible={vorderwuerzeDialog !== null} dismissable={false}>
+          <Dialog.Title>Vorderwürzehopfen</Dialog.Title>
+          <Dialog.Content>
+            <Text style={styles.dialogText}>{vorderwuerzeDialog}</Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Pressable
+              style={styles.dialogButton}
+              onPress={() => {
+                setVorderwuerzeDialog(null);
+                startBoil().catch((err: unknown) =>
+                  console.error("Failed to start boil timer:", err)
+                );
+              }}
+            >
+              <Text style={styles.dialogButtonText}>Starte Kochtimer</Text>
             </Pressable>
           </Dialog.Actions>
         </Dialog>

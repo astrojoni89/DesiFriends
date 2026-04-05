@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useBrewBarOffset } from "@/hooks/useBrewBarOffset";
 import { useState } from "react";
 import {
   View,
@@ -36,6 +37,7 @@ export default function BrewModal() {
   }>({});
   const [confirmVisible, setConfirmVisible] = useState(false);
   const theme = useTheme() as AppTheme;
+  const brewBarOffset = useBrewBarOffset();
   const { colors } = theme;
   const styles = createStyles(theme.colors);
 
@@ -385,7 +387,7 @@ export default function BrewModal() {
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <ScrollView
-            contentContainerStyle={styles.content}
+            contentContainerStyle={[styles.content, brewBarOffset > 0 && { paddingBottom: brewBarOffset }]}
             keyboardShouldPersistTaps="handled"
           >
             <Text style={styles.title}>{recipe.name}</Text>

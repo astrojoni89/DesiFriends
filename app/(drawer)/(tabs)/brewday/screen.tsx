@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useBrewBarOffset } from "@/hooks/useBrewBarOffset";
 import { Recipe, useRecipes } from "@/context/RecipeContext";
 import { useDeleteMode } from "@/context/DeleteModeContext";
 import { useRouter } from "expo-router";
@@ -24,6 +25,7 @@ export default function BrewDayScreen() {
   const theme = useTheme() as AppTheme;
   const { colors } = theme;
   const styles = createStyles(theme.colors);
+  const brewBarOffset = useBrewBarOffset();
   const { recipes, addRecipe, deleteRecipe } = useRecipes();
   const router = useRouter();
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -92,7 +94,7 @@ export default function BrewDayScreen() {
   return (
     <View style={styles.container}>
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[styles.content, brewBarOffset > 0 && { paddingBottom: brewBarOffset }]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           onScrollBeginDrag={() => {

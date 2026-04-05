@@ -17,11 +17,13 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import type { AppTheme } from "@/theme/theme";
 import { useRecipes } from "@/context/RecipeContext";
 import { estimateIBU, platoToSG } from "@/utils/calcUtils";
+import { useBrewBarOffset } from "@/hooks/useBrewBarOffset";
 
 export default function MashScheduleModal() {
   const theme = useTheme() as AppTheme;
   const { colors } = theme;
   const styles = createStyles(colors);
+  const brewBarOffset = useBrewBarOffset();
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const { getRecipeById, addRecipe } = useRecipes();
@@ -108,7 +110,7 @@ export default function MashScheduleModal() {
         >
           <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
           <ScrollView
-            contentContainerStyle={styles.content}
+            contentContainerStyle={[styles.content, brewBarOffset > 0 && { paddingBottom: brewBarOffset }]}
             keyboardShouldPersistTaps="handled"
           >
             <Text style={styles.title}>{recipe.name}</Text>

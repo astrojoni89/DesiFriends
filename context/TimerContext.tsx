@@ -283,7 +283,7 @@ export const TimerProvider = ({ children }: { children: React.ReactNode }) => {
     setBrewSessionState(session);
   };
 
-  const setBrewPhase = async (phase: "lauter" | "boil") => {
+  const setBrewPhase = async (phase: "mash" | "lauter" | "boil") => {
     setBrewSessionState((prev) => {
       if (!prev) return prev;
       const updated = { ...prev, phase };

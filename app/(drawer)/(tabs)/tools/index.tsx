@@ -1,4 +1,5 @@
 import { useState, useRef, RefObject } from "react";
+import { useBrewBarOffset } from "@/hooks/useBrewBarOffset";
 import {
   View,
   Text,
@@ -30,6 +31,7 @@ export default function CalcsScreen() {
   const theme = useTheme() as AppTheme;
   const { colors } = theme;
   const styles = createStyles(theme.colors);
+  const brewBarOffset = useBrewBarOffset();
   const placeholderFor = (enabled: boolean) =>
     enabled ? colors.outline : colors.disabledText;
 
@@ -165,7 +167,7 @@ export default function CalcsScreen() {
       <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
         <ScrollView
           ref={scrollRef}
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[styles.content, brewBarOffset > 0 && { paddingBottom: brewBarOffset }]}
           keyboardShouldPersistTaps="handled"
         >
           <View style={{ position: "absolute", top: 32, left: 16, zIndex: 10 }}>
