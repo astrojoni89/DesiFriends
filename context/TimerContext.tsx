@@ -2,6 +2,7 @@ import React, {
   createContext,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -80,7 +81,9 @@ function useDualTimer(type: TimerType): TimerMethods {
     });
   };
 
-  // Persist timer state to AsyncStorage on every change.
+  // Persist timer state to AsyncStorage only when structural fields change.
+  // timeLeft is intentionally excluded — it's recomputed from startTimestamp
+  // on restore, so writing it every tick would cause a disk write every second.
   useEffect(() => {
     const persist = async () => {
       if (timer) {
@@ -90,7 +93,7 @@ function useDualTimer(type: TimerType): TimerMethods {
       }
     };
     persist();
-  }, [timer]);
+  }, [timer?.id, timer?.paused, timer?.startTimestamp, timer?.duration, timer?.stepIndex, timer?.notificationIds]);
 
   // Restore timer state on mount.
   useEffect(() => {
@@ -135,13 +138,16 @@ function useDualTimer(type: TimerType): TimerMethods {
     restore();
   }, []);
 
-  // Single interval — uses the shared tick function directly.
+  // Only tick while the timer is actively running. Re-runs whenever the timer
+  // starts, resumes (new startTimestamp), or is cleared (startTimestamp → null).
+  // This means zero JS wake-ups when both timers are idle or paused.
   useEffect(() => {
-    intervalRef.current = setInterval(tick, 500);
+    if (!timer || timer.paused || timer.startTimestamp === null) return;
+    intervalRef.current = setInterval(tick, 1000);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, []);
+  }, [timer?.startTimestamp]);
 
   const startTimer = ({
     id,
@@ -306,8 +312,21 @@ export const TimerProvider = ({ children }: { children: React.ReactNode }) => {
     setBrewSessionState(null);
   };
 
+  const contextValue = useMemo(
+    () => ({ mash, boil, stopAllTimers, brewSession, startBrewSession, setBrewPhase }),
+    // Re-compute only when timer identity/structural state or brew session changes.
+    // Consumers that don't use timeLeft (e.g. layout buttons, lauter screen) will
+    // not re-render on every tick.
+    [
+      mash.timer?.id, mash.timer?.paused, mash.timer?.timeLeft,
+      boil.timer?.id, boil.timer?.paused, boil.timer?.timeLeft,
+      mash.isRestoring, boil.isRestoring,
+      brewSession,
+    ]
+  );
+
   return (
-    <TimerContext.Provider value={{ mash, boil, stopAllTimers, brewSession, startBrewSession, setBrewPhase }}>
+    <TimerContext.Provider value={contextValue}>
       {children}
     </TimerContext.Provider>
   );
