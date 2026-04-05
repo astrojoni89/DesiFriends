@@ -66,6 +66,8 @@ function useDualTimer(type: TimerType): TimerMethods {
 
   // Single tick function — used by the interval and for immediate updates.
   // Uses a functional setTimer updater so it never closes over stale state.
+  // Writes to AsyncStorage directly when the timer expires (the only structural
+  // change that happens inside tick) so the expiry is always persisted.
   const tick = () => {
     setTimer((prev) => {
       if (!prev || prev.paused || prev.startTimestamp === null) return prev;
@@ -74,26 +76,14 @@ function useDualTimer(type: TimerType): TimerMethods {
       const timeLeft = Math.max(0, prev.duration - elapsed);
 
       if (timeLeft === 0) {
-        return { ...prev, timeLeft: 0, paused: true, startTimestamp: null };
+        const next = { ...prev, timeLeft: 0, paused: true, startTimestamp: null };
+        AsyncStorage.setItem(storageKey, JSON.stringify(next));
+        return next;
       }
 
       return { ...prev, timeLeft };
     });
   };
-
-  // Persist timer state to AsyncStorage only when structural fields change.
-  // timeLeft is intentionally excluded — it's recomputed from startTimestamp
-  // on restore, so writing it every tick would cause a disk write every second.
-  useEffect(() => {
-    const persist = async () => {
-      if (timer) {
-        await AsyncStorage.setItem(storageKey, JSON.stringify(timer));
-      } else {
-        await AsyncStorage.removeItem(storageKey);
-      }
-    };
-    persist();
-  }, [timer?.id, timer?.paused, timer?.startTimestamp, timer?.duration, timer?.stepIndex, timer?.notificationIds]);
 
   // Restore timer state on mount.
   useEffect(() => {
@@ -149,6 +139,11 @@ function useDualTimer(type: TimerType): TimerMethods {
     };
   }, [timer?.startTimestamp]);
 
+  // All timer mutation functions write directly to AsyncStorage (fire-and-forget)
+  // rather than relying on a React effect. This guarantees the state is on disk
+  // even if the app is killed immediately after the call — the effect approach
+  // was unreliable because effects run after render and may not flush before kill.
+
   const startTimer = ({
     id,
     stepIndex,
@@ -158,7 +153,7 @@ function useDualTimer(type: TimerType): TimerMethods {
     TimerState,
     "notificationIds" | "paused" | "timeLeft" | "startTimestamp"
   >) => {
-    setTimer({
+    const newTimer: TimerState = {
       id,
       type,
       stepIndex,
@@ -168,7 +163,9 @@ function useDualTimer(type: TimerType): TimerMethods {
       startTimestamp: Date.now(),
       timeLeft: duration,
       notificationIds: {},
-    });
+    };
+    setTimer(newTimer);
+    AsyncStorage.setItem(storageKey, JSON.stringify(newTimer));
   };
 
   const pauseTimer = () => {
@@ -176,35 +173,44 @@ function useDualTimer(type: TimerType): TimerMethods {
       if (!prev || prev.paused || prev.startTimestamp === null) return prev;
       const elapsed = Math.floor((Date.now() - prev.startTimestamp) / 1000);
       const remaining = Math.max(0, prev.duration - elapsed);
-      return { ...prev, paused: true, startTimestamp: null, timeLeft: remaining };
+      const next = { ...prev, paused: true, startTimestamp: null, timeLeft: remaining };
+      AsyncStorage.setItem(storageKey, JSON.stringify(next));
+      return next;
     });
   };
 
   const resumeTimer = () => {
     setTimer((prev) => {
       if (!prev || !prev.paused) return prev;
-      return {
+      const next = {
         ...prev,
         paused: false,
         startTimestamp: Date.now(),
         // duration becomes "remaining to count from" so the tick stays correct
         duration: prev.timeLeft,
       };
+      AsyncStorage.setItem(storageKey, JSON.stringify(next));
+      return next;
     });
   };
 
-  const resetTimer = () => setTimer(null);
+  const resetTimer = () => {
+    setTimer(null);
+    AsyncStorage.removeItem(storageKey);
+  };
 
   // Adds extra seconds to the current step. Updates both duration (so the
   // running tick stays accurate) and timeLeft (for immediate UI feedback).
   const extendTimer = (extraSeconds: number) => {
     setTimer((prev) => {
       if (!prev) return prev;
-      return {
+      const next = {
         ...prev,
         duration: prev.duration + extraSeconds,
         timeLeft: prev.timeLeft + extraSeconds,
       };
+      AsyncStorage.setItem(storageKey, JSON.stringify(next));
+      return next;
     });
   };
 
@@ -221,11 +227,12 @@ function useDualTimer(type: TimerType): TimerMethods {
   const isRunning = () => !!timer && !timer.paused && timer.timeLeft > 0;
 
   const setNotificationId = (stepIndex: number, id: string) => {
-    setTimer((prev) =>
-      prev
-        ? { ...prev, notificationIds: { ...prev.notificationIds, [stepIndex]: id } }
-        : prev
-    );
+    setTimer((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, notificationIds: { ...prev.notificationIds, [stepIndex]: id } };
+      AsyncStorage.setItem(storageKey, JSON.stringify(next));
+      return next;
+    });
   };
 
   const cancelNotification = async (stepIndex: number) => {
@@ -235,18 +242,19 @@ function useDualTimer(type: TimerType): TimerMethods {
     const notifId = timer?.notificationIds?.[stepIndex];
     if (notifId) {
       await notifee.default.cancelNotification(notifId);
-      setTimer((prev) =>
-        prev
-          ? {
-              ...prev,
-              notificationIds: Object.fromEntries(
-                Object.entries(prev.notificationIds).filter(
-                  ([k]) => Number(k) !== stepIndex
-                )
-              ),
-            }
-          : prev
-      );
+      setTimer((prev) => {
+        if (!prev) return prev;
+        const next = {
+          ...prev,
+          notificationIds: Object.fromEntries(
+            Object.entries(prev.notificationIds).filter(
+              ([k]) => Number(k) !== stepIndex
+            )
+          ),
+        };
+        AsyncStorage.setItem(storageKey, JSON.stringify(next));
+        return next;
+      });
     }
   };
 

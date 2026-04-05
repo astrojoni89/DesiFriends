@@ -1,5 +1,6 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useBrewBarOffset } from "@/hooks/useBrewBarOffset";
+import { useTimerContext } from "@/context/TimerContext";
 import { useState } from "react";
 import {
   View,
@@ -35,7 +36,9 @@ export default function BrewModal() {
   const [actualAlphaAcids, setActualAlphaAcids] = useState<{
     [index: number]: string;
   }>({});
+  const { brewSession, stopAllTimers } = useTimerContext();
   const [confirmVisible, setConfirmVisible] = useState(false);
+  const [overwriteVisible, setOverwriteVisible] = useState(false);
   const theme = useTheme() as AppTheme;
   const brewBarOffset = useBrewBarOffset();
   const { colors } = theme;
@@ -481,10 +484,16 @@ export default function BrewModal() {
               </Tooltip>
             </View>
 
-            <View style={{ marginTop: 8, marginBottom: 64 }}>
+            <View style={{ marginTop: 8 }}>
               <Pressable
                 style={styles.button}
-                onPress={() => setConfirmVisible(true)}
+                onPress={() => {
+                  if (brewSession) {
+                    setOverwriteVisible(true);
+                  } else {
+                    setConfirmVisible(true);
+                  }
+                }}
               >
                 <Text style={styles.buttontext}>Brautag starten</Text>
               </Pressable>
@@ -518,6 +527,32 @@ export default function BrewModal() {
             </Pressable>
           </Dialog.Actions>
         </Dialog>
+        <Dialog visible={overwriteVisible} onDismiss={() => setOverwriteVisible(false)}>
+          <Dialog.Title>Aktiver Brautag läuft!</Dialog.Title>
+          <Dialog.Content>
+            <Text style={{ fontSize: 16, color: colors.text, lineHeight: 24 }}>
+              Es läuft bereits ein Brautag. Wenn du jetzt einen neuen startest, werden alle laufenden Timer und Benachrichtigungen abgebrochen.
+            </Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Pressable style={styles.dialogCancelButton} onPress={() => setOverwriteVisible(false)}>
+              <Text style={styles.dialogCancelText}>Abbrechen</Text>
+            </Pressable>
+            <Pressable
+              style={styles.dialogErrorButton}
+              onPress={async () => {
+                setOverwriteVisible(false);
+                await stopAllTimers();
+                router.push({
+                  pathname: "/brewflow/[id]",
+                  params: { id: recipe.id, targetSize, actualAlphaAcids: JSON.stringify(actualAlphaAcids) },
+                });
+              }}
+            >
+              <Text style={styles.dialogButtonText}>Trotzdem starten</Text>
+            </Pressable>
+          </Dialog.Actions>
+        </Dialog>
       </Portal>
     </View>
   );
@@ -528,7 +563,6 @@ function createStyles(colors: AppTheme["colors"]) {
     container: {
       flex: 1,
       backgroundColor: colors.background,
-      marginBottom: 50,
       paddingTop: 32,
     },
     content: {
@@ -602,6 +636,13 @@ function createStyles(colors: AppTheme["colors"]) {
     dialogCancelText: {
       color: colors.text,
       fontSize: 15,
+    },
+    dialogErrorButton: {
+      backgroundColor: colors.error,
+      paddingVertical: 10,
+      paddingHorizontal: 20,
+      borderRadius: 8,
+      marginLeft: 8,
     },
   });
 }

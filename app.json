@@ -23,7 +23,19 @@
         },
         "edgeToEdgeEnabled": true,
         "package": "com.astrojoni89.DesiFriends",
-        "permissions": ["NOTIFICATIONS", "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE", "VIBRATE", "RECEIVE_BOOT_COMPLETED", "POST_NOTIFICATIONS"]
+        "permissions": ["NOTIFICATIONS", "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE", "VIBRATE", "RECEIVE_BOOT_COMPLETED", "POST_NOTIFICATIONS"],
+        "intentFilters": [
+          {
+            "action": "VIEW",
+            "category": ["DEFAULT", "BROWSABLE"],
+            "data": [
+              { "scheme": "file", "mimeType": "application/octet-stream", "pathPattern": ".*\\.dfr" },
+              { "scheme": "file", "mimeType": "application/json", "pathPattern": ".*\\.dfr" },
+              { "scheme": "content", "mimeType": "application/octet-stream" },
+              { "scheme": "content", "mimeType": "application/json" }
+            ]
+          }
+        ]
       },
       "web": {
         "bundler": "metro",

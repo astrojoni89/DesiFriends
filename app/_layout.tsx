@@ -49,12 +49,15 @@ import { ThemeProvider, useThemeContext } from "@/context/ThemeContext";
 import { DeleteModeProvider } from "@/context/DeleteModeContext";
 import { TimerProvider } from "@/context/TimerContext";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "expo-router";
+import * as Linking from "expo-linking";
+import * as FileSystem from "expo-file-system";
 import { useTimerContext } from "@/context/TimerContext";
+import { useRecipes } from "../context/RecipeContext";
 import { Pressable, Text, StyleSheet, View as RNView, Animated } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useTheme } from "react-native-paper";
+import { useTheme, Snackbar, Portal } from "react-native-paper";
 import type { AppTheme } from "@/theme/theme";
 
 import { loadNotifee } from "@/utils/notifeeWrapper";
@@ -141,6 +144,7 @@ function AppWithTheming() {
               />
             </Stack>
             <TimerWidget />
+            <FileImportHandler />
             <StatusBar style="auto" />
           </RNView>
         </TimerProvider>
@@ -344,3 +348,62 @@ const widgetStyles = StyleSheet.create({
     borderRadius: 2,
   },
 });
+
+function FileImportHandler() {
+  const { addRecipe } = useRecipes();
+  const router = useRouter();
+  const url = Linking.useURL();
+  const [snackMessage, setSnackMessage] = useState<string | null>(null);
+  const handled = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!url) return;
+    if (url === handled.current) return;
+    if (!url.startsWith("file://") && !url.startsWith("content://")) return;
+
+    handled.current = url;
+
+    const doImport = async () => {
+      try {
+        const contents = await FileSystem.readAsStringAsync(url);
+        const data = JSON.parse(contents);
+
+        if (!data?.recipe) {
+          setSnackMessage("Ungültige Rezeptdatei.");
+          return;
+        }
+
+        addRecipe({
+          ...data.recipe,
+          id: Date.now().toString(),
+          batchSize: data.recipe.batchSize ?? 0,
+          hauptguss: data.recipe.hauptguss ?? 0,
+          nachguss: data.recipe.nachguss ?? 0,
+          malz: data.recipe.malz ?? [],
+          hopfen: data.recipe.hopfen ?? [],
+          hefe: data.recipe.hefe ?? [],
+        });
+
+        setSnackMessage(`„${data.recipe.name}" importiert!`);
+        router.replace("/(drawer)/(tabs)/brewday" as any);
+      } catch (e) {
+        console.error("Failed to import .dfr file:", e);
+        setSnackMessage("Rezept konnte nicht importiert werden.");
+      }
+    };
+
+    doImport();
+  }, [url]);
+
+  return (
+    <Portal>
+      <Snackbar
+        visible={snackMessage !== null}
+        onDismiss={() => setSnackMessage(null)}
+        duration={3000}
+      >
+        {snackMessage ?? ""}
+      </Snackbar>
+    </Portal>
+  );
+}
