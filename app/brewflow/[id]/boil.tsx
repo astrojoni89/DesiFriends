@@ -107,12 +107,17 @@ export default function BoilTimer() {
     })
     .sort((a, b) => parseInt(b.time) - parseInt(a.time));
 
-  // Pre-mark hops that were already added before this mount (covers the
-  // restore case — any hop whose threshold the timer has already passed).
+  // Pre-mark hops whose threshold the timer passed well before this mount —
+  // those were already handled in a previous session and should not re-trigger.
+  // Hops crossed within the last 2 minutes are treated as "just fired" so the
+  // dialog still appears when the user navigates here from the notification.
+  const GRACE_SECONDS = 120;
   const initialPassed = new Set<string>();
   if (boil.timer && boil.timer.timeLeft > 0) {
     for (const hop of inBoilHops) {
-      if (boil.timer.timeLeft < parseInt(hop.time) * 60) {
+      const hopSeconds = parseInt(hop.time) * 60;
+      const secondsPast = hopSeconds - boil.timer.timeLeft;
+      if (secondsPast > GRACE_SECONDS) {
         initialPassed.add(`${hop.name}-${hop.time}`);
       }
     }

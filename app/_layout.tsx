@@ -34,6 +34,28 @@ if (Constants.executionEnvironment !== "storeClient") {
         }
       }
     }
+
+    // When a hop notification is delivered while the app is in the background,
+    // pause the boil timer in AsyncStorage so the user sees it paused when
+    // they navigate to the boil screen via the notification.
+    if (
+      type === EventType.DELIVERED &&
+      detail.notification?.android?.channelId === "boil-timer" &&
+      detail.notification?.title === "Hopfengabe"
+    ) {
+      const saved = await AsyncStorage.getItem("activeTimer-boil");
+      if (saved) {
+        const timer = JSON.parse(saved);
+        if (!timer.paused && timer.startTimestamp) {
+          const elapsed = Math.floor((Date.now() - timer.startTimestamp) / 1000);
+          const remaining = Math.max(0, timer.duration - elapsed);
+          await AsyncStorage.setItem(
+            "activeTimer-boil",
+            JSON.stringify({ ...timer, paused: true, startTimestamp: null, timeLeft: remaining })
+          );
+        }
+      }
+    }
   });
 }
 import {
@@ -158,6 +180,27 @@ function TimerRedirector() {
   const router = useRouter();
   const hasRedirected = useRef(false);
 
+  // Pause the boil timer the moment a hop notification is delivered, even when
+  // the user is on a different screen. This prevents the timer from running
+  // while the user navigates to the boil screen to confirm the hop addition.
+  useEffect(() => {
+    let active = true;
+    let unsubscribe: (() => void) | undefined;
+    loadNotifee().then((notifee) => {
+      if (!notifee || !active) return;
+      unsubscribe = notifee.default.onForegroundEvent(({ type, detail }: any) => {
+        if (
+          type === notifee.EventType?.DELIVERED &&
+          detail.notification?.android?.channelId === "boil-timer" &&
+          detail.notification?.title === "Hopfengabe"
+        ) {
+          boil.pauseTimer();
+        }
+      });
+    });
+    return () => { active = false; unsubscribe?.(); };
+  }, []);
+
   useEffect(() => {
     const setup = async () => {
       const notifee = await loadNotifee();
@@ -212,9 +255,28 @@ function TimerWidget() {
   const insets = useSafeAreaInsets();
   const theme = useTheme() as AppTheme;
 
-  // Pulse animation for the live dot — hooks must come before any early return.
-  const pulseAnim = useRef(new Animated.Value(0.2)).current;
+  const isInBrewflow = pathname.includes("brewflow");
+  const activeTimer = mash.timer ?? boil.timer;
+  const isRestoring = mash.isRestoring || boil.isRestoring;
+
+  const isMash = !!mash.timer;
+  const sessionPhase = !activeTimer ? (brewSession?.phase ?? "lauter") : undefined;
+  const isSessionMash = !activeTimer && sessionPhase === "mash";
+  const isLauter = !activeTimer && sessionPhase === "lauter";
+  const isPreBoil = !activeTimer && sessionPhase === "boil";
+  const isPaused = isSessionMash || isLauter || isPreBoil ? false : isMash ? mash.isPaused() : boil.isPaused();
+  const isLive = !isPaused && !!activeTimer;
+
+  // Pulse animation — must be before early return (hook rules).
+  // Tied to isLive so it starts fresh when the timer is running and stops
+  // (dot hidden) when paused, avoiding the "static dot" glitch.
+  const pulseAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
+    if (!isLive) {
+      pulseAnim.setValue(0);
+      return;
+    }
+    pulseAnim.setValue(0.2);
     const pulse = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
@@ -223,23 +285,11 @@ function TimerWidget() {
     );
     pulse.start();
     return () => pulse.stop();
-  }, []);
-
-  const isInBrewflow = pathname.includes("brewflow");
-  const activeTimer = mash.timer ?? boil.timer;
-  const isRestoring = mash.isRestoring || boil.isRestoring;
+  }, [isLive]);
 
   // Show when outside brewflow and either a timer is running OR a brew session
   // is active (e.g. the user is on the lauter screen which has no timer).
   if (isInBrewflow || isRestoring || (!activeTimer && !brewSession)) return null;
-
-  const isMash = !!mash.timer;
-  // When no active timer, use the brew session phase to decide label + destination.
-  // "mash" phase covers the restore race window: brewSession loads before mash.timer.
-  const sessionPhase = !activeTimer ? (brewSession?.phase ?? "lauter") : undefined;
-  const isSessionMash = !activeTimer && sessionPhase === "mash";
-  const isLauter = !activeTimer && sessionPhase === "lauter";
-  const isPreBoil = !activeTimer && sessionPhase === "boil";
 
   const label = isSessionMash ? "Maischen" : isPreBoil ? "Kochen" : isLauter ? "Läutern" : isMash ? "Maischen" : "Kochen";
   const timeDisplay = isSessionMash || isLauter || isPreBoil
@@ -247,8 +297,6 @@ function TimerWidget() {
     : isMash
     ? mash.getFormattedTime()
     : boil.getFormattedTime();
-  const isPaused = isSessionMash || isLauter || isPreBoil ? false : isMash ? mash.isPaused() : boil.isPaused();
-  const isLive = !isPaused && !!activeTimer;
 
   const progress = activeTimer
     ? Math.max(0, Math.min(1, 1 - activeTimer.timeLeft / activeTimer.duration))
@@ -278,9 +326,7 @@ function TimerWidget() {
     >
       <RNView style={widgetStyles.row}>
         <RNView style={widgetStyles.labelRow}>
-          {isLive && (
-            <Animated.View style={[widgetStyles.liveDot, { opacity: pulseAnim }]} />
-          )}
+          <Animated.View style={[widgetStyles.liveDot, { opacity: pulseAnim }]} />
           <Text style={widgetStyles.label}>{label}{isPaused ? " (pausiert)" : ""}</Text>
         </RNView>
         {timeDisplay && <Text style={widgetStyles.time}>{timeDisplay}</Text>}

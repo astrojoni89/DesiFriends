@@ -28,6 +28,16 @@
           {
             "action": "VIEW",
             "category": ["DEFAULT", "BROWSABLE"],
+            "data": [{ "scheme": "file", "mimeType": "*/*", "pathPattern": ".*\\\\.dfr" }]
+          },
+          {
+            "action": "VIEW",
+            "category": ["DEFAULT", "BROWSABLE"],
+            "data": [{ "scheme": "content", "mimeType": "*/*", "pathPattern": ".*\\\\.dfr" }]
+          },
+          {
+            "action": "VIEW",
+            "category": ["DEFAULT", "BROWSABLE"],
             "data": [{ "scheme": "content", "mimeType": "application/octet-stream" }]
           },
           {
