@@ -59,6 +59,7 @@ export const scheduleHopNotifications = async ({
       {
         title: "Hopfengabe",
         body: `${hopText} jetzt zugeben (${hop.time} Minuten vor Ende)!`,
+        data: { hopThresholdSeconds: String(hopSecondsBeforeEnd) },
         android: {
           channelId: "boil-timer",
           smallIcon: "ic_stat_hop",

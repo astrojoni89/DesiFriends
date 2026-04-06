@@ -1,13 +1,15 @@
 import { useRouter } from "expo-router";
-import { Alert } from "react-native";
+import { useState } from "react";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
 import { useRecipes } from "@/context/RecipeContext";
 import { RecipeForm, RecipeFormData } from "@/components/RecipeForm";
+import { Portal, Snackbar } from "react-native-paper";
 
 export default function RecipesScreen() {
   const router = useRouter();
   const { addRecipe } = useRecipes();
+  const [snackMessage, setSnackMessage] = useState<string | null>(null);
 
   const handleSave = (data: RecipeFormData) => {
     addRecipe({
@@ -53,12 +55,12 @@ export default function RecipesScreen() {
       const data = JSON.parse(contents);
 
       if (!fileUri.endsWith(".json") && !fileUri.endsWith(".dfr")) {
-        Alert.alert("Fehler", "Bitte wähle eine gültige Rezeptdatei (.json oder .dfr).");
+        setSnackMessage("Bitte wähle eine gültige Rezeptdatei (.json oder .dfr).");
         return;
       }
 
       if (!data || typeof data !== "object" || !data.recipe) {
-        Alert.alert("Fehler", "Die Datei enthält kein gültiges Rezept.");
+        setSnackMessage("Die Datei enthält kein gültiges Rezept.");
         return;
       }
 
@@ -73,20 +75,31 @@ export default function RecipesScreen() {
         hefe: data.recipe.hefe ?? [],
       });
 
-      Alert.alert("Erfolg", "Rezept erfolgreich importiert!");
+      setSnackMessage("Rezept erfolgreich importiert!");
     } catch (error) {
       console.error("Import Error:", error);
-      Alert.alert("Fehler", "Rezept konnte nicht importiert werden.");
+      setSnackMessage("Rezept konnte nicht importiert werden.");
     }
   };
 
   return (
-    <RecipeForm
-      title="Rezept erstellen"
-      onSave={handleSave}
-      showScheduleButton
-      onSchedule={handleSchedule}
-      onImport={importRecipe}
-    />
+    <>
+      <RecipeForm
+        title="Rezept erstellen"
+        onSave={handleSave}
+        showScheduleButton
+        onSchedule={handleSchedule}
+        onImport={importRecipe}
+      />
+      <Portal>
+        <Snackbar
+          visible={snackMessage !== null}
+          onDismiss={() => setSnackMessage(null)}
+          duration={3000}
+        >
+          {snackMessage ?? ""}
+        </Snackbar>
+      </Portal>
+    </>
   );
 }

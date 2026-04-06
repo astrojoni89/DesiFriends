@@ -31,7 +31,7 @@ interface TimerMethods {
       "notificationIds" | "paused" | "timeLeft" | "startTimestamp"
     >
   ) => void;
-  pauseTimer: () => void;
+  pauseTimer: (atTimeLeft?: number) => void;
   resumeTimer: () => void;
   resetTimer: () => void;
   extendTimer: (extraSeconds: number) => void;
@@ -60,14 +60,17 @@ const TimerContext = createContext<TimerContextValue | undefined>(undefined);
 
 function useDualTimer(type: TimerType): TimerMethods {
   const [timer, setTimer] = useState<TimerState | null>(null);
+  // Always-current mirror of timer state. Read by getTimeLeft/getFormattedTime/
+  // isPaused/isRunning so those functions stay accurate even when the context
+  // memo hasn't propagated a new value to consumers yet.
+  const timerRef = useRef<TimerState | null>(null);
   const intervalRef = useRef<number | null>(null);
   const storageKey = `activeTimer-${type}`;
   const [isRestoring, setIsRestoring] = useState(true);
 
-  // Single tick function — used by the interval and for immediate updates.
-  // Uses a functional setTimer updater so it never closes over stale state.
-  // Writes to AsyncStorage directly when the timer expires (the only structural
-  // change that happens inside tick) so the expiry is always persisted.
+  // Single tick function — uses a functional setTimer updater so it never
+  // closes over stale state. Also keeps timerRef current so consumers that
+  // drive their own re-render cycle always read fresh values.
   const tick = () => {
     setTimer((prev) => {
       if (!prev || prev.paused || prev.startTimestamp === null) return prev;
@@ -77,11 +80,14 @@ function useDualTimer(type: TimerType): TimerMethods {
 
       if (timeLeft === 0) {
         const next = { ...prev, timeLeft: 0, paused: true, startTimestamp: null };
+        timerRef.current = next;
         AsyncStorage.setItem(storageKey, JSON.stringify(next));
         return next;
       }
 
-      return { ...prev, timeLeft };
+      const next = { ...prev, timeLeft };
+      timerRef.current = next;
+      return next;
     });
   };
 
@@ -99,20 +105,17 @@ function useDualTimer(type: TimerType): TimerMethods {
             const remaining = parsed.duration - elapsed;
 
             if (remaining <= 0) {
-              // Timer expired while app was closed. Preserve as an expired
-              // state (timeLeft: 0, paused: true) so the screen can react —
-              // e.g. boil.tsx will auto-navigate to the complete screen.
-              setTimer({
-                ...parsed,
-                timeLeft: 0,
-                paused: true,
-                startTimestamp: null,
-              });
+              const restored = { ...parsed, timeLeft: 0, paused: true, startTimestamp: null };
+              timerRef.current = restored;
+              setTimer(restored);
             } else {
-              setTimer({ ...parsed, timeLeft: remaining, paused: false });
+              const restored = { ...parsed, timeLeft: remaining, paused: false };
+              timerRef.current = restored;
+              setTimer(restored);
             }
           } else {
             // Paused timer — restore as-is.
+            timerRef.current = parsed;
             setTimer(parsed);
           }
         }
@@ -164,16 +167,18 @@ function useDualTimer(type: TimerType): TimerMethods {
       timeLeft: duration,
       notificationIds: {},
     };
+    timerRef.current = newTimer;
     setTimer(newTimer);
     AsyncStorage.setItem(storageKey, JSON.stringify(newTimer));
   };
 
-  const pauseTimer = () => {
+  const pauseTimer = (atTimeLeft?: number) => {
     setTimer((prev) => {
       if (!prev || prev.paused || prev.startTimestamp === null) return prev;
       const elapsed = Math.floor((Date.now() - prev.startTimestamp) / 1000);
-      const remaining = Math.max(0, prev.duration - elapsed);
+      const remaining = atTimeLeft ?? Math.max(0, prev.duration - elapsed);
       const next = { ...prev, paused: true, startTimestamp: null, timeLeft: remaining };
+      timerRef.current = next;
       AsyncStorage.setItem(storageKey, JSON.stringify(next));
       return next;
     });
@@ -186,15 +191,16 @@ function useDualTimer(type: TimerType): TimerMethods {
         ...prev,
         paused: false,
         startTimestamp: Date.now(),
-        // duration becomes "remaining to count from" so the tick stays correct
         duration: prev.timeLeft,
       };
+      timerRef.current = next;
       AsyncStorage.setItem(storageKey, JSON.stringify(next));
       return next;
     });
   };
 
   const resetTimer = () => {
+    timerRef.current = null;
     setTimer(null);
     AsyncStorage.removeItem(storageKey);
   };
@@ -209,27 +215,35 @@ function useDualTimer(type: TimerType): TimerMethods {
         duration: prev.duration + extraSeconds,
         timeLeft: prev.timeLeft + extraSeconds,
       };
+      timerRef.current = next;
       AsyncStorage.setItem(storageKey, JSON.stringify(next));
       return next;
     });
   };
 
-  const getTimeLeft = () => timer?.timeLeft ?? 0;
+  // Read from ref so these stay accurate even when the context memo hasn't
+  // propagated a new value — screens drive their own re-renders via a local
+  // interval and call these during each render to get the fresh value.
+  const getTimeLeft = () => timerRef.current?.timeLeft ?? 0;
 
   const getFormattedTime = () => {
-    const secs = getTimeLeft();
+    const secs = timerRef.current?.timeLeft ?? 0;
     const m = Math.floor(secs / 60);
     const s = secs % 60;
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
-  const isPaused = () => timer?.paused ?? true;
-  const isRunning = () => !!timer && !timer.paused && timer.timeLeft > 0;
+  const isPaused = () => timerRef.current?.paused ?? true;
+  const isRunning = () => {
+    const t = timerRef.current;
+    return !!t && !t.paused && t.timeLeft > 0;
+  };
 
   const setNotificationId = (stepIndex: number, id: string) => {
     setTimer((prev) => {
       if (!prev) return prev;
       const next = { ...prev, notificationIds: { ...prev.notificationIds, [stepIndex]: id } };
+      timerRef.current = next;
       AsyncStorage.setItem(storageKey, JSON.stringify(next));
       return next;
     });
@@ -322,12 +336,14 @@ export const TimerProvider = ({ children }: { children: React.ReactNode }) => {
 
   const contextValue = useMemo(
     () => ({ mash, boil, stopAllTimers, brewSession, startBrewSession, setBrewPhase }),
-    // Re-compute only when timer identity/structural state or brew session changes.
-    // Consumers that don't use timeLeft (e.g. layout buttons, lauter screen) will
-    // not re-render on every tick.
+    // Only structural changes (start, pause, resume, reset, restore) push a new
+    // context value to consumers. timeLeft is excluded — screens that need to
+    // display the countdown drive their own re-renders via a local interval and
+    // read fresh values through getTimeLeft()/getFormattedTime() which read from
+    // timerRef rather than the memoized state snapshot.
     [
-      mash.timer?.id, mash.timer?.paused, mash.timer?.timeLeft,
-      boil.timer?.id, boil.timer?.paused, boil.timer?.timeLeft,
+      mash.timer?.id, mash.timer?.paused,
+      boil.timer?.id, boil.timer?.paused,
       mash.isRestoring, boil.isRestoring,
       brewSession,
     ]

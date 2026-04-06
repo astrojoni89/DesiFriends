@@ -90,10 +90,20 @@ export default function BoilTimer() {
   const { boil, stopAllTimers, setBrewPhase } = useTimerContext();
   const { onPermissionDenied, PermissionDialog } = usePermissionDialogs();
   const [vorderwuerzeDialog, setVorderwuerzeDialog] = useState<string | null>(null);
+  const [, setTick] = useState(0);
+  const isScheduling = useRef(false);
 
   useEffect(() => {
     setBrewPhase("boil");
   }, []);
+
+  // Local interval drives display re-renders every second so the countdown
+  // stays live without pushing timeLeft through the context memo on every tick.
+  useEffect(() => {
+    if (!boil.timer || boil.timer.paused) return;
+    const id = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, [boil.timer?.paused, boil.timer?.startTimestamp]);
 
   const paused = boil.isPaused();
   const timeLeft = boil.getTimeLeft();
@@ -107,17 +117,13 @@ export default function BoilTimer() {
     })
     .sort((a, b) => parseInt(b.time) - parseInt(a.time));
 
-  // Pre-mark hops whose threshold the timer passed well before this mount —
-  // those were already handled in a previous session and should not re-trigger.
-  // Hops crossed within the last 2 minutes are treated as "just fired" so the
-  // dialog still appears when the user navigates here from the notification.
-  const GRACE_SECONDS = 120;
+  // Pre-mark all hops whose threshold the timer has already passed so they
+  // never re-trigger when the screen re-mounts (e.g. via the widget).
   const initialPassed = new Set<string>();
-  if (boil.timer && boil.timer.timeLeft > 0) {
+  if (boil.timer) {
     for (const hop of inBoilHops) {
       const hopSeconds = parseInt(hop.time) * 60;
-      const secondsPast = hopSeconds - boil.timer.timeLeft;
-      if (secondsPast > GRACE_SECONDS) {
+      if (boil.timer.timeLeft < hopSeconds) {
         initialPassed.add(`${hop.name}-${hop.time}`);
       }
     }
@@ -130,6 +136,21 @@ export default function BoilTimer() {
     time: string;
   } | null>(null);
 
+  // On mount: if the timer is already paused exactly at a hop threshold (because
+  // the DELIVERED handler paused it while the user was outside the app), show
+  // the dialog immediately without waiting for the tick-driven effect.
+  useEffect(() => {
+    if (!boil.timer || !boil.timer.paused) return;
+    for (const hop of inBoilHops) {
+      const hopKey = `${hop.name}-${hop.time}`;
+      if (boil.timer.timeLeft === parseInt(hop.time) * 60 && !shownHops.current.has(hopKey)) {
+        shownHops.current.add(hopKey);
+        setPendingHop(hop);
+        break;
+      }
+    }
+  }, []);
+
   useEffect(() => {
     const maybeReschedule = async () => {
       if (
@@ -139,16 +160,22 @@ export default function BoilTimer() {
         boil.timer.startTimestamp != null &&
         recipe?.hopSchedule
       ) {
-        const now = Date.now();
-        const elapsed = Math.floor((now - boil.timer.startTimestamp) / 1000);
-        const delay = Math.max(1, boil.timer.duration - elapsed);
+        if (isScheduling.current) return;
+        isScheduling.current = true;
+        try {
+          const now = Date.now();
+          const elapsed = Math.floor((now - boil.timer.startTimestamp) / 1000);
+          const delay = Math.max(1, boil.timer.duration - elapsed);
 
-        await scheduleHopNotifications({
-          hopSchedule: adjustedHopSchedule,
-          boilSeconds: boil.timer.duration,
-          timeLeft: delay,
-          onPermissionDenied,
-        });
+          await scheduleHopNotifications({
+            hopSchedule: adjustedHopSchedule,
+            boilSeconds: boil.timer.duration,
+            timeLeft: delay,
+            onPermissionDenied,
+          });
+        } finally {
+          isScheduling.current = false;
+        }
       }
     };
 
@@ -156,7 +183,7 @@ export default function BoilTimer() {
   }, [boil.timer?.startTimestamp]);
 
   useEffect(() => {
-    if (boil.timer && boil.timer.timeLeft <= 0) {
+    if (boil.timer && timeLeft <= 0) {
       router.replace({
         pathname: "/brewflow/[id]/complete",
         params: {
@@ -166,7 +193,7 @@ export default function BoilTimer() {
         },
       });
     }
-  }, [boil.timer?.timeLeft]);
+  }, [timeLeft]);
 
   // Pause and show the hop addition dialog when the timer reaches each hop's
   // scheduled time. Skip hops that were already added before this mount.
@@ -178,7 +205,7 @@ export default function BoilTimer() {
       if (timeLeft <= parseInt(hop.time) * 60 && !shownHops.current.has(hopKey)) {
         shownHops.current.add(hopKey);
         const pauseAndShow = async () => {
-          boil.pauseTimer();
+          boil.pauseTimer(parseInt(hop.time) * 60);
           setPendingHop(hop);
           const notifee = await loadNotifee();
           if (notifee) await notifee.default.cancelAllNotifications();

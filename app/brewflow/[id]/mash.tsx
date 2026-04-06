@@ -29,6 +29,8 @@ export default function MashTimerStep() {
 
   const { mash, stopAllTimers, startBrewSession } = useTimerContext();
   const { onPermissionDenied, PermissionDialog } = usePermissionDialogs();
+  const [, setTick] = useState(0);
+  const isScheduling = useRef(false);
 
   const steps = recipe?.mashSteps ?? [];
   // Initialise from a restored timer so we return to the correct step.
@@ -42,6 +44,14 @@ export default function MashTimerStep() {
   // Tracks the full expected duration for the current step, including any
   // extensions. Initialised from the recipe and reset when the step changes.
   const [stepDuration, setStepDuration] = useState(durationSec);
+
+  // Local interval drives display re-renders every second independently of
+  // the context memo, which no longer propagates on every tick.
+  useEffect(() => {
+    if (!mash.timer || mash.timer.paused) return;
+    const id = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, [mash.timer?.paused, mash.timer?.startTimestamp]);
 
   // Skip the reset on the first render — resetting immediately would wipe a
   // timer that was just restored from AsyncStorage.
@@ -68,23 +78,26 @@ export default function MashTimerStep() {
         !mash.timer.paused &&
         mash.timer.startTimestamp != null
       ) {
-        const notifee = await loadNotifee();
-        // Always cancel first — prevents duplicates when the app is closed and
-        // reopened while a timer is running (restore sets startTimestamp again,
-        // but the OS still has the pre-close notification queued).
-        if (notifee) await notifee.default.cancelAllNotifications();
+        if (isScheduling.current) return;
+        isScheduling.current = true;
+        try {
+          const notifee = await loadNotifee();
+          if (notifee) await notifee.default.cancelAllNotifications();
 
-        const now = Date.now();
-        const elapsed = Math.floor((now - mash.timer.startTimestamp) / 1000);
-        const delay = Math.max(1, mash.timer.duration - elapsed);
+          const now = Date.now();
+          const elapsed = Math.floor((now - mash.timer.startTimestamp) / 1000);
+          const delay = Math.max(1, mash.timer.duration - elapsed);
 
-        await scheduleMashNotification({
-          duration: delay,
-          stepIndex: mash.timer.stepIndex,
-          onScheduled: (id) =>
-            mash.setNotificationId(mash.timer!.stepIndex, id),
-          onPermissionDenied,
-        });
+          await scheduleMashNotification({
+            duration: delay,
+            stepIndex: mash.timer.stepIndex,
+            onScheduled: (id) =>
+              mash.setNotificationId(mash.timer!.stepIndex, id),
+            onPermissionDenied,
+          });
+        } finally {
+          isScheduling.current = false;
+        }
       }
     };
 

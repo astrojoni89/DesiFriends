@@ -47,8 +47,11 @@ if (Constants.executionEnvironment !== "storeClient") {
       if (saved) {
         const timer = JSON.parse(saved);
         if (!timer.paused && timer.startTimestamp) {
+          const hopThreshold = detail.notification?.data?.hopThresholdSeconds
+            ? parseInt(detail.notification.data.hopThresholdSeconds)
+            : null;
           const elapsed = Math.floor((Date.now() - timer.startTimestamp) / 1000);
-          const remaining = Math.max(0, timer.duration - elapsed);
+          const remaining = hopThreshold ?? Math.max(0, timer.duration - elapsed);
           await AsyncStorage.setItem(
             "activeTimer-boil",
             JSON.stringify({ ...timer, paused: true, startTimestamp: null, timeLeft: remaining })
@@ -194,7 +197,10 @@ function TimerRedirector() {
           detail.notification?.android?.channelId === "boil-timer" &&
           detail.notification?.title === "Hopfengabe"
         ) {
-          boil.pauseTimer();
+          const hopThreshold = detail.notification?.data?.hopThresholdSeconds
+            ? parseInt(detail.notification.data.hopThresholdSeconds)
+            : undefined;
+          boil.pauseTimer(hopThreshold);
         }
       });
     });
@@ -267,6 +273,14 @@ function TimerWidget() {
   const isPaused = isSessionMash || isLauter || isPreBoil ? false : isMash ? mash.isPaused() : boil.isPaused();
   const isLive = !isPaused && !!activeTimer;
 
+  // Local interval drives display re-renders when a timer is live.
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!isLive) return;
+    const id = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, [isLive]);
+
   // Pulse animation — must be before early return (hook rules).
   // Tied to isLive so it starts fresh when the timer is running and stops
   // (dot hidden) when paused, avoiding the "static dot" glitch.
@@ -298,8 +312,9 @@ function TimerWidget() {
     ? mash.getFormattedTime()
     : boil.getFormattedTime();
 
+  const currentTimeLeft = isMash ? mash.getTimeLeft() : boil.getTimeLeft();
   const progress = activeTimer
-    ? Math.max(0, Math.min(1, 1 - activeTimer.timeLeft / activeTimer.duration))
+    ? Math.max(0, Math.min(1, 1 - currentTimeLeft / activeTimer.duration))
     : null;
 
   const recipeId = activeTimer ? activeTimer.id.split("-")[1] : brewSession!.recipeId;
@@ -411,8 +426,12 @@ function FileImportHandler() {
 
     const doImport = async () => {
       try {
+        // Read the file before navigating — Android URI permissions are tied to
+        // the Intent and may be revoked once we leave the launch context.
         const contents = await FileSystem.readAsStringAsync(url);
         const data = JSON.parse(contents);
+
+        router.replace("/(drawer)/(tabs)/brewday" as any);
 
         if (!data?.recipe) {
           setSnackMessage("Ungültige Rezeptdatei.");
@@ -431,9 +450,9 @@ function FileImportHandler() {
         });
 
         setSnackMessage(`„${data.recipe.name}" importiert!`);
-        router.replace("/(drawer)/(tabs)/brewday" as any);
       } catch (e) {
         console.error("Failed to import .dfr file:", e);
+        router.replace("/(drawer)/(tabs)/brewday" as any);
         setSnackMessage("Rezept konnte nicht importiert werden.");
       }
     };
