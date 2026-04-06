@@ -5,6 +5,7 @@ import { loadNotifee } from "@/utils/notifeeWrapper"; // dynamic safe import
 import * as Device from "expo-device";
 import { useRecipes } from "@/context/RecipeContext";
 import { useTheme } from "react-native-paper";
+import { usePermissionDialogs } from "@/hooks/usePermissionDialogs";
 import type { AppTheme } from "@/theme/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useTimerContext } from "@/context/TimerContext";
@@ -27,6 +28,7 @@ export default function MashTimerStep() {
   const parsedAlphaAcids = actualAlphaAcids ? JSON.parse(actualAlphaAcids) : {};
 
   const { mash, stopAllTimers, startBrewSession } = useTimerContext();
+  const { onPermissionDenied, PermissionDialog } = usePermissionDialogs();
 
   const steps = recipe?.mashSteps ?? [];
   // Initialise from a restored timer so we return to the correct step.
@@ -81,6 +83,7 @@ export default function MashTimerStep() {
           stepIndex: mash.timer.stepIndex,
           onScheduled: (id) =>
             mash.setNotificationId(mash.timer!.stepIndex, id),
+          onPermissionDenied,
         });
       }
     };
@@ -146,6 +149,7 @@ export default function MashTimerStep() {
         duration: delay,
         stepIndex: mash.timer.stepIndex ?? stepIndex,
         onScheduled: (id) => mash.setNotificationId(mash.timer!.stepIndex, id),
+        onPermissionDenied,
       });
     }
   };
@@ -260,6 +264,7 @@ export default function MashTimerStep() {
           </Pressable>
         </View>
       )}
+      {PermissionDialog}
     </View>
   );
 }

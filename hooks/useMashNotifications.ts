@@ -5,17 +5,19 @@ export const scheduleMashNotification = async ({
   duration,
   stepIndex,
   onScheduled,
+  onPermissionDenied,
 }: {
   duration: number; // in seconds
   stepIndex: number;
   onScheduled?: (id: string) => void;
+  onPermissionDenied?: (type: "notification" | "alarm") => void;
 }) => {
   const notifee = await loadNotifee();
   if (!notifee) return;
 
   const result = await requestPermission();
 
-  const hasPermission = await ensureNotificationPermissions();
+  const hasPermission = await ensureNotificationPermissions(onPermissionDenied);
   if (!hasPermission) {
     console.warn(
       "❌ Mash notification scheduling skipped due to missing permissions."

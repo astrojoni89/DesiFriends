@@ -213,12 +213,12 @@ function TimerWidget() {
   const theme = useTheme() as AppTheme;
 
   // Pulse animation for the live dot — hooks must come before any early return.
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const pulseAnim = useRef(new Animated.Value(0.2)).current;
   useEffect(() => {
     const pulse = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 0.2, duration: 900, useNativeDriver: true }),
         Animated.timing(pulseAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 0.2, duration: 900, useNativeDriver: true }),
       ])
     );
     pulse.start();
@@ -251,7 +251,7 @@ function TimerWidget() {
   const isLive = !isPaused && !!activeTimer;
 
   const progress = activeTimer
-    ? Math.max(0, Math.min(1, activeTimer.timeLeft / activeTimer.duration))
+    ? Math.max(0, Math.min(1, 1 - activeTimer.timeLeft / activeTimer.duration))
     : null;
 
   const recipeId = activeTimer ? activeTimer.id.split("-")[1] : brewSession!.recipeId;

@@ -11,19 +11,21 @@ interface Options {
   hopSchedule: Hop[];
   boilSeconds: number;
   timeLeft: number;
+  onPermissionDenied?: (type: "notification" | "alarm") => void;
 }
 
 export const scheduleHopNotifications = async ({
   hopSchedule,
   boilSeconds,
   timeLeft,
+  onPermissionDenied,
 }: Options) => {
   const notifee = await loadNotifee();
   if (!notifee) return;
 
   const result = await requestPermission();
 
-  const hasPermission = await ensureNotificationPermissions();
+  const hasPermission = await ensureNotificationPermissions(onPermissionDenied);
   if (!hasPermission) {
     console.warn(
       "❌ Mash notification scheduling skipped due to missing permissions."

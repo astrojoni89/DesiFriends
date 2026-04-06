@@ -4,6 +4,7 @@ import { loadNotifee } from "@/utils/notifeeWrapper";
 import * as Device from "expo-device";
 import { useRecipes } from "@/context/RecipeContext";
 import { useTheme, Portal, Dialog } from "react-native-paper";
+import { usePermissionDialogs } from "@/hooks/usePermissionDialogs";
 import { Ionicons } from "@expo/vector-icons";
 import type { AppTheme } from "@/theme/theme";
 import { useEffect, useRef, useState } from "react";
@@ -87,6 +88,7 @@ export default function BoilTimer() {
   );
 
   const { boil, stopAllTimers, setBrewPhase } = useTimerContext();
+  const { onPermissionDenied, PermissionDialog } = usePermissionDialogs();
   const [vorderwuerzeDialog, setVorderwuerzeDialog] = useState<string | null>(null);
 
   useEffect(() => {
@@ -140,6 +142,7 @@ export default function BoilTimer() {
           hopSchedule: adjustedHopSchedule,
           boilSeconds: boil.timer.duration,
           timeLeft: delay,
+          onPermissionDenied,
         });
       }
     };
@@ -328,6 +331,7 @@ export default function BoilTimer() {
         <Text style={styles.text}>Keine Hopfengaben gefunden.</Text>
       )}
 
+      {PermissionDialog}
       <Portal>
         <Dialog visible={pendingHop !== null} dismissable={false}>
           <Dialog.Title>Hopfengabe</Dialog.Title>
