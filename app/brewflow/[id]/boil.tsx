@@ -170,10 +170,10 @@ export default function BoilTimer() {
       if (timeLeft <= parseInt(hop.time) * 60 && !shownHops.current.has(hopKey)) {
         shownHops.current.add(hopKey);
         const pauseAndShow = async () => {
-          const notifee = await loadNotifee();
-          if (notifee) await notifee.default.cancelAllNotifications();
           boil.pauseTimer();
           setPendingHop(hop);
+          const notifee = await loadNotifee();
+          if (notifee) await notifee.default.cancelAllNotifications();
         };
         pauseAndShow();
         break; // show one at a time

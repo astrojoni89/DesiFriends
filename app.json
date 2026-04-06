@@ -28,12 +28,22 @@
           {
             "action": "VIEW",
             "category": ["DEFAULT", "BROWSABLE"],
-            "data": [
-              { "scheme": "file", "mimeType": "application/octet-stream", "pathPattern": ".*\\.dfr" },
-              { "scheme": "file", "mimeType": "application/json", "pathPattern": ".*\\.dfr" },
-              { "scheme": "content", "mimeType": "application/octet-stream" },
-              { "scheme": "content", "mimeType": "application/json" }
-            ]
+            "data": [{ "scheme": "content", "mimeType": "application/octet-stream" }]
+          },
+          {
+            "action": "VIEW",
+            "category": ["DEFAULT", "BROWSABLE"],
+            "data": [{ "scheme": "content", "mimeType": "application/json" }]
+          },
+          {
+            "action": "VIEW",
+            "category": ["DEFAULT", "BROWSABLE"],
+            "data": [{ "scheme": "file", "mimeType": "application/octet-stream" }]
+          },
+          {
+            "action": "VIEW",
+            "category": ["DEFAULT", "BROWSABLE"],
+            "data": [{ "scheme": "file", "mimeType": "application/json" }]
           }
         ]
       },
