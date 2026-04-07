@@ -91,7 +91,6 @@ export default function BoilTimer() {
   const { onPermissionDenied, PermissionDialog } = usePermissionDialogs();
   const [vorderwuerzeDialog, setVorderwuerzeDialog] = useState<string | null>(null);
   const [, setTick] = useState(0);
-  const isScheduling = useRef(false);
 
   useEffect(() => {
     setBrewPhase("boil");
@@ -160,9 +159,6 @@ export default function BoilTimer() {
         boil.timer.startTimestamp != null &&
         recipe?.hopSchedule
       ) {
-        if (isScheduling.current) return;
-        isScheduling.current = true;
-        try {
           const now = Date.now();
           const elapsed = Math.floor((now - boil.timer.startTimestamp) / 1000);
           const delay = Math.max(1, boil.timer.duration - elapsed);
@@ -173,9 +169,6 @@ export default function BoilTimer() {
             timeLeft: delay,
             onPermissionDenied,
           });
-        } finally {
-          isScheduling.current = false;
-        }
       }
     };
 

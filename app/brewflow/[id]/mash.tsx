@@ -30,7 +30,6 @@ export default function MashTimerStep() {
   const { mash, stopAllTimers, startBrewSession } = useTimerContext();
   const { onPermissionDenied, PermissionDialog } = usePermissionDialogs();
   const [, setTick] = useState(0);
-  const isScheduling = useRef(false);
 
   const steps = recipe?.mashSteps ?? [];
   // Initialise from a restored timer so we return to the correct step.
@@ -78,9 +77,6 @@ export default function MashTimerStep() {
         !mash.timer.paused &&
         mash.timer.startTimestamp != null
       ) {
-        if (isScheduling.current) return;
-        isScheduling.current = true;
-        try {
           const notifee = await loadNotifee();
           if (notifee) await notifee.default.cancelAllNotifications();
 
@@ -95,9 +91,6 @@ export default function MashTimerStep() {
               mash.setNotificationId(mash.timer!.stepIndex, id),
             onPermissionDenied,
           });
-        } finally {
-          isScheduling.current = false;
-        }
       }
     };
 

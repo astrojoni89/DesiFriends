@@ -1,6 +1,29 @@
 import { Stack } from "expo-router";
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  ThemeProvider as NavigationThemeProvider,
+  DarkTheme as NavigationDarkTheme,
+  DefaultTheme as NavigationLightTheme,
+} from "@react-navigation/native";
+import { StatusBar } from "expo-status-bar";
+import { RecipeProvider } from "../context/RecipeContext";
+import { Provider as PaperProvider } from "react-native-paper";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { ThemeProvider, useThemeContext } from "@/context/ThemeContext";
+import { DeleteModeProvider } from "@/context/DeleteModeContext";
+import { TimerProvider } from "@/context/TimerContext";
+import { useEffect, useRef, useState } from "react";
+import { useRouter, usePathname } from "expo-router";
+import * as Linking from "expo-linking";
+import * as FileSystem from "expo-file-system";
+import { useTimerContext } from "@/context/TimerContext";
+import { useRecipes } from "../context/RecipeContext";
+import { Pressable, Text, StyleSheet, View as RNView, Animated } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTheme, Snackbar, Portal } from "react-native-paper";
+import type { AppTheme } from "@/theme/theme";
+import { loadNotifee } from "@/utils/notifeeWrapper";
 
 // Register the Notifee background event handler at module level (before React
 // mounts) so it can handle notification actions even when the app is killed.
@@ -61,31 +84,6 @@ if (Constants.executionEnvironment !== "storeClient") {
     }
   });
 }
-import {
-  ThemeProvider as NavigationThemeProvider,
-  DarkTheme as NavigationDarkTheme,
-  DefaultTheme as NavigationLightTheme,
-} from "@react-navigation/native";
-import { StatusBar } from "expo-status-bar";
-import { RecipeProvider } from "../context/RecipeContext";
-import { Provider as PaperProvider } from "react-native-paper";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { ThemeProvider, useThemeContext } from "@/context/ThemeContext";
-import { DeleteModeProvider } from "@/context/DeleteModeContext";
-import { TimerProvider } from "@/context/TimerContext";
-
-import { useEffect, useRef, useState } from "react";
-import { useRouter, usePathname } from "expo-router";
-import * as Linking from "expo-linking";
-import * as FileSystem from "expo-file-system";
-import { useTimerContext } from "@/context/TimerContext";
-import { useRecipes } from "../context/RecipeContext";
-import { Pressable, Text, StyleSheet, View as RNView, Animated } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useTheme, Snackbar, Portal } from "react-native-paper";
-import type { AppTheme } from "@/theme/theme";
-
-import { loadNotifee } from "@/utils/notifeeWrapper";
 
 export default function RootLayout() {
   return (
@@ -426,9 +424,16 @@ function FileImportHandler() {
 
     const doImport = async () => {
       try {
-        // Read the file before navigating — Android URI permissions are tied to
-        // the Intent and may be revoked once we leave the launch context.
-        const contents = await FileSystem.readAsStringAsync(url);
+        // Use fetch() for content:// URIs — React Native's fetch has native
+        // Android support for content URIs from intents, whereas
+        // FileSystem.readAsStringAsync only handles file:// and SAF-granted URIs.
+        let contents: string;
+        if (url.startsWith("content://")) {
+          const response = await fetch(url);
+          contents = await response.text();
+        } else {
+          contents = await FileSystem.readAsStringAsync(url);
+        }
         const data = JSON.parse(contents);
 
         router.replace("/(drawer)/(tabs)/brewday" as any);
