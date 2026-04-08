@@ -135,11 +135,11 @@ export default function BoilTimer() {
     time: string;
   } | null>(null);
 
-  // On mount: if the timer is already paused exactly at a hop threshold (because
-  // the DELIVERED handler paused it while the user was outside the app), show
-  // the dialog immediately without waiting for the tick-driven effect.
+  // Show the hop dialog whenever the timer is paused at a hop threshold — covers
+  // both the case where the user is on this screen (auto-pause via context tick)
+  // and the case where they navigate back after a background/foreground pause.
   useEffect(() => {
-    if (!boil.timer || !boil.timer.paused) return;
+    if (!boil.timer?.paused) return;
     for (const hop of inBoilHops) {
       const hopKey = `${hop.name}-${hop.time}`;
       if (boil.timer.timeLeft === parseInt(hop.time) * 60 && !shownHops.current.has(hopKey)) {
@@ -148,7 +148,7 @@ export default function BoilTimer() {
         break;
       }
     }
-  }, []);
+  }, [boil.timer?.paused]);
 
   useEffect(() => {
     const maybeReschedule = async () => {
@@ -169,6 +169,12 @@ export default function BoilTimer() {
             timeLeft: delay,
             onPermissionDenied,
           });
+
+          // Tell the timer context which thresholds to auto-pause at. This makes
+          // the widget timer stop correctly even when no brewflow screen is mounted.
+          boil.setHopThresholds(
+            inBoilHops.map((hop) => parseInt(hop.time) * 60)
+          );
       }
     };
 
@@ -188,26 +194,6 @@ export default function BoilTimer() {
     }
   }, [timeLeft]);
 
-  // Pause and show the hop addition dialog when the timer reaches each hop's
-  // scheduled time. Skip hops that were already added before this mount.
-  useEffect(() => {
-    if (!boil.timer || boil.timer.paused || timeLeft <= 0) return;
-
-    for (const hop of inBoilHops) {
-      const hopKey = `${hop.name}-${hop.time}`;
-      if (timeLeft <= parseInt(hop.time) * 60 && !shownHops.current.has(hopKey)) {
-        shownHops.current.add(hopKey);
-        const pauseAndShow = async () => {
-          boil.pauseTimer(parseInt(hop.time) * 60);
-          setPendingHop(hop);
-          const notifee = await loadNotifee();
-          if (notifee) await notifee.default.cancelAllNotifications();
-        };
-        pauseAndShow();
-        break; // show one at a time
-      }
-    }
-  }, [timeLeft]);
 
   const handleHopAdded = () => {
     setPendingHop(null);

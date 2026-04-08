@@ -75,9 +75,19 @@ if (Constants.executionEnvironment !== "storeClient") {
             : null;
           const elapsed = Math.floor((Date.now() - timer.startTimestamp) / 1000);
           const remaining = hopThreshold ?? Math.max(0, timer.duration - elapsed);
+          // Also remove this threshold from hopThresholds so that resuming after
+          // confirmation doesn't immediately re-trigger the auto-pause in the tick.
+          const updatedThresholds = (timer.hopThresholds as number[] | undefined)
+            ?.filter((t: number) => t !== remaining) ?? [];
           await AsyncStorage.setItem(
             "activeTimer-boil",
-            JSON.stringify({ ...timer, paused: true, startTimestamp: null, timeLeft: remaining })
+            JSON.stringify({
+              ...timer,
+              paused: true,
+              startTimestamp: null,
+              timeLeft: remaining,
+              hopThresholds: updatedThresholds,
+            })
           );
         }
       }
@@ -424,16 +434,13 @@ function FileImportHandler() {
 
     const doImport = async () => {
       try {
-        // Use fetch() for content:// URIs — React Native's fetch has native
-        // Android support for content URIs from intents, whereas
-        // FileSystem.readAsStringAsync only handles file:// and SAF-granted URIs.
-        let contents: string;
-        if (url.startsWith("content://")) {
-          const response = await fetch(url);
-          contents = await response.text();
-        } else {
-          contents = await FileSystem.readAsStringAsync(url);
-        }
+        // Copy to cache first — FileSystem.copyAsync uses Android's ContentResolver
+        // under the hood and works with content:// intent URIs. Reading directly
+        // via readAsStringAsync fails for those URIs; fetch() causes a native crash.
+        const tempUri = (FileSystem.cacheDirectory ?? "") + "recipe_import.dfr";
+        await FileSystem.copyAsync({ from: url, to: tempUri });
+        const contents = await FileSystem.readAsStringAsync(tempUri);
+        await FileSystem.deleteAsync(tempUri, { idempotent: true });
         const data = JSON.parse(contents);
 
         router.replace("/(drawer)/(tabs)/brewday" as any);

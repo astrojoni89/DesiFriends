@@ -21,6 +21,9 @@ interface TimerState {
   startTimestamp: number | null;
   notificationIds: Record<number, string>;
   targetSize?: string;
+  // Sorted descending. The tick auto-pauses when timeLeft crosses each value,
+  // so the timer stops at hop thresholds even when no brewflow screen is mounted.
+  hopThresholds?: number[];
 }
 
 interface TimerMethods {
@@ -35,6 +38,7 @@ interface TimerMethods {
   resumeTimer: () => void;
   resetTimer: () => void;
   extendTimer: (extraSeconds: number) => void;
+  setHopThresholds: (thresholds: number[]) => void;
   getTimeLeft: () => number;
   getFormattedTime: () => string;
   isPaused: () => boolean;
@@ -77,6 +81,27 @@ function useDualTimer(type: TimerType): TimerMethods {
 
       const elapsed = Math.floor((Date.now() - prev.startTimestamp) / 1000);
       const timeLeft = Math.max(0, prev.duration - elapsed);
+
+      // Auto-pause at the next hop threshold. hopThresholds is sorted descending
+      // so index 0 is always the soonest upcoming threshold. This stops the timer
+      // even when the user is on a different screen — the DELIVERED foreground
+      // event from Notifee is unreliable for AlarmManager triggers on Android.
+      const nextThreshold = prev.hopThresholds?.[0];
+      if (nextThreshold !== undefined && timeLeft <= nextThreshold) {
+        const next = {
+          ...prev,
+          paused: true,
+          startTimestamp: null,
+          timeLeft: nextThreshold,
+          hopThresholds: prev.hopThresholds!.slice(1),
+        };
+        timerRef.current = next;
+        AsyncStorage.setItem(storageKey, JSON.stringify(next));
+        // Cancel pending notifications so no subsequent hop or completion
+        // notification fires while the user is confirming this hop addition.
+        loadNotifee().then((n) => n?.default.cancelAllNotifications());
+        return next;
+      }
 
       if (timeLeft === 0) {
         const next = { ...prev, timeLeft: 0, paused: true, startTimestamp: null };
@@ -275,6 +300,17 @@ function useDualTimer(type: TimerType): TimerMethods {
   const getNotificationId = (stepIndex: number) =>
     timer?.notificationIds?.[stepIndex];
 
+  const setHopThresholds = (thresholds: number[]) => {
+    setTimer((prev) => {
+      if (!prev) return prev;
+      const sorted = [...thresholds].sort((a, b) => b - a);
+      const next = { ...prev, hopThresholds: sorted };
+      timerRef.current = next;
+      AsyncStorage.setItem(storageKey, JSON.stringify(next));
+      return next;
+    });
+  };
+
   return {
     timer,
     startTimer,
@@ -282,6 +318,7 @@ function useDualTimer(type: TimerType): TimerMethods {
     resumeTimer,
     resetTimer,
     extendTimer,
+    setHopThresholds,
     getTimeLeft,
     getFormattedTime,
     isPaused,
