@@ -282,19 +282,22 @@ function TimerWidget() {
   const isLive = !isPaused && !!activeTimer;
 
   // Local interval drives display re-renders when a timer is live.
+  // Stopped while inside brewflow (widget invisible) to avoid wasted JS work.
   const [, setTick] = useState(0);
   useEffect(() => {
-    if (!isLive) return;
+    if (!isLive || isInBrewflow) return;
     const id = setInterval(() => setTick((t) => t + 1), 1000);
     return () => clearInterval(id);
-  }, [isLive]);
+  }, [isLive, isInBrewflow]);
 
   // Pulse animation — must be before early return (hook rules).
-  // Tied to isLive so it starts fresh when the timer is running and stops
-  // (dot hidden) when paused, avoiding the "static dot" glitch.
+  // Also stopped while inside brewflow: the Animated.View is unmounted from
+  // the native tree when the widget returns null, and keeping a native-driver
+  // animation running against an unmounted node corrupts its state so the
+  // animation fails to restart correctly when the widget becomes visible again.
   const pulseAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    if (!isLive) {
+    if (!isLive || isInBrewflow) {
       pulseAnim.setValue(0);
       return;
     }
@@ -307,7 +310,7 @@ function TimerWidget() {
     );
     pulse.start();
     return () => pulse.stop();
-  }, [isLive]);
+  }, [isLive, isInBrewflow]);
 
   // Show when outside brewflow and either a timer is running OR a brew session
   // is active (e.g. the user is on the lauter screen which has no timer).
