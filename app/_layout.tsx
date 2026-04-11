@@ -424,6 +424,8 @@ function FileImportHandler() {
   const url = Linking.useURL();
   const [snackMessage, setSnackMessage] = useState<string | null>(null);
   const handled = useRef<string | null>(null);
+  const theme = useTheme() as AppTheme;
+  const { colors } = theme;
 
   useEffect(() => {
     if (!url) return;
@@ -461,7 +463,7 @@ function FileImportHandler() {
           hefe: data.recipe.hefe ?? [],
         });
 
-        setSnackMessage(`„${data.recipe.name}" importiert!`);
+        setSnackMessage(`„${data.recipe.name}" erfolgreich importiert!`);
       } catch (e) {
         console.error("Failed to import .dfr file:", e);
         router.replace("/(drawer)/(tabs)/brewday" as any);
@@ -478,6 +480,14 @@ function FileImportHandler() {
         visible={snackMessage !== null}
         onDismiss={() => setSnackMessage(null)}
         duration={3000}
+        style={{
+          backgroundColor: colors.primary,
+          position: "absolute",
+          bottom: 16,
+          left: 16,
+          right: 16,
+          borderRadius: 8,
+        }}
       >
         {snackMessage ?? ""}
       </Snackbar>

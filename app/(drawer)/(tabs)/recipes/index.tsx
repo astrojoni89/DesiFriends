@@ -4,12 +4,15 @@ import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
 import { useRecipes } from "@/context/RecipeContext";
 import { RecipeForm, RecipeFormData } from "@/components/RecipeForm";
-import { Portal, Snackbar } from "react-native-paper";
+import { useTheme, Portal, Snackbar } from "react-native-paper";
+import type { AppTheme } from "@/theme/theme";
 
 export default function RecipesScreen() {
   const router = useRouter();
   const { addRecipe } = useRecipes();
   const [snackMessage, setSnackMessage] = useState<string | null>(null);
+  const theme = useTheme() as AppTheme;
+  const { colors } = theme;
 
   const handleSave = (data: RecipeFormData) => {
     addRecipe({
@@ -96,6 +99,14 @@ export default function RecipesScreen() {
           visible={snackMessage !== null}
           onDismiss={() => setSnackMessage(null)}
           duration={3000}
+          style={{
+          backgroundColor: colors.primary,
+          position: "absolute",
+          bottom: 16,
+          left: 16,
+          right: 16,
+          borderRadius: 8,
+        }}
         >
           {snackMessage ?? ""}
         </Snackbar>

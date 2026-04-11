@@ -170,10 +170,12 @@ export default function BoilTimer() {
             onPermissionDenied,
           });
 
-          // Tell the timer context which thresholds to auto-pause at. This makes
-          // the widget timer stop correctly even when no brewflow screen is mounted.
+          // Only register thresholds that are still in the future so the tick
+          // doesn't immediately re-pause at a hop that was just confirmed.
           boil.setHopThresholds(
-            inBoilHops.map((hop) => parseInt(hop.time) * 60)
+            inBoilHops
+              .map((hop) => parseInt(hop.time) * 60)
+              .filter((t) => t < delay)
           );
       }
     };

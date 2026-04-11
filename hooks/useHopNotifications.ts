@@ -41,7 +41,9 @@ export const scheduleHopNotifications = async ({
     if (hopSecondsBeforeEnd >= boilSeconds) continue; // skip Vorderwürzehopfen
 
     const elapsed = boilSeconds - timeLeft;
-    const delay = Math.max(1, boilSeconds - hopSecondsBeforeEnd - elapsed);
+    const secondsUntilHop = boilSeconds - hopSecondsBeforeEnd - elapsed;
+    if (secondsUntilHop <= 0) continue; // hop time already passed, skip
+    const delay = secondsUntilHop;
 
     // const hopText = `${(parseFloat(hop.amount) * scaleFactor).toFixed(1)} g ${
     //   hop.name
