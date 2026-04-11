@@ -92,14 +92,13 @@ export default function BrewDayScreen() {
     const [showSavedMessage, setShowSavedMessage] = useState(false);
 
   return (
-    <View style={styles.container}>
+    <Pressable style={styles.container} onPress={() => setDeleteModeId(null)}>
         <ScrollView
           contentContainerStyle={[styles.content, brewBarOffset > 0 && { paddingBottom: brewBarOffset }]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           onScrollBeginDrag={() => {
             Keyboard.dismiss();
-            if (deleteModeId !== null) setDeleteModeId(null);
           }}
         >
           <Text style={styles.title}>Gespeicherte Rezepte</Text>
@@ -339,7 +338,7 @@ export default function BrewDayScreen() {
       >
         Rezept dupliziert!
       </Snackbar>
-    </View>
+    </Pressable>
   );
 }
 
