@@ -151,36 +151,41 @@ export default function BoilTimer() {
   }, [boil.timer?.paused]);
 
   useEffect(() => {
-    const maybeReschedule = async () => {
-      if (
-        Device.isDevice &&
-        boil.timer &&
-        !boil.timer.paused &&
-        boil.timer.startTimestamp != null &&
-        recipe?.hopSchedule
-      ) {
-          const now = Date.now();
-          const elapsed = Math.floor((now - boil.timer.startTimestamp) / 1000);
-          const delay = Math.max(1, boil.timer.duration - elapsed);
+    if (
+      !Device.isDevice ||
+      !boil.timer ||
+      boil.timer.paused ||
+      boil.timer.startTimestamp == null ||
+      !recipe?.hopSchedule
+    ) return;
 
-          await scheduleHopNotifications({
-            hopSchedule: adjustedHopSchedule,
-            boilSeconds: boil.timer.duration,
-            timeLeft: delay,
-            onPermissionDenied,
-          });
+    // Debounce: rapid pause/resume would otherwise flood the native bridge with
+    // overlapping cancelAllNotifications + createTriggerNotification calls.
+    const startTimestamp = boil.timer.startTimestamp;
+    const duration = boil.timer.duration;
 
-          // Only register thresholds that are still in the future so the tick
-          // doesn't immediately re-pause at a hop that was just confirmed.
-          boil.setHopThresholds(
-            inBoilHops
-              .map((hop) => parseInt(hop.time) * 60)
-              .filter((t) => t < delay)
-          );
-      }
-    };
+    const timeout = setTimeout(async () => {
+      const now = Date.now();
+      const elapsed = Math.floor((now - startTimestamp) / 1000);
+      const delay = Math.max(1, duration - elapsed);
 
-    maybeReschedule();
+      await scheduleHopNotifications({
+        hopSchedule: adjustedHopSchedule,
+        boilSeconds: duration,
+        timeLeft: delay,
+        onPermissionDenied,
+      });
+
+      // Only register thresholds that are still in the future so the tick
+      // doesn't immediately re-pause at a hop that was just confirmed.
+      boil.setHopThresholds(
+        inBoilHops
+          .map((hop) => parseInt(hop.time) * 60)
+          .filter((t) => t < delay)
+      );
+    }, 300);
+
+    return () => clearTimeout(timeout);
   }, [boil.timer?.startTimestamp]);
 
   useEffect(() => {

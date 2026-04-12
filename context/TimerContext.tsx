@@ -72,48 +72,55 @@ function useDualTimer(type: TimerType): TimerMethods {
   const storageKey = `activeTimer-${type}`;
   const [isRestoring, setIsRestoring] = useState(true);
 
-  // Single tick function — uses a functional setTimer updater so it never
-  // closes over stale state. Also keeps timerRef current so consumers that
-  // drive their own re-render cycle always read fresh values.
+  // Single tick function — reads directly from timerRef (always current) so
+  // it never needs a functional setTimer updater for the normal path.
+  // Critically, normal ticks do NOT call setTimer at all — getTimeLeft()
+  // computes from startTimestamp dynamically so there is zero object
+  // allocation and zero React state churn per second. setTimer is only called
+  // on structural transitions (threshold crossed, timer reaches zero).
   const tick = () => {
-    setTimer((prev) => {
-      if (!prev || prev.paused || prev.startTimestamp === null) return prev;
+    const prev = timerRef.current;
+    if (!prev || prev.paused || prev.startTimestamp === null) return;
 
-      const elapsed = Math.floor((Date.now() - prev.startTimestamp) / 1000);
-      const timeLeft = Math.max(0, prev.duration - elapsed);
+    const elapsed = Math.floor((Date.now() - prev.startTimestamp) / 1000);
+    const timeLeft = Math.max(0, prev.duration - elapsed);
 
-      // Auto-pause at the next hop threshold. hopThresholds is sorted descending
-      // so index 0 is always the soonest upcoming threshold. This stops the timer
-      // even when the user is on a different screen — the DELIVERED foreground
-      // event from Notifee is unreliable for AlarmManager triggers on Android.
-      const nextThreshold = prev.hopThresholds?.[0];
-      if (nextThreshold !== undefined && timeLeft <= nextThreshold) {
+    // Auto-pause at the next hop threshold. hopThresholds is sorted descending
+    // so index 0 is always the soonest upcoming threshold. This stops the timer
+    // even when the user is on a different screen — the DELIVERED foreground
+    // event from Notifee is unreliable for AlarmManager triggers on Android.
+    const nextThreshold = prev.hopThresholds?.[0];
+    if (nextThreshold !== undefined && timeLeft <= nextThreshold) {
+      setTimer((s) => {
+        if (!s || s.paused || s.startTimestamp === null) return s;
         const next = {
-          ...prev,
+          ...s,
           paused: true,
           startTimestamp: null,
           timeLeft: nextThreshold,
-          hopThresholds: prev.hopThresholds!.slice(1),
+          hopThresholds: s.hopThresholds!.slice(1),
         };
         timerRef.current = next;
         AsyncStorage.setItem(storageKey, JSON.stringify(next));
-        // Cancel pending notifications so no subsequent hop or completion
-        // notification fires while the user is confirming this hop addition.
         loadNotifee().then((n) => n?.default.cancelAllNotifications());
         return next;
-      }
+      });
+      return;
+    }
 
-      if (timeLeft === 0) {
-        const next = { ...prev, timeLeft: 0, paused: true, startTimestamp: null };
+    if (timeLeft === 0) {
+      setTimer((s) => {
+        if (!s || s.paused || s.startTimestamp === null) return s;
+        const next = { ...s, timeLeft: 0, paused: true, startTimestamp: null };
         timerRef.current = next;
         AsyncStorage.setItem(storageKey, JSON.stringify(next));
         return next;
-      }
+      });
+      return;
+    }
 
-      const next = { ...prev, timeLeft };
-      timerRef.current = next;
-      return next;
-    });
+    // Normal tick: nothing to do. getTimeLeft() computes from startTimestamp
+    // so consumers always read the correct value without a state update.
   };
 
   // Restore timer state on mount.
@@ -249,10 +256,18 @@ function useDualTimer(type: TimerType): TimerMethods {
   // Read from ref so these stay accurate even when the context memo hasn't
   // propagated a new value — screens drive their own re-renders via a local
   // interval and call these during each render to get the fresh value.
-  const getTimeLeft = () => timerRef.current?.timeLeft ?? 0;
+  // When the timer is running, compute from startTimestamp rather than the
+  // stored timeLeft field (which is no longer updated on normal ticks).
+  const getTimeLeft = () => {
+    const t = timerRef.current;
+    if (!t) return 0;
+    if (t.paused || t.startTimestamp === null) return t.timeLeft;
+    const elapsed = Math.floor((Date.now() - t.startTimestamp) / 1000);
+    return Math.max(0, t.duration - elapsed);
+  };
 
   const getFormattedTime = () => {
-    const secs = timerRef.current?.timeLeft ?? 0;
+    const secs = getTimeLeft();
     const m = Math.floor(secs / 60);
     const s = secs % 60;
     return `${m}:${s.toString().padStart(2, "0")}`;

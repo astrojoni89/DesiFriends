@@ -70,31 +70,36 @@ export default function MashTimerStep() {
   }, [stepIndex]);
 
   useEffect(() => {
-    const maybeReschedule = async () => {
-      if (
-        Device.isDevice &&
-        mash.timer &&
-        !mash.timer.paused &&
-        mash.timer.startTimestamp != null
-      ) {
-          const notifee = await loadNotifee();
-          if (notifee) await notifee.default.cancelAllNotifications();
+    if (
+      !Device.isDevice ||
+      !mash.timer ||
+      mash.timer.paused ||
+      mash.timer.startTimestamp == null
+    ) return;
 
-          const now = Date.now();
-          const elapsed = Math.floor((now - mash.timer.startTimestamp) / 1000);
-          const delay = Math.max(1, mash.timer.duration - elapsed);
+    // Debounce: rapid pause/resume would otherwise flood the native bridge with
+    // overlapping cancelAllNotifications + createTriggerNotification calls.
+    const startTimestamp = mash.timer.startTimestamp;
+    const duration = mash.timer.duration;
+    const stepIdx = mash.timer.stepIndex;
 
-          await scheduleMashNotification({
-            duration: delay,
-            stepIndex: mash.timer.stepIndex,
-            onScheduled: (id) =>
-              mash.setNotificationId(mash.timer!.stepIndex, id),
-            onPermissionDenied,
-          });
-      }
-    };
+    const timeout = setTimeout(async () => {
+      const notifee = await loadNotifee();
+      if (notifee) await notifee.default.cancelAllNotifications();
 
-    maybeReschedule();
+      const now = Date.now();
+      const elapsed = Math.floor((now - startTimestamp) / 1000);
+      const delay = Math.max(1, duration - elapsed);
+
+      await scheduleMashNotification({
+        duration: delay,
+        stepIndex: stepIdx,
+        onScheduled: (id) => mash.setNotificationId(stepIdx, id),
+        onPermissionDenied,
+      });
+    }, 300);
+
+    return () => clearTimeout(timeout);
   }, [mash.timer?.startTimestamp]);
 
   const getDisplayTime = () => {
