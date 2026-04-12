@@ -257,7 +257,10 @@ function TimerRedirector() {
         params: { id: recipeId, targetSize: boil.timer.targetSize },
       });
     }
-  }, [mash.isRestoring, boil.isRestoring, mash.timer, boil.timer]);
+  // Only re-run after the restore phase. The hasRedirected guard means this
+  // is a one-shot effect — including mash.timer/boil.timer in deps would
+  // cause it to re-run (as a no-op) on every pause/resume cycle.
+  }, [mash.isRestoring, boil.isRestoring]);
 
   return null;
 }

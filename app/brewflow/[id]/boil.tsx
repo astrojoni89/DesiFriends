@@ -7,7 +7,7 @@ import { useTheme, Portal, Dialog } from "react-native-paper";
 import { usePermissionDialogs } from "@/hooks/usePermissionDialogs";
 import { Ionicons } from "@expo/vector-icons";
 import type { AppTheme } from "@/theme/theme";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTimerContext } from "@/context/TimerContext";
 import { scheduleHopNotifications } from "@/hooks/useHopNotifications";
 
@@ -25,7 +25,13 @@ export default function BoilTimer() {
   const { colors } = theme;
   const styles = createStyles(colors);
   const router = useRouter();
-  const parsedAlphaAcids = actualAlphaAcids ? JSON.parse(actualAlphaAcids) : {};
+
+  // Stable parsed object — JSON.parse on every render creates a new reference
+  // which would prevent downstream useMemos from caching.
+  const parsedAlphaAcids = useMemo(
+    () => (actualAlphaAcids ? JSON.parse(actualAlphaAcids) : {}),
+    [actualAlphaAcids]
+  );
 
   const boilMinutes = parseInt(recipe?.boilTime || "0");
   const boilSeconds = boilMinutes * 60;
@@ -61,7 +67,9 @@ export default function BoilTimer() {
     return amount;
   };
 
-  const adjustedHopSchedule = hopSchedule.map((hop) => {
+  // Memoized — recipe and params never change during a brew, so these only
+  // compute once per mount rather than on every second's re-render.
+  const adjustedHopSchedule = useMemo(() => hopSchedule.map((hop) => {
     if (!recipe || !recipe.hopfen) {
       return { ...hop, amount: (parseFloat(hop.amount) * scaleFactor).toFixed(1) };
     }
@@ -70,21 +78,17 @@ export default function BoilTimer() {
     const actualAA = parseFloat(
       parsedAlphaAcids[hopIndex] || originalAA.toString() || "0"
     );
-
-    let adjustedAmount = parseFloat(hop.amount) * scaleFactor;
+    let adjusted = parseFloat(hop.amount) * scaleFactor;
     if (originalAA > 0 && actualAA > 0) {
-      adjustedAmount *= originalAA / actualAA;
+      adjusted *= originalAA / actualAA;
     }
-
-    return {
-      ...hop,
-      amount: adjustedAmount.toFixed(1),
-    };
-  });
+    return { ...hop, amount: adjusted.toFixed(1) };
+  }), [hopSchedule, scaleFactor, parsedAlphaAcids, recipe]);
 
   // Declared here so handleTogglePause can reference it without a forward-ref.
-  const hopsAtStart = hopSchedule.filter(
-    (hop) => parseInt(hop.time) * 60 >= boilSeconds
+  const hopsAtStart = useMemo(
+    () => hopSchedule.filter((hop) => parseInt(hop.time) * 60 >= boilSeconds),
+    [hopSchedule, boilSeconds]
   );
 
   const { boil, stopAllTimers, setBrewPhase } = useTimerContext();
@@ -109,12 +113,16 @@ export default function BoilTimer() {
 
   // In-boil hops: exclude Vorderwürzehopfen (already handled on start) and
   // flameout hops (time=0, shown on the complete screen).
-  const inBoilHops = adjustedHopSchedule
-    .filter((hop) => {
-      const sec = parseInt(hop.time) * 60;
-      return sec > 0 && sec < boilSeconds;
-    })
-    .sort((a, b) => parseInt(b.time) - parseInt(a.time));
+  const inBoilHops = useMemo(
+    () =>
+      adjustedHopSchedule
+        .filter((hop) => {
+          const sec = parseInt(hop.time) * 60;
+          return sec > 0 && sec < boilSeconds;
+        })
+        .sort((a, b) => parseInt(b.time) - parseInt(a.time)),
+    [adjustedHopSchedule, boilSeconds]
+  );
 
   // Pre-mark all hops whose threshold the timer has already passed so they
   // never re-trigger when the screen re-mounts (e.g. via the widget).
@@ -188,8 +196,11 @@ export default function BoilTimer() {
     return () => clearTimeout(timeout);
   }, [boil.timer?.startTimestamp]);
 
+  // Fire only on structural state changes (paused/timeLeft stored in context),
+  // not every second. When the tick hits zero it sets paused:true + timeLeft:0,
+  // which propagates through context and triggers this once.
   useEffect(() => {
-    if (boil.timer && timeLeft <= 0) {
+    if (boil.timer?.paused && (boil.timer?.timeLeft ?? 1) <= 0) {
       router.replace({
         pathname: "/brewflow/[id]/complete",
         params: {
@@ -199,7 +210,7 @@ export default function BoilTimer() {
         },
       });
     }
-  }, [timeLeft]);
+  }, [boil.timer?.paused, boil.timer?.timeLeft]);
 
 
   const handleHopAdded = () => {
@@ -311,6 +322,7 @@ export default function BoilTimer() {
         tintColor={colors.primary}
         backgroundColor={colors.surfaceVariant}
         rotation={0}
+        duration={0}
       >
         {() => (
           <View style={styles.timerContainer}>

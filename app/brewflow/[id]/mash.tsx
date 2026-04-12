@@ -204,6 +204,7 @@ export default function MashTimerStep() {
         tintColor={colors.primary}
         backgroundColor={colors.surfaceVariant}
         rotation={0}
+        duration={0}
       >
         {() => (
           <View style={styles.timerContainer}>
