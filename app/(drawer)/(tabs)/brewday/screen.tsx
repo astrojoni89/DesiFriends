@@ -366,12 +366,6 @@ function createStyles(colors: AppTheme["colors"]) {
       borderRadius: 12,
       borderWidth: 1,
       borderColor: colors.border,
-      // Optional shadow for nicer look (iOS/Android)
-      shadowColor: colors.shadow,
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.1,
-      shadowRadius: 3,
-      elevation: 2,
     },
     recipeTitleRow: {
       flexDirection: "row",
