@@ -67,7 +67,7 @@ export default function LauterScreen() {
 
   const goToBoil = () => {
     AsyncStorage.removeItem(STORAGE_KEY);
-    router.push({
+    router.replace({
       pathname: "/brewflow/[id]/boil",
       params: { id, targetSize, actualAlphaAcids },
     });

@@ -108,7 +108,7 @@ export default function BrewStartScreen() {
         <Pressable
           style={styles.button}
           onPress={() =>
-            router.push({
+            router.replace({
               pathname: "/brewflow/[id]/mash",
               params: { id, targetSize, actualAlphaAcids: JSON.stringify(parsedAlphaAcids), },
             })

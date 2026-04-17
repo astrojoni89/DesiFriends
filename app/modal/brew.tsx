@@ -517,7 +517,7 @@ export default function BrewModal() {
               style={styles.dialogButton}
               onPress={() => {
                 setConfirmVisible(false);
-                router.push({
+                router.replace({
                   pathname: "/brewflow/[id]",
                   params: { id: recipe.id, targetSize, actualAlphaAcids: JSON.stringify(actualAlphaAcids) },
                 });
@@ -543,7 +543,7 @@ export default function BrewModal() {
               onPress={async () => {
                 setOverwriteVisible(false);
                 await stopAllTimers();
-                router.push({
+                router.replace({
                   pathname: "/brewflow/[id]",
                   params: { id: recipe.id, targetSize, actualAlphaAcids: JSON.stringify(actualAlphaAcids) },
                 });

@@ -1,4 +1,4 @@
-import { Stack, useRouter } from "expo-router";
+import { Stack, useRouter, useNavigation } from "expo-router";
 import { View, Pressable, StyleSheet, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme, Portal, Dialog } from "react-native-paper";
@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function BrewFlowLayout() {
   const router = useRouter();
+  const navigation = useNavigation();
   const theme = useTheme() as AppTheme;
   const { colors } = theme;
   const { stopAllTimers } = useTimerContext();
@@ -37,7 +38,7 @@ export default function BrewFlowLayout() {
       </Pressable>
       <Pressable
         style={[styles.homeFab, { backgroundColor: colors.card, bottom: insets.bottom + 16 }]}
-        onPress={() => router.replace("/")}
+        onPress={() => (navigation as any).popToTop()}
       >
         <Ionicons name="home-outline" size={22} color={colors.onSurface} />
       </Pressable>
@@ -64,7 +65,7 @@ export default function BrewFlowLayout() {
               onPress={async () => {
                 setConfirmVisible(false);
                 await stopAllTimers();
-                router.replace("/");
+                (navigation as any).popToTop();
               }}
             >
               <Text style={dialogStyles.buttonText}>Beenden</Text>

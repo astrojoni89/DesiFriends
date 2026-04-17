@@ -168,7 +168,7 @@ export default function MashTimerStep() {
   const nextStep = () => setStepIndex((prev) => prev + 1);
 
   const goToLauter = () =>
-    router.push({
+    router.replace({
       pathname: "/brewflow/[id]/lauter",
       params: { id, targetSize, actualAlphaAcids: JSON.stringify(parsedAlphaAcids) },
     });

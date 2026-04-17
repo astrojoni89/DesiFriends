@@ -1,5 +1,5 @@
 import { View, Text, Pressable, StyleSheet } from "react-native";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter, useLocalSearchParams, useNavigation } from "expo-router";
 import { useTheme } from "react-native-paper";
 import type { AppTheme } from "@/theme/theme";
 import { useRecipes } from "@/context/RecipeContext";
@@ -13,6 +13,7 @@ export default function CompleteScreen() {
   const { getRecipeById } = useRecipes();
   const recipe = getRecipeById(id || "");
   const router = useRouter();
+  const navigation = useNavigation();
   const { stopAllTimers } = useTimerContext();
   const theme = useTheme() as AppTheme;
   const { colors } = theme;
@@ -28,7 +29,7 @@ export default function CompleteScreen() {
         style={styles.button}
         onPress={async () => {
           await stopAllTimers();
-          router.replace("/");
+          (navigation as any).getParent()?.popToTop();
         }}
       >
         <Text style={styles.buttonText}>Zurück zur Übersicht</Text>
