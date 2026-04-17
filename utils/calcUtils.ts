@@ -101,9 +101,7 @@ export function calculateSugarSaccharose(co2Difference: number): [number, number
 export function calculateSugarWort(co2Difference: number, og: number, fg: number): [number, number] {
   var fermentableSugar = (0.8192 * (og - fg)) * 10;
   var neededSugar = co2Difference/0.468*(1000/fermentableSugar);
-  var neededSugarNormalized = neededSugar * (1000/(1000-neededSugar));
-  var addedAlcohol = neededSugar * 0.488/10 * 1.267/10;
-  return [neededSugar, addedAlcohol];
+  return [neededSugar, 0];
 }
 
 export function calculateSugarGlucose(co2Difference: number): [number, number] {

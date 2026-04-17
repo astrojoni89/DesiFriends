@@ -1,4 +1,4 @@
-import { useState, useRef, RefObject } from "react";
+import { useState, useRef } from "react";
 import { useBrewBarOffset } from "@/hooks/useBrewBarOffset";
 import {
   View,
@@ -68,8 +68,11 @@ export default function CalcsScreen() {
   const [fgSugar, setFgSugar] = useState("");
   const [sunit, setSUnit] = useState<"sugar" | "wort" | "glucose">("sugar");
   const carbValue = parseFloat(carb);
-  const maxCarb = 7.0;
+  const maxCarb = 6.5;
   const carbTooHigh = !isNaN(carbValue) && carbValue > maxCarb;
+  const ftempValue = parseFloat(ftemp);
+  const maxTemp = 22;
+  const tempTooHigh = !isNaN(ftempValue) && ftempValue > maxTemp;
   const renderResult = (
     co2Pressure: string,
     co2Difference: string,
@@ -92,13 +95,6 @@ export default function CalcsScreen() {
           ? "Erforderliche Zuckermenge:"
           : ""}
       </Text>
-      {/* <Text style={[styles.result, { marginTop: 0 }]}>
-        {unit === "wort"
-          ? `${parseFloat(amountToAdd).toFixed(0)} ml/Liter\n(=${parseFloat(amountToAdd).toFixed(0)}ml Speise + ${(1000-parseFloat(parseFloat(amountToAdd).toFixed(0))).toFixed(0)}ml Jungbier)`
-          : unit === "sugar"
-          ? `${amountToAdd} g/Liter`
-          : ""}
-      </Text> */}
       {unit === "wort" && (
         <>
           <Text style={[styles.result, { marginTop: 0, marginBottom: 2 }]}>
@@ -130,9 +126,11 @@ export default function CalcsScreen() {
       <Text style={styles.secondaryResult}>
         Erforderliches CO&#8322;: {co2Difference} g/Liter
       </Text>
-      <Text style={styles.secondaryResult}>
-        Änderung Alkoholgehalt: +{additionalAlc}%vol
-      </Text>
+      {unit !== "wort" && (
+        <Text style={styles.secondaryResult}>
+          Änderung Alkoholgehalt: +{additionalAlc}%vol
+        </Text>
+      )}
     </View>
   );
 
@@ -382,7 +380,13 @@ export default function CalcsScreen() {
               placeholderTextColor={placeholderFor(sunit === "wort")}
             />
 
-            {carbTooHigh ? (
+            {tempTooHigh ? (
+              <View style={{ padding: 12 }}>
+                <Text style={styles.note}>
+                  Die Gärtemperatur sollte {maxTemp}°C nicht überschreiten!
+                </Text>
+              </View>
+            ) : carbTooHigh ? (
               <View style={{ padding: 12 }}>
                 <Text style={styles.note}>
                   Der Ziel-CO₂-Gehalt darf {maxCarb.toFixed(1)} g/L nicht
@@ -639,7 +643,6 @@ export default function CalcsScreen() {
 }
 
 function createStyles(colors: AppTheme["colors"]) {
-  const sidebarWidth = 250;
   return StyleSheet.create({
     container: {
       flex: 1,
