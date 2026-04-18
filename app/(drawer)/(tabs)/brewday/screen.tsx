@@ -133,7 +133,6 @@ export default function BrewDayScreen() {
                   }
                 }}
                 onLongPress={() => setDeleteModeId(r.id)}
-                onStartShouldSetResponder={() => true}
                 style={[
                   styles.recipeBox,
                   expandedId === r.id && styles.recipeBoxExpanded,
