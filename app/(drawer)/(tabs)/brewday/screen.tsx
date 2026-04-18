@@ -33,6 +33,7 @@ export default function BrewDayScreen() {
   const { deleteModeId, setDeleteModeId } = useDeleteMode();
   const rotationAnims = useRef<{ [id: string]: Animated.Value }>({});
   const contentAnims = useRef<{ [id: string]: Animated.Value }>({});
+  const scrolling = useRef(false);
   const toggleExpand = (id: string) => {
     const isExpanding = expandedId !== id;
 
@@ -92,13 +93,19 @@ export default function BrewDayScreen() {
     const [showSavedMessage, setShowSavedMessage] = useState(false);
 
   return (
-    <Pressable style={styles.container} onPress={() => setDeleteModeId(null)}>
+    <View style={styles.container}>
         <ScrollView
           contentContainerStyle={[styles.content, brewBarOffset > 0 && { paddingBottom: brewBarOffset }]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           onScrollBeginDrag={() => {
+            scrolling.current = true;
             Keyboard.dismiss();
+          }}
+          onScrollEndDrag={() => { scrolling.current = false; }}
+          onMomentumScrollEnd={() => { scrolling.current = false; }}
+          onTouchEnd={() => {
+            if (!scrolling.current) setDeleteModeId(null);
           }}
         >
           <Text style={styles.title}>Gespeicherte Rezepte</Text>
@@ -339,7 +346,7 @@ export default function BrewDayScreen() {
       >
         Rezept dupliziert!
       </Snackbar>
-    </Pressable>
+    </View>
   );
 }
 
