@@ -133,6 +133,8 @@ export default function BrewDayScreen() {
                   }
                 }}
                 onLongPress={() => setDeleteModeId(r.id)}
+                delayLongPress={400}
+                unstable_pressDelay={100}
                 style={[
                   styles.recipeBox,
                   expandedId === r.id && styles.recipeBoxExpanded,
