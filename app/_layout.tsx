@@ -221,15 +221,19 @@ function TimerRedirector() {
       if (!notifee) return;
       try {
         await notifee.default.requestPermission();
+        await notifee.default.deleteChannel("mash-timer");
+        await notifee.default.deleteChannel("boil-timer");
         await notifee.default.createChannel({
           id: "mash-timer",
           name: "Maische-Timer",
           importance: notifee.AndroidImportance.HIGH,
+          sound: "alarm",
         });
         await notifee.default.createChannel({
           id: "boil-timer",
           name: "Koch-Timer",
           importance: notifee.AndroidImportance.HIGH,
+          sound: "alarm",
         });
       } catch (e) {
         console.error("Error in notifee setup:", e);
