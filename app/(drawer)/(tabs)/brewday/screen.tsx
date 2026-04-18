@@ -33,7 +33,6 @@ export default function BrewDayScreen() {
   const { deleteModeId, setDeleteModeId } = useDeleteMode();
   const rotationAnims = useRef<{ [id: string]: Animated.Value }>({});
   const contentAnims = useRef<{ [id: string]: Animated.Value }>({});
-  const scrolling = useRef(false);
   const toggleExpand = (id: string) => {
     const isExpanding = expandedId !== id;
 
@@ -95,19 +94,12 @@ export default function BrewDayScreen() {
   return (
     <View style={styles.container}>
         <ScrollView
-          contentContainerStyle={[styles.content, brewBarOffset > 0 && { paddingBottom: brewBarOffset }]}
+          contentContainerStyle={[{ flexGrow: 1 }, brewBarOffset > 0 && { paddingBottom: brewBarOffset }]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
-          onScrollBeginDrag={() => {
-            scrolling.current = true;
-            Keyboard.dismiss();
-          }}
-          onScrollEndDrag={() => { scrolling.current = false; }}
-          onMomentumScrollEnd={() => { scrolling.current = false; }}
-          onTouchEnd={() => {
-            if (!scrolling.current) setDeleteModeId(null);
-          }}
+          onScrollBeginDrag={() => Keyboard.dismiss()}
         >
+          <Pressable style={styles.content} onPress={() => setDeleteModeId(null)}>
           <Text style={styles.title}>Gespeicherte Rezepte</Text>
 
           {recipes.length === 0 && (
@@ -140,7 +132,6 @@ export default function BrewDayScreen() {
                   }
                 }}
                 onLongPress={() => setDeleteModeId(r.id)}
-                delayLongPress={400}
                 unstable_pressDelay={100}
                 style={[
                   styles.recipeBox,
@@ -330,6 +321,7 @@ export default function BrewDayScreen() {
               </Pressable>
             );
           })}
+          </Pressable>
         </ScrollView>
       <Snackbar
         visible={showSavedMessage}
