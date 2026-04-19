@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system";
+import JSZip from "jszip";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme, Tooltip, Snackbar } from "react-native-paper";
 import uuid from "react-native-uuid";
@@ -89,7 +90,33 @@ export default function BrewDayScreen() {
       }
     };
 
-    const [showSavedMessage, setShowSavedMessage] = useState(false);
+  const [showSavedMessage, setShowSavedMessage] = useState(false);
+
+  const exportAllRecipes = async () => {
+    if (recipes.length === 0) {
+      Alert.alert("Keine Rezepte", "Es sind keine Rezepte zum Exportieren vorhanden.");
+      return;
+    }
+    try {
+      const zip = new JSZip();
+      recipes.forEach((r) => {
+        const fileName = `${r.name.replace(/\s+/g, "_")}.dfr`;
+        zip.file(fileName, JSON.stringify({ version: 1, recipe: r }, null, 2));
+      });
+      const base64 = await zip.generateAsync({ type: "base64" });
+      const fileUri = FileSystem.cacheDirectory + "DesiFriends_Rezepte.zip";
+      await FileSystem.writeAsStringAsync(fileUri, base64, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      await Sharing.shareAsync(fileUri, {
+        mimeType: "application/zip",
+        dialogTitle: "Alle Rezepte exportieren",
+      });
+    } catch (error) {
+      console.error("Export Error:", error);
+      Alert.alert("Fehler", "Rezepte konnten nicht exportiert werden.");
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -100,7 +127,14 @@ export default function BrewDayScreen() {
           onScrollBeginDrag={() => Keyboard.dismiss()}
         >
           <Pressable style={styles.content} onPress={() => setDeleteModeId(null)}>
-          <Text style={styles.title}>Gespeicherte Rezepte</Text>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+            <Text style={styles.title}>Gespeicherte Rezepte</Text>
+            {recipes.length > 0 && (
+              <Pressable onPress={exportAllRecipes} style={styles.iconButton}>
+                <Ionicons name="archive-outline" size={22} color={colors.primary} />
+              </Pressable>
+            )}
+          </View>
 
           {recipes.length === 0 && (
             <Text style={styles.text}>Noch keine Rezepte gespeichert.</Text>
@@ -357,7 +391,6 @@ function createStyles(colors: AppTheme["colors"]) {
       fontSize: 22,
       fontWeight: "bold",
       color: colors.onBackground,
-      marginBottom: 24,
     },
     recipeBox: {
       backgroundColor: colors.card,

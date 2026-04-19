@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
+import JSZip from "jszip";
 import { useRecipes } from "@/context/RecipeContext";
 import { RecipeForm, RecipeFormData } from "@/components/RecipeForm";
 import { useTheme, Portal, Snackbar } from "react-native-paper";
@@ -45,38 +46,59 @@ export default function RecipesScreen() {
     router.push({ pathname: "/modal/schedule", params: { id } });
   };
 
+  const importSingleRecipe = (data: any): boolean => {
+    if (!data || typeof data !== "object" || !data.recipe) return false;
+    addRecipe({
+      ...data.recipe,
+      id: Date.now().toString(),
+      batchSize: data.recipe.batchSize ?? 0,
+      hauptguss: data.recipe.hauptguss ?? 0,
+      nachguss: data.recipe.nachguss ?? 0,
+      malz: data.recipe.malz ?? [],
+      hopfen: data.recipe.hopfen ?? [],
+      hefe: data.recipe.hefe ?? [],
+    });
+    return true;
+  };
+
   const importRecipe = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: ["application/json", "application/octet-stream"],
+        type: ["application/json", "application/octet-stream", "application/zip"],
       });
 
       if (result.canceled || !result.assets || !result.assets[0]?.uri) return;
 
       const fileUri = result.assets[0].uri;
-      const contents = await FileSystem.readAsStringAsync(fileUri);
-      const data = JSON.parse(contents);
 
-      if (!fileUri.endsWith(".json") && !fileUri.endsWith(".dfr")) {
-        setSnackMessage("Bitte wähle eine gültige Rezeptdatei (.json oder .dfr).");
+      if (fileUri.endsWith(".zip")) {
+        const base64 = await FileSystem.readAsStringAsync(fileUri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        const zip = await JSZip.loadAsync(base64, { base64: true });
+        let count = 0;
+        await Promise.all(
+          Object.values(zip.files).map(async (file) => {
+            if (file.dir || (!file.name.endsWith(".dfr") && !file.name.endsWith(".json"))) return;
+            const text = await file.async("string");
+            if (importSingleRecipe(JSON.parse(text))) count++;
+          })
+        );
+        setSnackMessage(`${count} Rezept${count !== 1 ? "e" : ""} importiert!`);
         return;
       }
 
-      if (!data || typeof data !== "object" || !data.recipe) {
+      if (!fileUri.endsWith(".json") && !fileUri.endsWith(".dfr")) {
+        setSnackMessage("Bitte wähle eine gültige Rezeptdatei (.json, .dfr oder .zip).");
+        return;
+      }
+
+      const contents = await FileSystem.readAsStringAsync(fileUri);
+      const data = JSON.parse(contents);
+      if (!importSingleRecipe(data)) {
         setSnackMessage("Die Datei enthält kein gültiges Rezept.");
         return;
       }
-
-      addRecipe({
-        ...data.recipe,
-        id: Date.now().toString(),
-        batchSize: data.recipe.batchSize ?? 0,
-        hauptguss: data.recipe.hauptguss ?? 0,
-        nachguss: data.recipe.nachguss ?? 0,
-        malz: data.recipe.malz ?? [],
-        hopfen: data.recipe.hopfen ?? [],
-        hefe: data.recipe.hefe ?? [],
-      });
 
       setSnackMessage("Rezept erfolgreich importiert!");
     } catch (error) {

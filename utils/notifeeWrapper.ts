@@ -29,6 +29,13 @@ export async function loadNotifee() {
         createChannel: async (...args: any[]) => {
           console.log("📡 [MockNotifee] createChannel", ...args);
         },
+        getChannels: async () => {
+          console.log("📡 [MockNotifee] getChannels");
+          return [];
+        },
+        deleteChannel: async (id: string) => {
+          console.log(`📡 [MockNotifee] deleteChannel ${id}`);
+        },
         requestPermission: async () => {
           console.log("🔐 [MockNotifee] requestPermission");
           return { authorizationStatus: 1 };
