@@ -63,7 +63,7 @@ export const scheduleHopNotifications = async ({
         body: `${hopText} jetzt zugeben (${hop.time} Minuten vor Ende)!`,
         data: { hopThresholdSeconds: String(hopSecondsBeforeEnd) },
         android: {
-          channelId: "boil-timer",
+          channelId: "boil-timer-v2",
           smallIcon: "ic_stat_hop",
           largeIcon: require("@/assets/images/favicon.png"),
           timestamp: triggerTimestamp,
@@ -96,7 +96,7 @@ export const scheduleHopNotifications = async ({
       title: "Kochen abgeschlossen",
       body: "Zeit zum Abkühlen! Das geht am besten mit einem Bier!",
       android: {
-        channelId: "boil-timer",
+        channelId: "boil-timer-v2",
         smallIcon: "ic_stat_complete", // required in real builds
         largeIcon: require("@/assets/images/favicon.png"),
         timestamp: triggerTimestamp,

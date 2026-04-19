@@ -63,7 +63,7 @@ if (Constants.executionEnvironment !== "storeClient") {
     // they navigate to the boil screen via the notification.
     if (
       type === EventType.DELIVERED &&
-      detail.notification?.android?.channelId === "boil-timer" &&
+      detail.notification?.android?.channelId === "boil-timer-v2" &&
       detail.notification?.title === "Hopfengabe"
     ) {
       const saved = await AsyncStorage.getItem("activeTimer-boil");
@@ -202,7 +202,7 @@ function TimerRedirector() {
       unsubscribe = notifee.default.onForegroundEvent(({ type, detail }: any) => {
         if (
           type === notifee.EventType?.DELIVERED &&
-          detail.notification?.android?.channelId === "boil-timer" &&
+          detail.notification?.android?.channelId === "boil-timer-v2" &&
           detail.notification?.title === "Hopfengabe"
         ) {
           const hopThreshold = detail.notification?.data?.hopThresholdSeconds
@@ -221,16 +221,21 @@ function TimerRedirector() {
       if (!notifee) return;
       try {
         await notifee.default.requestPermission();
-        await notifee.default.deleteChannel("mash-timer");
-        await notifee.default.deleteChannel("boil-timer");
+        const activeChannels = ["mash-timer-v2", "boil-timer-v2"];
+        const existing = await notifee.default.getChannels();
+        await Promise.all(
+          existing
+            .filter((c: any) => !activeChannels.includes(c.id))
+            .map((c: any) => notifee.default.deleteChannel(c.id))
+        );
         await notifee.default.createChannel({
-          id: "mash-timer",
+          id: "mash-timer-v2",
           name: "Maische-Timer",
           importance: notifee.AndroidImportance.HIGH,
           sound: "alarm",
         });
         await notifee.default.createChannel({
-          id: "boil-timer",
+          id: "boil-timer-v2",
           name: "Koch-Timer",
           importance: notifee.AndroidImportance.HIGH,
           sound: "alarm",

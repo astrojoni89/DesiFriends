@@ -38,7 +38,7 @@ export const scheduleMashNotification = async ({
       title: "Timer abgelaufen",
       body: "Der nächste Schritt kann beginnen.",
       android: {
-        channelId: "mash-timer",
+        channelId: "mash-timer-v2",
         smallIcon: "ic_stat_mash", // ensure this icon exists
         largeIcon: require("@/assets/images/favicon.png"),
         timestamp: triggerTimestamp,
