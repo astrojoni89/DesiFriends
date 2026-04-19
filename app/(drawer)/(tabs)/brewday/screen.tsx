@@ -130,9 +130,11 @@ export default function BrewDayScreen() {
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
             <Text style={styles.title}>Gespeicherte Rezepte</Text>
             {recipes.length > 0 && (
+              <Tooltip title="Rezepte exportieren">
               <Pressable onPress={exportAllRecipes} style={styles.iconButton}>
                 <Ionicons name="archive-outline" size={22} color={colors.primary} />
               </Pressable>
+              </Tooltip>
             )}
           </View>
 
