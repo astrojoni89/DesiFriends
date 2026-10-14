@@ -1,6 +1,15 @@
 // calcUtils.ts
 import type { HopSchedule } from "@/context/RecipeContext";
 
+/** Water-solubility approximation; CO₂ in g/L, temperature in °C, gauge pressure in bar. */
+export function calculateBottlePressure(co2: number, temperature: number): number | null {
+  if (!Number.isFinite(co2) || co2 < 0 ||
+      !Number.isFinite(temperature) || temperature <= -273.15) return null;
+
+  const pressure = (co2 / 10) / Math.exp(-10.73797 + 2617.25 / (temperature + 273.15)) - 1.013;
+  return Number.isFinite(pressure) ? pressure : null;
+}
+
 /** Convert Plato (P) to specific gravity (SG) using a 3rd order polynomial */
 export function platoToSG(plato: number): number {
   // Approximation from ASBC table

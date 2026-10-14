@@ -23,6 +23,7 @@ import {
   adjustHopAmount,
   correctPlatoTemp,
   calculateDilutionVolume,
+  calculateBottlePressure,
 } from "@/utils/calcUtils";
 import { useTheme } from "react-native-paper";
 import type { AppTheme } from "@/theme/theme";
@@ -49,6 +50,7 @@ export default function CalcsScreen() {
   const [aaY, setAaY] = useState(0);
   const [tempY, setTempY] = useState(0);
   const [diluY, setDiluY] = useState(0);
+  const [pressureY, setPressureY] = useState(0);
   // const scrollTo = (y: number) => {
   // scrollRef.current?.scrollToPosition(0, y, true);
   // };
@@ -156,6 +158,18 @@ export default function CalcsScreen() {
   const [desiredGravity, setDesiredGravity] = useState("");
   const [originalWortVolume, setOriginalWortVolume] = useState("");
 
+  // 7) Bottle gauge pressure
+  const [bottleCo2, setBottleCo2] = useState("");
+  const [bottleTemp, setBottleTemp] = useState("");
+  const hasPressureInputs = bottleCo2.trim() !== "" && bottleTemp.trim() !== "";
+  const parsePressureInput = (value: string) => {
+    const normalized = value.trim().replace(",", ".");
+    return /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(normalized) ? Number(normalized) : NaN;
+  };
+  const bottlePressure = hasPressureInputs
+    ? calculateBottlePressure(parsePressureInput(bottleCo2), parsePressureInput(bottleTemp))
+    : null;
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -219,6 +233,13 @@ export default function CalcsScreen() {
                   closeMenu();
                 }}
                 title="Würzeverdünnung"
+              />
+              <Menu.Item
+                onPress={() => {
+                  scrollTo(pressureY);
+                  closeMenu();
+                }}
+                title="Flaschendruck"
               />
             </Menu>
           </View>
@@ -635,6 +656,45 @@ export default function CalcsScreen() {
                 L
               </Text>
             ) : null}
+          </View>
+          <View
+            onLayout={(e) => setPressureY(e.nativeEvent.layout.y)}
+            style={{ marginTop: 32 }}
+          >
+            <Text style={styles.title}>Flaschendruck</Text>
+            <Text style={styles.label}>CO₂-Gehalt (g/Liter)</Text>
+            <TextInput
+              style={styles.input}
+              accessibilityLabel="CO₂-Gehalt (g/Liter)"
+              placeholder="z. B. 5,0"
+              keyboardType="decimal-pad"
+              value={bottleCo2}
+              onChangeText={setBottleCo2}
+              placeholderTextColor={colors.outline}
+            />
+            <Text style={styles.label}>Biertemperatur (°C)</Text>
+            <TextInput
+              style={styles.input}
+              accessibilityLabel="Biertemperatur (°C)"
+              placeholder="z. B. 20"
+              keyboardType="decimal-pad"
+              value={bottleTemp}
+              onChangeText={setBottleTemp}
+              placeholderTextColor={colors.outline}
+            />
+            {hasPressureInputs && (
+              <Text style={styles.result}>
+                {bottlePressure === null
+                  ? "Bitte gültige Werte eingeben: CO₂ ≥ 0 und Temperatur > −273,15 °C."
+                  : `Erwarteter Überdruck: ${bottlePressure.toFixed(2).replace(".", ",")} bar`}
+              </Text>
+            )}
+            <Text style={styles.note}>
+              Näherung über die CO₂-Löslichkeit in Wasser. Alkohol und Restextrakt
+              werden nicht berücksichtigt. Überdruck gegenüber 1,013 bar
+              Umgebungsdruck; zum Vergleich mit dem Manometer bei gleicher
+              Biertemperatur und im Gleichgewicht.
+            </Text>
           </View>
         </ScrollView>
       </TouchableWithoutFeedback>
