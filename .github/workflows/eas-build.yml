@@ -1,7 +1,16 @@
 name: Build Android APK with EAS
 
 on:
-  workflow_dispatch: # Allows manual triggering from the GitHub UI
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: EAS build profile (development supports live testing)
+        required: true
+        default: preview
+        type: choice
+        options:
+          - preview
+          - development
 
 jobs:
   build:
@@ -22,7 +31,9 @@ jobs:
           token: ${{ secrets.EAS_TOKEN }}
 
       - name: 📦 Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: 🚀 Build app
-        run: eas build --platform android --non-interactive --profile preview
+        env:
+          BUILD_PROFILE: ${{ inputs.profile }}
+        run: eas build --platform android --non-interactive --profile "$BUILD_PROFILE"
