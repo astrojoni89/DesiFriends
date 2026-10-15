@@ -4,6 +4,7 @@ import { ScrollView, Text, View, Pressable, StyleSheet } from "react-native";
 import { useRecipes } from "@/context/RecipeContext";
 import { useTheme } from "react-native-paper";
 import type { AppTheme } from "@/theme/theme";
+import { RecipeExtras } from "@/components/RecipeExtras";
 
 export default function BrewStartScreen() {
   const { id, targetSize, actualAlphaAcids } = useLocalSearchParams<{
@@ -103,6 +104,7 @@ export default function BrewStartScreen() {
           ) : (
             <Text style={styles.text}>Keine Angaben</Text>
           )}
+          <RecipeExtras recipe={recipe} factor={scaleFactor} titleStyle={styles.section} textStyle={styles.text} />
         </View>
 
         <Pressable

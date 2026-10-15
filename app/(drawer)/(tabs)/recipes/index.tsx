@@ -25,6 +25,8 @@ export default function RecipesScreen() {
       malz: data.malz,
       hopfen: data.hopfen,
       hefe: data.hefe,
+      notes: data.notes,
+      additionalIngredients: data.additionalIngredients,
       mashSteps: data.mashSteps,
       boilTime: data.boilTime,
       hopSchedule: data.hopSchedule,
@@ -42,6 +44,8 @@ export default function RecipesScreen() {
       malz: data.malz,
       hopfen: data.hopfen,
       hefe: data.hefe,
+      notes: data.notes,
+      additionalIngredients: data.additionalIngredients,
     });
     router.push({ pathname: "/modal/schedule", params: { id } });
   };

@@ -16,6 +16,12 @@ export type HopIngredient = Ingredient & {
   alphaAcid: string;
 };
 
+export type AdditionalIngredient = {
+  name: string;
+  amount: number;
+  unit: string;
+};
+
 export type Recipe = {
   id: string;
   name: string;
@@ -25,6 +31,8 @@ export type Recipe = {
   malz: Ingredient[];
   hopfen: HopIngredient[];
   hefe: Ingredient[];
+  notes?: string;
+  additionalIngredients?: AdditionalIngredient[];
   mashSteps?: MashStep[];
   boilTime?: string;
   hopSchedule?: HopSchedule[];

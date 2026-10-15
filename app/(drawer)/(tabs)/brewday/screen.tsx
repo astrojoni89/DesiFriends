@@ -21,6 +21,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme, Tooltip, Snackbar } from "react-native-paper";
 import uuid from "react-native-uuid";
 import type { AppTheme } from "@/theme/theme";
+import { RecipeExtras } from "@/components/RecipeExtras";
 
 export default function BrewDayScreen() {
   const theme = useTheme() as AppTheme;
@@ -256,6 +257,8 @@ export default function BrewDayScreen() {
                       &bull; {h.name}: {h.amount} g
                     </Text>
                   ))}
+                  <RecipeExtras recipe={r} titleStyle={styles.section} textStyle={styles.ingredient} />
+
 
                   
                     <View

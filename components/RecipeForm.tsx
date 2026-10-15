@@ -16,11 +16,13 @@ import { useTheme, Snackbar, Tooltip, Portal, Dialog } from "react-native-paper"
 import type { AppTheme } from "@/theme/theme";
 import { useValidation } from "@/hooks/useValidation";
 import { useBrewBarOffset } from "@/hooks/useBrewBarOffset";
+import { formatAdditionalAmount } from "@/utils/recipeExtras";
 import {
   Ingredient,
   HopIngredient,
   MashStep,
   HopSchedule,
+  AdditionalIngredient,
 } from "@/context/RecipeContext";
 
 export type RecipeFormData = {
@@ -34,6 +36,8 @@ export type RecipeFormData = {
   mashSteps: MashStep[];
   boilTime: string;
   hopSchedule: HopSchedule[];
+  notes?: string;
+  additionalIngredients?: AdditionalIngredient[];
 };
 
 type RecipeFields = {
@@ -73,6 +77,10 @@ export function RecipeForm({
   const [malzList, setMalzList] = useState<Ingredient[]>(initialValues.malz ?? []);
   const [hopfenList, setHopfenList] = useState<HopIngredient[]>(initialValues.hopfen ?? []);
   const [hefeList, setHefeList] = useState<Ingredient[]>(initialValues.hefe ?? []);
+  const [notes, setNotes] = useState(initialValues.notes ?? "");
+  const [additionalIngredients, setAdditionalIngredients] = useState<AdditionalIngredient[]>(initialValues.additionalIngredients ?? []);
+  const [extraInput, setExtraInput] = useState({ name: "", amount: "", unit: "" });
+  const [extraError, setExtraError] = useState("");
 
   const [malzInput, setMalzInput] = useState<Ingredient>({ name: "", amount: "" });
   const [hopfenInput, setHopfenInput] = useState<HopIngredient>({ name: "", amount: "", alphaAcid: "" });
@@ -112,7 +120,7 @@ export function RecipeForm({
     useValidation<RecipeFields>(initialFields, validationRules);
 
   const [pendingRemove, setPendingRemove] = useState<{
-    type: "malz" | "hopfen" | "hefe";
+    type: "malz" | "hopfen" | "hefe" | "extra";
     index: number;
     title: string;
     description: string;
@@ -128,12 +136,18 @@ export function RecipeForm({
     malz: malzList,
     hopfen: hopfenList,
     hefe: hefeList,
+    notes: notes.trim() || undefined,
+    additionalIngredients: additionalIngredients.length ? additionalIngredients : undefined,
     mashSteps: initialValues.mashSteps ?? [],
     boilTime: initialValues.boilTime ?? "",
     hopSchedule: initialValues.hopSchedule ?? [],
   });
 
   const syncAndValidate = () => {
+    if (Object.values(extraInput).some(value => value.trim())) {
+      setExtraError("Bitte die weitere Zutat mit + hinzufügen oder die Eingaben leeren.");
+      return { additionalIngredients: "unfinished" };
+    }
     handleChange("malzList", malzList);
     handleChange("hopfenList", hopfenList);
     handleChange("hefeList", hefeList);
@@ -147,6 +161,10 @@ export function RecipeForm({
     setMalzList([]);
     setHopfenList([]);
     setHefeList([]);
+    setNotes("");
+    setAdditionalIngredients([]);
+    setExtraInput({ name: "", amount: "", unit: "" });
+    setExtraError("");
     setValues(emptyFields);
     setErrors({});
     Keyboard.dismiss();
@@ -186,6 +204,8 @@ export function RecipeForm({
       const updated = hopfenList.filter((_, i) => i !== pendingRemove.index);
       setHopfenList(updated);
       handleChange("hopfenList", updated);
+    } else if (pendingRemove.type === "extra") {
+      setAdditionalIngredients(list => list.filter((_, index) => index !== pendingRemove.index));
     } else {
       const updated = hefeList.filter((_, i) => i !== pendingRemove.index);
       setHefeList(updated);
@@ -323,6 +343,50 @@ export function RecipeForm({
                 </Pressable>
               </View>
             ))}
+
+            <Text style={styles.sectionTitle}>Weitere Zutaten (optional)</Text>
+            <IngredientInput
+              input={extraInput}
+              setInput={(input: typeof extraInput) => { setExtraInput(input); setExtraError(""); }}
+              onAdd={() => {
+                const rawAmount = extraInput.amount.trim().replace(",", ".");
+                const amount = Number(rawAmount);
+                if (!extraInput.name.trim() || !extraInput.unit.trim() ||
+                    !/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(rawAmount) || !Number.isFinite(amount) || amount <= 0) {
+                  setExtraError("Bitte Name, Menge größer als 0 und Einheit eingeben.");
+                  return;
+                }
+                setAdditionalIngredients(list => [...list, { name: extraInput.name.trim(), amount, unit: extraInput.unit.trim() }]);
+                setExtraInput({ name: "", amount: "", unit: "" });
+                setExtraError("");
+              }}
+              colors={theme.colors}
+              amountPlaceholder="Menge"
+              extraField={{ key: "unit", placeholder: "Einheit" }}
+              showErrors={!!extraError}
+            />
+            {!!extraError && <Text style={{ color: colors.error }}>{extraError}</Text>}
+            {additionalIngredients.map((item, idx) => (
+              <View key={idx} style={styles.ingredientRow}>
+                <Text style={[styles.ingredientItem, { flex: 1 }]}>&bull; {item.name}: {formatAdditionalAmount(item.amount)} {item.unit}</Text>
+                <Pressable
+                  onPress={() => setPendingRemove({ type: "extra", index: idx, title: "Zutat entfernen", description: `${item.name} (${formatAdditionalAmount(item.amount)} ${item.unit}) wirklich entfernen?` })}
+                  style={[styles.removeButton, { backgroundColor: colors.remove }]}
+                >
+                  <Ionicons name="remove" size={20} color="#fff" />
+                </Pressable>
+              </View>
+            ))}
+            <Text style={styles.sectionTitle}>Notizen (optional)</Text>
+            <TextInput
+              style={[styles.input, { flex: 0, height: 100, paddingTop: 12, textAlignVertical: "top" }]}
+              placeholder="Notizen zum Rezept"
+              accessibilityLabel="Notizen zum Rezept"
+              multiline
+              value={notes}
+              onChangeText={setNotes}
+              placeholderTextColor={colors.outline}
+            />
 
             <View style={{ marginVertical: 16 }}>
               {showScheduleButton && (

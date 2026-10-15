@@ -23,6 +23,8 @@ import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system";
 import { useTheme, Tooltip, Portal, Dialog } from "react-native-paper";
 import type { AppTheme } from "@/theme/theme";
+import { RecipeExtras } from "@/components/RecipeExtras";
+import { recipeExtrasHtml, recipeExtrasText } from "@/utils/recipeExtras";
 
 export default function BrewModal() {
   const router = useRouter();
@@ -134,6 +136,7 @@ export default function BrewModal() {
     
     Hefe:
     ${scaled?.hefe.map((h) => `• ${h.name}: ${h.amount} g`).join("\n")}
+    ${recipeExtrasText(recipe, scaleFactor)}
     
     ${
       recipe.mashSteps?.length
@@ -275,6 +278,8 @@ export default function BrewModal() {
                 </ul>
               </div>
             </div>
+
+            ${recipeExtrasHtml(recipe, scaleFactor)}
 
             ${
               recipe.mashSteps?.length
@@ -453,6 +458,8 @@ export default function BrewModal() {
                 &bull; {h.name}: {h.amount} g
               </Text>
             ))}
+
+            <RecipeExtras recipe={recipe} factor={scaleFactor} titleStyle={styles.section} textStyle={styles.text} />
 
             <View style={{ marginTop: 24 }} />
 

@@ -10,6 +10,16 @@ function parseRecipe(contents: string): Recipe {
       typeof recipe.name !== "string" || !recipe.name.trim()) {
     throw new Error("Die Datei enthält kein gültiges Rezept.");
   }
+  if (recipe.notes != null && typeof recipe.notes !== "string") {
+    throw new Error("Ungültige Rezeptnotizen.");
+  }
+  if (recipe.additionalIngredients != null &&
+      (!Array.isArray(recipe.additionalIngredients) || recipe.additionalIngredients.some((ingredient: any) =>
+        !ingredient || typeof ingredient.name !== "string" || !ingredient.name.trim() ||
+        typeof ingredient.amount !== "number" || !Number.isFinite(ingredient.amount) || ingredient.amount <= 0 ||
+        typeof ingredient.unit !== "string" || !ingredient.unit.trim()))) {
+    throw new Error("Ungültige weitere Zutaten.");
+  }
   return {
     ...recipe,
     id: String(uuid.v4()),
@@ -19,6 +29,8 @@ function parseRecipe(contents: string): Recipe {
     malz: recipe.malz ?? [],
     hopfen: recipe.hopfen ?? [],
     hefe: recipe.hefe ?? [],
+    notes: recipe.notes?.trim() ? recipe.notes : undefined,
+    additionalIngredients: recipe.additionalIngredients?.length ? recipe.additionalIngredients : undefined,
   };
 }
 

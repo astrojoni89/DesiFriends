@@ -11,6 +11,21 @@ const recipeJson = name => JSON.stringify({ version: 1, recipe: { id: "old-id", 
 
 beforeEach(() => jest.clearAllMocks());
 
+test("optional recipe extras survive JSON and ZIP imports with numeric quantities", async () => {
+  const recipe = { name: "Mango Weizen", batchSize: 20, notes: "After fermentation", additionalIngredients: [{ name: "Mango", amount: 1.5, unit: "kg" }] };
+  const json = JSON.stringify({ version: 1, recipe });
+  expect((await parseRecipeImport(json, false))[0]).toMatchObject(recipe);
+  const zip = new JSZip();
+  zip.file("mango.dfr", json);
+  expect((await parseRecipeImport(await zip.generateAsync({ type: "base64" }), true))[0]).toMatchObject(recipe);
+});
+
+test("invalid optional fields are rejected rather than breaking recipe displays", async () => {
+  for (const fields of [{ notes: {} }, { additionalIngredients: "mango" }, { additionalIngredients: [{ name: "Mango", amount: "1.5", unit: "kg" }] }]) {
+    await expect(parseRecipeImport(JSON.stringify({ recipe: { name: "Weizen", ...fields } }), false)).rejects.toThrow();
+  }
+});
+
 test("detects a bulk export by ZIP signature even with a .dfr cache filename", async () => {
   const zip = new JSZip();
   for (let i = 0; i < 30; i++) zip.file(`recipe-${i}.dfr`, recipeJson(`Recipe ${i}`));
