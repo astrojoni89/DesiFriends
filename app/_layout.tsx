@@ -17,6 +17,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "expo-router";
 import * as Linking from "expo-linking";
 import * as FileSystem from "expo-file-system";
+import { readRecipeImport } from "@/utils/recipeImport";
 import { useTimerContext } from "@/context/TimerContext";
 import { useRecipes } from "../context/RecipeContext";
 import { Pressable, Text, StyleSheet, View as RNView, Animated } from "react-native";
@@ -456,32 +457,19 @@ function FileImportHandler() {
         // via readAsStringAsync fails for those URIs; fetch() causes a native crash.
         const tempUri = (FileSystem.cacheDirectory ?? "") + "recipe_import.dfr";
         await FileSystem.copyAsync({ from: url, to: tempUri });
-        const contents = await FileSystem.readAsStringAsync(tempUri);
-        await FileSystem.deleteAsync(tempUri, { idempotent: true });
-        const data = JSON.parse(contents);
+        const recipes = await readRecipeImport(tempUri).finally(() =>
+          FileSystem.deleteAsync(tempUri, { idempotent: true })
+        );
 
-        router.replace("/(drawer)/(tabs)/brewday" as any);
+        router.replace("/(drawer)/(tabs)/brewday/screen");
 
-        if (!data?.recipe) {
-          setSnackMessage("Ungültige Rezeptdatei.");
-          return;
-        }
-
-        addRecipe({
-          ...data.recipe,
-          id: Date.now().toString(),
-          batchSize: data.recipe.batchSize ?? 0,
-          hauptguss: data.recipe.hauptguss ?? 0,
-          nachguss: data.recipe.nachguss ?? 0,
-          malz: data.recipe.malz ?? [],
-          hopfen: data.recipe.hopfen ?? [],
-          hefe: data.recipe.hefe ?? [],
-        });
-
-        setSnackMessage(`„${data.recipe.name}" erfolgreich importiert!`);
+        recipes.forEach(addRecipe);
+        setSnackMessage(recipes.length === 1
+          ? `„${recipes[0].name}“ erfolgreich importiert!`
+          : `${recipes.length} Rezepte importiert!`);
       } catch (e) {
-        console.error("Failed to import .dfr file:", e);
-        router.replace("/(drawer)/(tabs)/brewday" as any);
+        console.error("Failed to import recipe file:", e);
+        router.replace("/(drawer)/(tabs)/brewday/screen");
         setSnackMessage("Rezept konnte nicht importiert werden.");
       }
     };

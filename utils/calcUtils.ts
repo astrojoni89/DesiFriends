@@ -1,15 +1,6 @@
 // calcUtils.ts
 import type { HopSchedule } from "@/context/RecipeContext";
 
-/** Water-solubility approximation; CO₂ in g/L, temperature in °C, gauge pressure in bar. */
-export function calculateBottlePressure(co2: number, temperature: number): number | null {
-  if (!Number.isFinite(co2) || co2 < 0 ||
-      !Number.isFinite(temperature) || temperature <= -273.15) return null;
-
-  const pressure = (co2 / 10) / Math.exp(-10.73797 + 2617.25 / (temperature + 273.15)) - 1.013;
-  return Number.isFinite(pressure) ? pressure : null;
-}
-
 /** Convert Plato (P) to specific gravity (SG) using a 3rd order polynomial */
 export function platoToSG(plato: number): number {
   // Approximation from ASBC table
@@ -142,6 +133,40 @@ export function calculateSugar(ftemp: number, carb: number, sunit: string, og?: 
 }
 
 
+/**
+ * Alternative priming calculation, adapted from the supplied Fabier equation:
+ * https://fabier.de/biercalcs.html (Speise-/Zuckerberechnung zur Nachgärung).
+ * Same result tuple as calculateSugar, so the screen can switch implementations.
+ * Fabier's Speise quantity is ml per litre of existing Jungbier. Convert it to
+ * ml per litre of final mixture for the existing UI, retaining full precision.
+ * This conversion does NOT compensate for carbonating the added Speise volume.
+ * Fabier does not supply an alcohol estimate here; retain the app's existing
+ * 0.488 / 10 * 1.267 estimate for the calculated sugar dose.
+ */
+export function calculateSugarFabier(ftemp: number, carb: number, sunit: string, og?: number, fg?: number): [string, string, string, string] {
+  const co2Pressure = 10.13 * Math.exp(-10.73797 + 2617.25 / (ftemp + 273.15));
+  const co2Difference = carb - co2Pressure;
+  let amountToAdd: string;
+  let addedAlcohol = 0;
+
+  if (sunit === "wort") {
+    if (og == null || fg == null) {
+      throw new Error("OG and FG are required when unit is 'wort'");
+    }
+    const fermentableSugar = og * 8.1 * (1 - fg / og);
+    const speisePerLiterJungbier = 1000 * (co2Difference / 0.50) / fermentableSugar;
+    amountToAdd = String(1000 * speisePerLiterJungbier / (1000 + speisePerLiterJungbier));
+  } else if (sunit === "sugar" || sunit === "glucose") {
+    const neededSugar = co2Difference / (sunit === "sugar" ? 0.51 : 0.44);
+    amountToAdd = neededSugar.toFixed(1);
+    addedAlcohol = neededSugar * 0.488 / 10 * 1.267;
+  } else {
+    throw new Error("Invalid unit. Use 'sugar', 'wort', or 'glucose'.");
+  }
+
+  return [co2Pressure.toFixed(1), co2Difference.toFixed(1), amountToAdd, addedAlcohol.toFixed(1)];
+}
+
 /** Convert unit wrapper  */
 export function convertUnit(
   value: number,
@@ -207,6 +232,28 @@ export function calculateDilutionVolume(
   targetGravity: number
 ): string {
   return ((originalGravity * originalVolume) / targetGravity - originalVolume).toFixed(2);
+}
+
+/** Water-solubility approximation; CO₂ in g/L, temperature in °C, gauge pressure in bar. */
+export function calculateBottlePressure(co2: number, temperature: number): number | null {
+  if (!Number.isFinite(co2) || co2 < 0 ||
+      !Number.isFinite(temperature) || temperature <= -273.15) return null;
+
+  const pressure = (co2 / 10) / Math.exp(-10.73797 + 2617.25 / (temperature + 273.15)) - 1.013;
+  return Number.isFinite(pressure) ? pressure : null;
+}
+
+/** Supplied residual alkalinity formula: Ca/Mg in mg/L, acid capacity in mmol/L; results in °dH. */
+export function calculateResidualAlkalinity(calcium: number, magnesium: number, acidCapacity: number) {
+  if (![calcium, magnesium, acidCapacity].every(value => Number.isFinite(value) && value >= 0)) return null;
+
+  const calciumHardness = (calcium / 40.8) / 0.1783;
+  const magnesiumHardness = (magnesium / 24.3) / 0.1783;
+  const carbonateHardness = acidCapacity * 2.8;
+  const residualAlkalinity = carbonateHardness - (calciumHardness + 0.5 * magnesiumHardness) / 3.5;
+  if (![calciumHardness, magnesiumHardness, carbonateHardness, residualAlkalinity].every(Number.isFinite)) return null;
+
+  return { residualAlkalinity, carbonateHardness, calciumHardness, magnesiumHardness };
 }
 
 type EnrichedHopSchedule = {
