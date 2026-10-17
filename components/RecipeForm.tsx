@@ -51,6 +51,7 @@ type RecipeFields = {
 };
 
 type Props = {
+  bottomInset?: number;
   title: string;
   initialValues?: Partial<RecipeFormData>;
   onSave: (data: RecipeFormData) => void;
@@ -61,6 +62,7 @@ type Props = {
 };
 
 export function RecipeForm({
+  bottomInset = 0,
   title,
   initialValues = {},
   onSave,
@@ -222,7 +224,7 @@ export function RecipeForm({
         keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-          <ScrollView contentContainerStyle={[styles.content, brewBarOffset > 0 && { paddingBottom: brewBarOffset }]} keyboardShouldPersistTaps="handled">
+          <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(16 + bottomInset, brewBarOffset) }]} keyboardShouldPersistTaps="handled">
 
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <Text style={styles.title}>{title}</Text>
@@ -414,10 +416,7 @@ export function RecipeForm({
         duration={2000}
         style={{
           backgroundColor: colors.primary,
-          position: "absolute",
-          bottom: 16,
-          left: 16,
-          right: 16,
+          margin: 16,
           borderRadius: 8,
         }}
       >

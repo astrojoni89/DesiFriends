@@ -332,10 +332,7 @@ export default function MashScheduleModal() {
           duration={2000}
           style={{
             backgroundColor: colors.primary,
-            position: "absolute",
-            bottom: 48,
-            left: 16,
-            right: 16,
+            margin: 16,
             borderRadius: 8,
           }}
         >

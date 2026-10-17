@@ -368,10 +368,7 @@ export default function BrewDayScreen() {
         duration={2000}
         style={{
           backgroundColor: colors.primary,
-          position: "absolute",
-          bottom: 2,
-          left: 16,
-          right: 16,
+          margin: 16,
           borderRadius: 8,
         }}
       >

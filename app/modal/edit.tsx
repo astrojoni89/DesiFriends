@@ -1,11 +1,13 @@
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "react-native-paper";
 import type { AppTheme } from "@/theme/theme";
 import { useRecipes } from "@/context/RecipeContext";
 import { RecipeForm, RecipeFormData } from "@/components/RecipeForm";
 
 export default function EditRecipeModal() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { getRecipeById, updateRecipe } = useRecipes();
@@ -33,6 +35,7 @@ export default function EditRecipeModal() {
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background, borderRadius: 12, elevation: 5 }}>
       <RecipeForm
+        bottomInset={insets.bottom}
         title="Rezept bearbeiten"
         initialValues={{
           name: existing?.name ?? "",

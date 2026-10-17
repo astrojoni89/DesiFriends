@@ -83,10 +83,7 @@ export default function RecipesScreen() {
           duration={3000}
           style={{
           backgroundColor: colors.primary,
-          position: "absolute",
-          bottom: 16,
-          left: 16,
-          right: 16,
+          margin: 16,
           borderRadius: 8,
         }}
         >
